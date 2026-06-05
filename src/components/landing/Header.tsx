@@ -60,12 +60,12 @@ export function Header({ user }: HeaderProps) {
           {/* Desktop Action Buttons */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
-              <Link href="/dashboard">
+              <Link href="/workspace">
                 <Button
                   variant="default"
                   className="bg-[#2d4a3e] hover:bg-[#20352c] text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm"
                 >
-                  Dashboard
+                  Workspace
                   <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-white" />
                 </Button>
               </Link>
@@ -126,9 +126,9 @@ export function Header({ user }: HeaderProps) {
 
           <div className="pt-4 border-t border-slate-200 flex flex-col gap-3">
             {user ? (
-              <Link href="/dashboard" onClick={() => setIsOpen(false)}>
+              <Link href="/workspace" onClick={() => setIsOpen(false)}>
                 <Button className="w-full bg-[#2d4a3e] hover:bg-[#20352c] text-white font-semibold py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer">
-                  Dashboard
+                  Workspace
                   <ArrowRight className="w-4 h-4 text-white" />
                 </Button>
               </Link>

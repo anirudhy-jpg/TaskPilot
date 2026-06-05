@@ -60,7 +60,15 @@ export function LoginForm() {
     try {
       const response = await loginAction({ email, password })
       if (response && !response.success) {
-        setError(response.error || "Failed to sign in. Please check your credentials.")
+        const errMsg = response.error || "Failed to sign in. Please check your credentials."
+        if (errMsg.toLowerCase().includes("credential") || errMsg.toLowerCase().includes("invalid")) {
+          setValidationErrors({
+            email: "Invalid email address or password",
+            password: "Invalid email address or password",
+          })
+        } else {
+          setError(errMsg)
+        }
       }
     } catch (err: any) {
       if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
@@ -79,8 +87,6 @@ export function LoginForm() {
         <p className="text-xs text-slate-550 mt-1">Access your workspace and dashboard.</p>
       </div>
 
-
-
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg p-3 mb-5 text-center font-medium">
           {error}
@@ -90,8 +96,13 @@ export function LoginForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Email */}
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email" className="text-slate-600 text-xs font-semibold">
-            Email address
+          <Label 
+            htmlFor="email" 
+            className={`text-xs font-semibold transition-colors ${
+              validationErrors.email ? "text-red-500" : "text-slate-600"
+            }`}
+          >
+            Email <span className="text-red-500">*</span>
           </Label>
           <Input
             id="email"
@@ -100,20 +111,28 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
-            className="bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e] rounded-lg h-10 w-full"
+            className={`bg-slate-50 text-slate-900 placeholder-slate-400 rounded-lg h-10 w-full transition-all ${
+              validationErrors.email
+                ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+            }`}
           />
           {validationErrors.email && (
-            <p className="text-red-650 text-xs mt-0.5">{validationErrors.email}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.email}</p>
           )}
         </div>
 
         {/* Password */}
         <div className="flex flex-col gap-1.5 relative">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-slate-600 text-xs font-semibold">
-              Password
+            <Label 
+              htmlFor="password" 
+              className={`text-xs font-semibold transition-colors ${
+                validationErrors.password ? "text-red-500" : "text-slate-600"
+              }`}
+            >
+              Password <span className="text-red-500">*</span>
             </Label>
-
           </div>
           <div className="relative">
             <Input
@@ -122,7 +141,11 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 pr-10 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e] rounded-lg h-10 w-full"
+              className={`bg-slate-50 text-slate-900 placeholder-slate-400 pr-10 rounded-lg h-10 w-full transition-all ${
+                validationErrors.password
+                  ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                  : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+              }`}
             />
             <button
               type="button"
@@ -133,7 +156,7 @@ export function LoginForm() {
             </button>
           </div>
           {validationErrors.password && (
-            <p className="text-red-655 text-xs mt-0.5">{validationErrors.password}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.password}</p>
           )}
         </div>
 
