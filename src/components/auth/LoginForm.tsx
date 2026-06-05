@@ -8,12 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loginAction } from "@/actions/auth/auth.actions"
 import { loginSchema } from "@/validation/auth.validation"
-import { useSearchParams } from "next/navigation"
+
 import { createClient } from "@/lib/supabase/client"
 
 export function LoginForm() {
-  const searchParams = useSearchParams()
-  const signupSuccess = searchParams.get("signup") === "success"
+
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -80,11 +79,7 @@ export function LoginForm() {
         <p className="text-xs text-slate-550 mt-1">Access your workspace and dashboard.</p>
       </div>
 
-      {signupSuccess && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg p-3 mb-5 text-center font-medium">
-          Account created successfully! Please sign in.
-        </div>
-      )}
+
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg p-3 mb-5 text-center font-medium">
@@ -118,12 +113,7 @@ export function LoginForm() {
             <Label htmlFor="password" className="text-slate-600 text-xs font-semibold">
               Password
             </Label>
-            <Link
-              href="/forgot-password"
-              className="text-slate-500 hover:text-[#2d4a3e] text-xs font-semibold transition-colors"
-            >
-              Forgot?
-            </Link>
+
           </div>
           <div className="relative">
             <Input
