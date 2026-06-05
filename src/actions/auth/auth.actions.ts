@@ -41,7 +41,7 @@ export async function signupAction(input: SignupInput): Promise<ActionResponse> 
   }
 
   if (isSuccess) {
-    redirect("/login?signup=success")
+    redirect("/login")
   }
 
   return { success: false }
