@@ -1,5 +1,5 @@
 import React from "react"
-import { createClient } from "@/lib/supabase/server"
+import { getSession } from "@/lib/supabase/server"
 import { Header } from "@/components/landing/Header"
 import { Hero } from "@/components/landing/Hero"
 import { Features } from "@/components/landing/Features"
@@ -9,10 +9,7 @@ import { Footer } from "@/components/landing/Footer"
 export const dynamic = "force-dynamic"
 
 export default async function Home() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user } = await getSession()
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f8fafc]">

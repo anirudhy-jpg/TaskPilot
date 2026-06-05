@@ -38,7 +38,7 @@ export function Hero({ user }: HeroProps) {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center w-full sm:w-auto mb-16">
             {user ? (
-              <Link href="/dashboard" className="w-full sm:w-auto">
+              <Link href="/workspace" className="w-full sm:w-auto">
                 <Button className="w-full sm:w-auto bg-[#2d4a3e] hover:bg-[#20352c] text-white font-medium px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm">
                   Enter Workspace
                   <ArrowRight className="w-4 h-4 text-white" />

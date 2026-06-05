@@ -22,7 +22,7 @@ export async function loginAction(input: LoginInput): Promise<ActionResponse> {
   }
 
   if (isSuccess) {
-    redirect("/dashboard")
+    redirect("/workspace")
   }
 
   return { success: false }

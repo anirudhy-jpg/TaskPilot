@@ -59,13 +59,22 @@ export function SignupForm() {
     try {
       const response = await signupAction({ name, email, password })
       if (response && !response.success) {
-        setError(response.error || "Failed to create account. Please try again.")
+        const errMsg = response.error || "Failed to create account. Please try again."
+        if (errMsg.toLowerCase().includes("email") || errMsg.toLowerCase().includes("already")) {
+          setValidationErrors({ email: errMsg })
+        } else if (errMsg.toLowerCase().includes("password")) {
+          setValidationErrors({ password: errMsg })
+        } else if (errMsg.toLowerCase().includes("name")) {
+          setValidationErrors({ name: errMsg })
+        } else {
+          setValidationErrors({ email: errMsg })
+        }
       }
     } catch (err: any) {
       if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
         throw err
       }
-      setError(err.message || "An unexpected error occurred.")
+      setValidationErrors({ email: err.message || "An unexpected error occurred." })
     } finally {
       setLoading(false)
     }
@@ -87,8 +96,13 @@ export function SignupForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Name */}
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="name" className="text-slate-600 text-xs font-semibold">
-            Full name
+          <Label 
+            htmlFor="name" 
+            className={`text-xs font-semibold transition-colors ${
+              validationErrors.name ? "text-red-500" : "text-slate-600"
+            }`}
+          >
+            Full name <span className="text-red-500">*</span>
           </Label>
           <Input
             id="name"
@@ -97,17 +111,26 @@ export function SignupForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
-            className="bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e] rounded-lg h-10 w-full"
+            className={`bg-slate-50 text-slate-900 placeholder-slate-400 rounded-lg h-10 w-full transition-all ${
+              validationErrors.name
+                ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+            }`}
           />
           {validationErrors.name && (
-            <p className="text-red-650 text-xs mt-0.5">{validationErrors.name}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.name}</p>
           )}
         </div>
 
         {/* Email */}
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email" className="text-slate-600 text-xs font-semibold">
-            Email address
+          <Label 
+            htmlFor="email" 
+            className={`text-xs font-semibold transition-colors ${
+              validationErrors.email ? "text-red-500" : "text-slate-600"
+            }`}
+          >
+            Email <span className="text-red-500">*</span>
           </Label>
           <Input
             id="email"
@@ -116,17 +139,26 @@ export function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
-            className="bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e] rounded-lg h-10 w-full"
+            className={`bg-slate-50 text-slate-900 placeholder-slate-400 rounded-lg h-10 w-full transition-all ${
+              validationErrors.email
+                ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+            }`}
           />
           {validationErrors.email && (
-            <p className="text-red-650 text-xs mt-0.5">{validationErrors.email}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.email}</p>
           )}
         </div>
 
         {/* Password */}
         <div className="flex flex-col gap-1.5 relative">
-          <Label htmlFor="password" className="text-slate-600 text-xs font-semibold">
-            Password
+          <Label 
+            htmlFor="password" 
+            className={`text-xs font-semibold transition-colors ${
+              validationErrors.password ? "text-red-500" : "text-slate-600"
+            }`}
+          >
+            Password <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
             <Input
@@ -135,7 +167,11 @@ export function SignupForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 pr-10 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e] rounded-lg h-10 w-full"
+              className={`bg-slate-50 text-slate-900 placeholder-slate-400 pr-10 rounded-lg h-10 w-full transition-all ${
+                validationErrors.password
+                  ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
+                  : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+              }`}
             />
             <button
               type="button"
@@ -146,7 +182,7 @@ export function SignupForm() {
             </button>
           </div>
           {validationErrors.password && (
-            <p className="text-red-655 text-xs mt-0.5">{validationErrors.password}</p>
+            <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.password}</p>
           )}
         </div>
 
