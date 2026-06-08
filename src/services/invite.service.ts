@@ -1,21 +1,21 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server";
 
 export interface Invitation {
-  id: string
-  workspaceId: string
-  email: string
-  role: "admin" | "member"
-  token: string
-  status: "pending" | "accepted" | "declined"
-  invitedBy: string
-  createdAt: string
-  expiresAt: string
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: "admin" | "member";
+  token: string;
+  status: "pending" | "accepted" | "declined";
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface InvitationDetails {
-  invitation: Invitation
-  workspaceName: string
-  inviterName: string
+  invitation: Invitation;
+  workspaceName: string;
+  inviterName: string;
 }
 
 export class InviteService {
@@ -26,24 +26,24 @@ export class InviteService {
     workspaceId: string,
     email: string,
     role: "admin" | "member",
-    invitedBy: string
+    invitedBy: string,
   ): Promise<string> {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     // 1. Verify that the inviter is the workspace owner or an admin
     const { data: ws, error: wsErr } = await supabase
       .from("workspaces")
       .select("owner_id")
       .eq("id", workspaceId)
-      .maybeSingle()
+      .maybeSingle();
 
     if (wsErr) {
-      throw new Error("Failed to verify workspace owner: " + wsErr.message)
+      throw new Error("Failed to verify workspace owner: " + wsErr.message);
     }
 
-    let isAuthorized = false
+    let isAuthorized = false;
     if (ws && ws.owner_id === invitedBy) {
-      isAuthorized = true
+      isAuthorized = true;
     } else {
       // Check workspace_members
       const { data: member, error: memErr } = await supabase
@@ -51,15 +51,19 @@ export class InviteService {
         .select("role")
         .eq("workspace_id", workspaceId)
         .eq("user_id", invitedBy)
-        .maybeSingle()
+        .maybeSingle();
 
-      if (!memErr && member && (member.role === "owner" || member.role === "admin")) {
-        isAuthorized = true
+      if (
+        !memErr &&
+        member &&
+        (member.role === "owner" || member.role === "admin")
+      ) {
+        isAuthorized = true;
       }
     }
 
     if (!isAuthorized) {
-      throw new Error("Only workspace owners and admins can invite members.")
+      throw new Error("Only workspace owners and admins can invite members.");
     }
 
     // 2. Prevent duplicate workspace membership
@@ -68,7 +72,7 @@ export class InviteService {
       .from("profiles")
       .select("id")
       .eq("email", email)
-      .maybeSingle()
+      .maybeSingle();
 
     if (!profErr && targetProfile) {
       const { data: existingMember, error: existErr } = await supabase
@@ -76,17 +80,17 @@ export class InviteService {
         .select("id")
         .eq("workspace_id", workspaceId)
         .eq("user_id", targetProfile.id)
-        .maybeSingle()
+        .maybeSingle();
 
       if (!existErr && existingMember) {
-        throw new Error("This user is already a member of the workspace.")
+        throw new Error("This user is already a member of the workspace.");
       }
     }
 
     // 3. Generate token and create workspace_invitations row
-    const token = crypto.randomUUID()
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7) // expires in 7 days
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // expires in 7 days
 
     const { error: inviteErr } = await supabase
       .from("workspace_invitations")
@@ -98,34 +102,41 @@ export class InviteService {
         status: "pending",
         invited_by: invitedBy,
         expires_at: expiresAt.toISOString(),
-      })
+      });
 
     if (inviteErr) {
-      console.error("Error creating invitation row:", inviteErr)
-      throw new Error(inviteErr.message)
+      console.error("Error creating invitation row:", inviteErr);
+      throw new Error(inviteErr.message);
     }
 
     // 4. Return the invitation URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    return `${baseUrl}/invite/accept?token=${token}`
+    // Prefer explicit public URL, then Vercel-provided host, then localhost for dev
+    const envPublic = process.env.NEXT_PUBLIC_APP_URL;
+    const vercelHost = process.env.VERCEL_URL;
+    const baseUrl =
+      envPublic ||
+      (vercelHost ? `https://${vercelHost}` : "http://localhost:3000");
+    return `${baseUrl}/invite/accept?token=${token}`;
   }
 
   /**
    * Fetch invitation details by token, including workspace name and inviter name.
    */
-  static async getInvitationByToken(token: string): Promise<InvitationDetails | null> {
-    const supabase = await createClient()
+  static async getInvitationByToken(
+    token: string,
+  ): Promise<InvitationDetails | null> {
+    const supabase = await createClient();
 
     // Fetch invitation
     const { data: inviteRow, error: inviteErr } = await supabase
       .from("workspace_invitations")
       .select("*")
       .eq("token", token)
-      .maybeSingle()
+      .maybeSingle();
 
     if (inviteErr || !inviteRow) {
-      console.error("Error fetching invitation:", inviteErr)
-      return null
+      console.error("Error fetching invitation:", inviteErr);
+      return null;
     }
 
     // Map to Invitation type
@@ -139,55 +150,59 @@ export class InviteService {
       invitedBy: inviteRow.invited_by,
       createdAt: inviteRow.created_at,
       expiresAt: inviteRow.expires_at,
-    }
+    };
 
     // Fetch workspace name
     const { data: wsData } = await supabase
       .from("workspaces")
       .select("name")
       .eq("id", invitation.workspaceId)
-      .maybeSingle()
+      .maybeSingle();
 
     // Fetch inviter name
     const { data: inviterData } = await supabase
       .from("profiles")
       .select("full_name, email")
       .eq("id", invitation.invitedBy)
-      .maybeSingle()
+      .maybeSingle();
 
     return {
       invitation,
       workspaceName: wsData?.name || "Unknown Workspace",
       inviterName: inviterData?.full_name || inviterData?.email || "Someone",
-    }
+    };
   }
 
   /**
    * Accept an invitation.
    */
-  static async acceptInvitation(token: string, userId: string, userEmail: string): Promise<string> {
-    const supabase = await createClient()
+  static async acceptInvitation(
+    token: string,
+    userId: string,
+    userEmail: string,
+  ): Promise<string> {
+    const supabase = await createClient();
 
     // 1. Fetch invitation
-    const details = await this.getInvitationByToken(token)
+    const details = await this.getInvitationByToken(token);
     if (!details) {
-      throw new Error("Invitation not found.")
+      throw new Error("Invitation not found.");
     }
 
-    const { invitation } = details
+    const { invitation } = details;
 
     // 2. Validate status and expiration
     if (invitation.status !== "pending") {
-      throw new Error(`This invitation has already been ${invitation.status}.`)
+      throw new Error(`This invitation has already been ${invitation.status}.`);
     }
 
     if (new Date(invitation.expiresAt) < new Date()) {
-      throw new Error("This invitation has expired.")
+      throw new Error("This invitation has expired.");
     }
 
     // 3. Verify user's email matches
     if (userEmail.toLowerCase() !== invitation.email.toLowerCase()) {
-      throw new Error("Your email does not match the invitation email.")
+      throw new Error("Your email does not match the invitation email.");
     }
 
     // 4. Check if already a member
@@ -196,16 +211,16 @@ export class InviteService {
       .select("id")
       .eq("workspace_id", invitation.workspaceId)
       .eq("user_id", userId)
-      .maybeSingle()
+      .maybeSingle();
 
     if (existingMember) {
       // Mark invitation accepted anyway since they are already a member
       await supabase
         .from("workspace_invitations")
         .update({ status: "accepted" })
-        .eq("id", invitation.id)
+        .eq("id", invitation.id);
 
-      return invitation.workspaceId
+      return invitation.workspaceId;
     }
 
     // 5. Insert into workspace_members
@@ -215,79 +230,81 @@ export class InviteService {
         workspace_id: invitation.workspaceId,
         user_id: userId,
         role: invitation.role,
-      })
+      });
 
     if (memberErr) {
-      console.error("Error adding workspace member:", memberErr)
-      throw new Error(memberErr.message)
+      console.error("Error adding workspace member:", memberErr);
+      throw new Error(memberErr.message);
     }
 
     // 6. Update invitation status to accepted
     const { error: updateErr } = await supabase
       .from("workspace_invitations")
       .update({ status: "accepted" })
-      .eq("id", invitation.id)
+      .eq("id", invitation.id);
 
     if (updateErr) {
-      console.error("Error updating invitation status:", updateErr)
+      console.error("Error updating invitation status:", updateErr);
     }
 
-    return invitation.workspaceId
+    return invitation.workspaceId;
   }
 
   /**
    * Decline an invitation.
    */
   static async declineInvitation(token: string): Promise<void> {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     // 1. Fetch invitation
     const { data: inviteRow, error: inviteErr } = await supabase
       .from("workspace_invitations")
       .select("id, status, expires_at")
       .eq("token", token)
-      .maybeSingle()
+      .maybeSingle();
 
     if (inviteErr || !inviteRow) {
-      throw new Error("Invitation not found.")
+      throw new Error("Invitation not found.");
     }
 
     if (inviteRow.status !== "pending") {
-      throw new Error(`This invitation has already been ${inviteRow.status}.`)
+      throw new Error(`This invitation has already been ${inviteRow.status}.`);
     }
 
     if (new Date(inviteRow.expires_at) < new Date()) {
-      throw new Error("This invitation has expired.")
+      throw new Error("This invitation has expired.");
     }
 
     // 2. Update status to declined
     const { error: updateErr } = await supabase
       .from("workspace_invitations")
       .update({ status: "declined" })
-      .eq("id", inviteRow.id)
+      .eq("id", inviteRow.id);
 
     if (updateErr) {
-      console.error("Error declining invitation:", updateErr)
-      throw new Error(updateErr.message)
+      console.error("Error declining invitation:", updateErr);
+      throw new Error(updateErr.message);
     }
   }
 
   /**
    * Get all pending invitations for a workspace.
    */
-  static async getPendingInvitations(workspaceId: string): Promise<Invitation[]> {
-    const supabase = await createClient()
+  static async getPendingInvitations(
+    workspaceId: string,
+  ): Promise<Invitation[]> {
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from("workspace_invitations")
       .select("*")
       .eq("workspace_id", workspaceId)
       .eq("status", "pending")
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching pending invitations:", error)
-      throw new Error(error.message)
+      console.error("Error fetching pending invitations:", error);
+      throw new Error(error.message);
     }
 
     return (data || []).map((row) => ({
@@ -300,23 +317,23 @@ export class InviteService {
       invitedBy: row.invited_by,
       createdAt: row.created_at,
       expiresAt: row.expires_at,
-    }))
+    }));
   }
 
   /**
    * Revoke/Delete an invitation.
    */
   static async revokeInvitation(invitationId: string): Promise<void> {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from("workspace_invitations")
       .delete()
-      .eq("id", invitationId)
+      .eq("id", invitationId);
 
     if (error) {
-      console.error("Error revoking invitation:", error)
-      throw new Error(error.message)
+      console.error("Error revoking invitation:", error);
+      throw new Error(error.message);
     }
   }
 }
