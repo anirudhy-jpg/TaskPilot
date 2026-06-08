@@ -63,10 +63,10 @@ export function Header({ user }: HeaderProps) {
               <Link href="/workspace">
                 <Button
                   variant="default"
-                  className="bg-[#2d4a3e] hover:bg-[#20352c] text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm"
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm shadow-amber-500/10"
                 >
                   Workspace
-                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-white" />
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-slate-950" />
                 </Button>
               </Link>
             ) : (
@@ -79,7 +79,7 @@ export function Header({ user }: HeaderProps) {
                 <Link href="/signup">
                   <Button
                     variant="default"
-                    className="bg-[#2d4a3e] hover:bg-[#20352c] text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm"
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm shadow-amber-500/10"
                   >
                     Get Started
                   </Button>
@@ -127,9 +127,9 @@ export function Header({ user }: HeaderProps) {
           <div className="pt-4 border-t border-slate-200 flex flex-col gap-3">
             {user ? (
               <Link href="/workspace" onClick={() => setIsOpen(false)}>
-                <Button className="w-full bg-[#2d4a3e] hover:bg-[#20352c] text-white font-semibold py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer">
                   Workspace
-                  <ArrowRight className="w-4 h-4 text-white" />
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
                 </Button>
               </Link>
             ) : (
@@ -143,7 +143,7 @@ export function Header({ user }: HeaderProps) {
                   </Button>
                 </Link>
                 <Link href="/signup" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full bg-[#2d4a3e] hover:bg-[#20352c] text-white font-semibold py-2.5 rounded-lg transition-colors border-0 text-sm cursor-pointer">
+                  <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-colors border-0 text-sm cursor-pointer">
                     Get Started
                   </Button>
                 </Link>

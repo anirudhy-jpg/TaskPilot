@@ -11,8 +11,8 @@ export class TaskService {
     const { data, error } = await supabase
       .from("tasks")
       .select(`
-        id, project_id, title, description, status, created_at,
-        assignee:profiles!tasks_assignee_id_fkey(email, full_name, avatar_url)
+        id, project_id, title, description, status, assigned_to, created_at,
+        assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
@@ -21,7 +21,7 @@ export class TaskService {
       // Fallback: query without the join and select only guaranteed columns
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("tasks")
-        .select("id, project_id, title, description, status, created_at")
+        .select("id, project_id, title, description, status, assigned_to, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
 
@@ -59,7 +59,7 @@ export class TaskService {
 
     const { data, error } = await supabase
       .from("tasks")
-      .select("id, project_id, title, description, status, created_at")
+      .select("id, project_id, title, description, status, assigned_to, created_at")
       .in("project_id", projectIds)
       .order("created_at", { ascending: false })
 
@@ -91,11 +91,15 @@ export class TaskService {
     }
     if (input.description) insertData.description = input.description
     if (input.status) insertData.status = input.status
+    if (input.assigneeId) insertData.assigned_to = input.assigneeId
 
     const { data, error } = await supabase
       .from("tasks")
       .insert(insertData)
-      .select("id, project_id, title, description, status, created_at")
+      .select(`
+        id, project_id, title, description, status, created_at, assigned_to,
+        assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
+      `)
       .single()
 
     if (error) {
@@ -103,7 +107,7 @@ export class TaskService {
       throw new Error(error.message)
     }
 
-    return mapTask(data, null)
+    return mapTask(data, data.assignee)
   }
 
   /**
@@ -122,6 +126,26 @@ export class TaskService {
 
     if (error) {
       console.error("Error updating task status:", error)
+      throw new Error(error.message)
+    }
+  }
+
+  /**
+   * Update a task's assignee.
+   */
+  static async updateTaskAssignee(
+    taskId: string,
+    assigneeId: string | null
+  ): Promise<void> {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ assigned_to: assigneeId })
+      .eq("id", taskId)
+
+    if (error) {
+      console.error("Error updating task assignee:", error)
       throw new Error(error.message)
     }
   }

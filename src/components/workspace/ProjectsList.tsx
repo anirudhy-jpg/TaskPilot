@@ -15,11 +15,12 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Project, Task, TaskStatus } from "@/types/workspace.types";
+import type { Project, Task, TaskStatus, WorkspaceMember } from "@/types/workspace.types";
 import {
   createProjectAction,
   createTaskAction,
   updateTaskStatusAction,
+  updateTaskAssigneeAction,
   deleteTaskAction,
   deleteProjectAction,
 } from "@/actions/workspace/workspace.actions";
@@ -33,26 +34,28 @@ import { KanbanBoard } from "./KanbanBoard";
 interface ProjectsListProps {
   projects: (Project & { tasks: Task[] })[];
   workspaceId: string;
+  members: WorkspaceMember[];
+  currentUserId?: string;
 }
 
 const statusConfig: Record<
   TaskStatus,
   { label: string; color: string; icon: typeof Circle }
 > = {
-  todo: { label: "To Do", color: "text-slate-400", icon: Circle },
+  todo: { label: "To Do", color: "text-[#9bb0a5]", icon: Circle },
   in_progress: {
     label: "In Progress",
-    color: "text-amber-500",
+    color: "text-[#dca15c]",
     icon: Clock,
   },
   done: {
     label: "Done",
-    color: "text-emerald-500",
+    color: "text-rose-600",
     icon: CheckCircle2,
   },
 };
 
-function BoardContent({ projects, workspaceId }: ProjectsListProps) {
+function BoardContent({ projects, workspaceId, members, currentUserId }: ProjectsListProps) {
   const router = useRouter();
   const params = useParams();
   const activeProjectId = params?.projectId as string || null;
@@ -82,6 +85,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
       const res = await createProjectAction(workspaceId, name, description);
       if (res.success) {
         setIsCreateProjectOpen(false);
+        router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to create project.");
       }
@@ -92,6 +96,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
     title: string,
     description?: string,
     status?: TaskStatus,
+    assigneeId?: string,
   ) => {
     if (!createTaskProjectId) return;
     setErrorMsg(null);
@@ -102,9 +107,11 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
         description,
         status: status || "todo",
         priority: "medium",
+        assigneeId: assigneeId || undefined,
       });
       if (res.success) {
         setCreateTaskProjectId(null);
+        router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to create task.");
       }
@@ -115,8 +122,22 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
     setErrorMsg(null);
     startTransition(async () => {
       const res = await updateTaskStatusAction(taskId, status);
-      if (!res.success) {
+      if (res.success) {
+        router.refresh();
+      } else {
         setErrorMsg(res.error || "Failed to update task status.");
+      }
+    });
+  }
+
+  function handleAssigneeChange(taskId: string, assigneeId: string | null) {
+    setErrorMsg(null);
+    startTransition(async () => {
+      const res = await updateTaskAssigneeAction(taskId, assigneeId);
+      if (res.success) {
+        router.refresh();
+      } else {
+        setErrorMsg(res.error || "Failed to update task assignee.");
       }
     });
   }
@@ -147,6 +168,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
 
       if (res.success) {
         setDeleteTarget(null);
+        router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to execute delete action.");
         setDeleteTarget(null);
@@ -159,37 +181,42 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
   return (
     <div className="space-y-6 flex flex-col h-full w-full select-none">
       {/* ─── Header ─────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
         <div>
           {activeProject ? (
             <>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight sm:text-2xl">
-                  {activeProject.name}
-                </h1>
-                <button
-                  onClick={() =>
-                    setDeleteTarget({
-                      type: "project",
-                      id: activeProject.id,
-                      name: activeProject.name,
-                    })
-                  }
-                  className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                  title="Delete project"
-                >
-                  <Trash2 size={16} />
-                </button>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 font-extrabold text-xs shadow-3xs border border-amber-500/20 shrink-0">
+                  {activeProject.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
+                    {activeProject.name}
+                  </h1>
+                  <button
+                    onClick={() =>
+                      setDeleteTarget({
+                        type: "project",
+                        id: activeProject.id,
+                        name: activeProject.name,
+                      })
+                    }
+                    className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                    title="Delete project"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
               {activeProject.description && (
-                <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+                <p className="text-xs text-slate-550 mt-1.5 pl-11 max-w-2xl leading-relaxed">
                   {activeProject.description}
                 </p>
               )}
             </>
           ) : (
             <div>
-              <h1 className="text-xl font-bold text-slate-900">
+              <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
                 Projects Dashboard
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -205,7 +232,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
               <Button
                 size="sm"
                 variant="outline"
-                className="border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer text-xs font-semibold"
+                className="border-amber-500/20 hover:bg-amber-500/5 text-amber-600 cursor-pointer text-xs font-semibold rounded-xl"
               >
                 <span>Back to Projects</span>
               </Button>
@@ -213,7 +240,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
           ) : (
             <Button
               size="sm"
-              className="bg-[#2d4a3e] hover:bg-[#1e3a2e] text-white cursor-pointer shadow-sm text-xs font-semibold"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-3xs text-xs font-black rounded-xl px-4 py-2"
               onClick={() => setIsCreateProjectOpen(true)}
             >
               <Plus size={14} className="mr-1.5" />
@@ -240,18 +267,17 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
         /* ─── VIEW 1: KANBAN BOARD ─── */
         <KanbanBoard
           project={activeProject}
-          isPending={isPending}
+          members={members}
+          currentUserId={currentUserId}
           onAddTask={(status) => {
             setNewTaskStatus(status);
             setCreateTaskProjectId(activeProject.id);
           }}
-          onDeleteProject={(id, name) =>
-            setDeleteTarget({ type: "project", id, name })
-          }
           onDeleteTask={(id, title) =>
             setDeleteTarget({ type: "task", id, name: title })
           }
           onStatusChange={handleStatusChange}
+          onAssigneeChange={handleAssigneeChange}
         />
       ) : (
         /* ─── VIEW 2: ALL PROJECTS GRID ─── */
@@ -268,7 +294,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
               </p>
               <Button
                 size="sm"
-                className="bg-[#2d4a3e] hover:bg-[#1e3a2e] text-white cursor-pointer"
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold cursor-pointer"
                 onClick={() => setIsCreateProjectOpen(true)}
               >
                 Create Your First Project
@@ -291,14 +317,14 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
                     onClick={() =>
                       router.push(`/projects/${project.id}`)
                     }
-                    className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-[#2d4a3e]/30 transition-all duration-200 flex flex-col justify-between min-h-[380px] group cursor-pointer"
+                    className="bg-white/70 backdrop-blur-md border border-amber-900/5 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_16px_32px_-8px_rgba(245,158,11,0.1)] hover:-translate-y-1 hover:border-amber-500/20 transition-all duration-305 flex flex-col justify-between min-h-[380px] group cursor-pointer"
                   >
                     {/* Card Top Details */}
                     <div>
-                      <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center justify-between gap-3 mb-3">
                         <div className="flex items-center gap-2">
-                          <FolderKanban size={16} className="text-[#2d4a3e]" />
-                          <span className="text-sm font-extrabold text-slate-900 group-hover:text-[#2d4a3e] group-hover:underline truncate max-w-[170px]">
+                          <FolderKanban size={16} className="text-amber-600" />
+                          <span className="text-sm font-extrabold text-slate-800 group-hover:text-amber-700 group-hover:underline truncate max-w-[170px]">
                             {project.name}
                           </span>
                         </div>
@@ -319,11 +345,11 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
                       </div>
 
                       {project.description ? (
-                        <p className="text-[11px] text-slate-450 leading-relaxed truncate-2-lines mb-4 h-8 overflow-hidden">
+                        <p className="text-[11px] text-slate-500 leading-relaxed truncate-2-lines mb-4 h-8 overflow-hidden">
                           {project.description}
                         </p>
                       ) : (
-                        <p className="text-[11px] text-slate-350 italic mb-4 h-8">
+                        <p className="text-[11px] text-slate-400 italic mb-4 h-8">
                           No description provided.
                         </p>
                       )}
@@ -337,20 +363,20 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
                             {progressPercent}%)
                           </span>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="w-full h-1.5 bg-amber-500/10 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#2d4a3e] rounded-full transition-all duration-300"
+                            className="h-full bg-amber-500 rounded-full transition-all duration-300"
                             style={{ width: `${progressPercent}%` }}
                           />
                         </div>
                       </div>
 
                       {/* Mini task list overview */}
-                      <div className="border-t border-slate-100 pt-3">
+                      <div className="border-t border-amber-955/10 pt-3">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                           Tasks Pipeline
                         </div>
-                        <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                        <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1 scrollbar-thin">
                           {project.tasks && project.tasks.length > 0 ? (
                             project.tasks.map((task) => {
                               const cfg = statusConfig[task.status];
@@ -359,7 +385,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
                               return (
                                 <div
                                   key={task.id}
-                                  className="flex items-center justify-between gap-2 py-1 px-2 rounded-md hover:bg-slate-50 transition-colors group/task"
+                                  className="flex items-center justify-between gap-2 py-1 px-2 rounded-lg hover:bg-white/80 transition-colors group/task"
                                 >
                                   <div className="flex items-center gap-2 truncate">
                                     <button
@@ -400,7 +426,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
                               );
                             })
                           ) : (
-                            <span className="text-[10px] text-slate-355 italic pl-1">
+                            <span className="text-[10px] text-slate-400 italic pl-1">
                               No tasks in this project.
                             </span>
                           )}
@@ -409,15 +435,15 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
                     </div>
 
                     {/* Card Footer Actions */}
-                    <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-[#2d4a3e] group-hover:underline">
-                        Open Board &rarr;
+                    <div className="pt-4 mt-4 border-t border-amber-955/10 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-extrabold text-amber-600 group-hover:text-amber-700 flex items-center gap-1">
+                        Open Board <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
                       </span>
 
                       <Button
                         size="xs"
                         variant="outline"
-                        className="border-[#2d4a3e]/30 hover:bg-[#2d4a3e]/5 text-[#2d4a3e] cursor-pointer text-[10px] font-bold px-2.5 py-1"
+                        className="border-amber-500/35 hover:bg-amber-500/10 text-amber-700 hover:text-amber-800 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg"
                         onClick={(e) => {
                           e.stopPropagation();
                           setNewTaskStatus("todo");
@@ -446,6 +472,7 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
       />
 
       <CreateTaskModal
+        key={createTaskProjectId ? `${createTaskProjectId}-${newTaskStatus}` : "closed"}
         isOpen={!!createTaskProjectId}
         onClose={() => setCreateTaskProjectId(null)}
         projectName={
@@ -453,6 +480,8 @@ function BoardContent({ projects, workspaceId }: ProjectsListProps) {
         }
         isPending={isPending}
         initialStatus={newTaskStatus}
+        members={members}
+        currentUserId={currentUserId}
         onCreate={handleCreateTask}
       />
 

@@ -49,7 +49,7 @@ export function CreateProjectModal({
               placeholder="e.g. AI Model Orchestrator"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/20 focus:border-[#2d4a3e]"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               autoFocus
             />
           </div>
@@ -62,7 +62,7 @@ export function CreateProjectModal({
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/20 focus:border-[#2d4a3e] resize-none"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"
             />
           </div>
         </div>
@@ -79,7 +79,7 @@ export function CreateProjectModal({
             size="sm"
             onClick={handleSubmit}
             disabled={isPending || !name.trim()}
-            className="bg-[#2d4a3e] hover:bg-[#1e3a2e] text-white text-xs font-bold cursor-pointer"
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black cursor-pointer"
           >
             {isPending ? "Creating..." : "Create Project"}
           </Button>

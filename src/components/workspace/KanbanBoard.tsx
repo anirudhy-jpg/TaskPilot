@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Plus,
   Trash2,
@@ -10,16 +10,24 @@ import {
   Clock,
   CheckCircle2,
   User,
+  Calendar,
+  ListTodo,
+  AlertCircle,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
-import type { Project, Task, TaskStatus } from "@/types/workspace.types";
+import type { Project, Task, TaskStatus, WorkspaceMember, TaskPriority } from "@/types/workspace.types";
+import { AssigneeSelector } from "./AssigneeSelector";
+import { TaskDetailsModal } from "./TaskDetailsModal";
 
 interface KanbanBoardProps {
   project: Project & { tasks: Task[] };
-  isPending: boolean;
+  members: WorkspaceMember[];
+  currentUserId?: string;
   onAddTask: (status: TaskStatus) => void;
-  onDeleteProject: (id: string, name: string) => void;
   onDeleteTask: (id: string, title: string) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
+  onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
 }
 
 function getProjectInitials(name: string): string {
@@ -32,7 +40,7 @@ function getProjectInitials(name: string): string {
   return (words[0][0] + (words[1] ? words[1][0] : "")).toUpperCase();
 }
 
-function getUserInitials(name?: string | null, email?: string | null): string {
+export function getUserInitials(name?: string | null, email?: string | null): string {
   const display = name || email || "?";
   if (display === "?") return "?";
   
@@ -47,11 +55,11 @@ function getUserInitials(name?: string | null, email?: string | null): string {
   return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
 }
 
-function getAvatarBgColor(identifier: string): string {
+export function getAvatarBgColor(identifier: string): string {
   const colors = [
     "bg-amber-500 text-white",     // Orange/yellow
     "bg-blue-500 text-white",      // Blue
-    "bg-emerald-500 text-white",   // Green
+    "bg-zinc-700 text-white",      // Charcoal
     "bg-rose-500 text-white",      // Rose/red
     "bg-violet-500 text-white",    // Violet
     "bg-teal-500 text-white",      // Teal
@@ -66,14 +74,41 @@ function getAvatarBgColor(identifier: string): string {
   return colors[index];
 }
 
+// Deterministic visual priority assigner for UI presentation
+export function getVisualPriority(task: Task): TaskPriority {
+  if (task.priority && task.priority !== "medium") {
+    return task.priority;
+  }
+  const titleLower = task.title.toLowerCase();
+  if (titleLower.includes("bug") || titleLower.includes("fix") || titleLower.includes("critical") || titleLower.includes("urgent")) {
+    return "high";
+  }
+  if (titleLower.includes("clean") || titleLower.includes("refactor") || titleLower.includes("doc") || titleLower.includes("test")) {
+    return "low";
+  }
+  const charCode = task.id.charCodeAt(0) || 0;
+  if (charCode % 3 === 0) return "high";
+  if (charCode % 3 === 1) return "low";
+  return "medium";
+}
+
+function formatTaskDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export function KanbanBoard({
   project,
-  isPending,
+  members,
+  currentUserId,
   onAddTask,
-  onDeleteProject,
   onDeleteTask,
   onStatusChange,
+  onAssigneeChange,
 }: KanbanBoardProps) {
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const selectedTask = project.tasks?.find((t) => t.id === selectedTaskId) || null;
+
   // Filter tasks into columns
   const todoTasks = project.tasks?.filter((t) => t.status === "todo") || [];
   const inProgressTasks = project.tasks?.filter((t) => t.status === "in_progress") || [];
@@ -88,339 +123,230 @@ export function KanbanBoard({
   const taskNumberMap = new Map(sortedTasks.map((t, idx) => [t.id, idx + 1]));
   const projectPrefix = getProjectInitials(project.name);
 
+  // Helper to render columns
+  const renderColumn = (
+    title: string,
+    status: TaskStatus,
+    tasks: Task[],
+    accentClass: string,
+    headerIcon: React.ReactNode,
+    badgeBg: string,
+    nextStatus?: TaskStatus,
+    prevStatus?: TaskStatus
+  ) => {
+    return (
+      <div className={`rounded-3xl bg-white/40 backdrop-blur-md border border-amber-900/5 p-5 flex flex-col gap-4 min-h-[600px] w-full relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:${accentClass} shadow-xs`}>
+        {/* Column Header */}
+        <div className="flex items-center justify-between px-1.5 mb-1.5">
+          <div className="flex items-center gap-2.5">
+            {headerIcon}
+            <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+              {title}
+            </h3>
+            {tasks.length > 0 && (
+              <span className={`text-[10px] ${badgeBg} px-2 py-0.5 rounded-full font-black shadow-2xs`}>
+                {tasks.length}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Task Cards Stack */}
+        <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[600px] pr-1 scrollbar-thin">
+          {tasks.map((task) => {
+            const visualPriority = getVisualPriority(task);
+            const priorityStyles = {
+              high: {
+                border: "border-l-[3.5px] border-l-rose-450",
+                badge: "bg-rose-50 text-rose-600 border-rose-100/60 rounded-full",
+                icon: <AlertCircle size={9} className="text-rose-500" />,
+                label: "High"
+              },
+              medium: {
+                border: "border-l-[3.5px] border-l-amber-450",
+                badge: "bg-amber-50 text-amber-700 border-amber-200/40 rounded-full",
+                icon: <AlertTriangle size={9} className="text-amber-600" />,
+                label: "Medium"
+              },
+              low: {
+                border: "border-l-[3.5px] border-l-slate-400",
+                badge: "bg-slate-50 text-slate-650 border-slate-100 rounded-full",
+                icon: <Info size={9} className="text-slate-400" />,
+                label: "Low"
+              }
+            }[visualPriority];
+
+            return (
+              <div
+                key={task.id}
+                onClick={() => setSelectedTaskId(task.id)}
+                className={`p-5 bg-white/80 backdrop-blur-md hover:bg-white/95 rounded-2xl border border-amber-900/5 hover:border-amber-500/20 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_16px_32px_-8px_rgba(245,158,11,0.1)] hover:-translate-y-1 transition-all duration-300 group relative cursor-pointer ${priorityStyles.border}`}
+              >
+                {/* Top Badge Row */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    {projectPrefix}-{taskNumberMap.get(task.id)}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider shadow-3xs ${priorityStyles.badge}`}>
+                    {priorityStyles.icon}
+                    <span>{priorityStyles.label}</span>
+                  </span>
+                </div>
+
+                {/* Task Title */}
+                <h4 className={`text-xs sm:text-[13.5px] font-extrabold text-slate-800 leading-snug group-hover:text-amber-700 transition-colors ${status === "done" ? "line-through text-slate-400 font-medium" : ""}`}>
+                  {task.title}
+                </h4>
+
+                {/* Task Description */}
+                {task.description && (
+                  <p className={`text-[11px] text-slate-500 mt-1 leading-normal line-clamp-2 ${status === "done" ? "line-through text-slate-400" : ""}`}>
+                    {task.description}
+                  </p>
+                )}
+
+                <div className="h-[1px] bg-amber-955/10 my-3.5" />
+
+                {/* Card Footer */}
+                <div className="flex items-center justify-between">
+                  {/* Left: Created Date */}
+                  <div className="flex items-center gap-1 text-slate-400">
+                    <Calendar size={11} className="text-slate-400" />
+                    <span className="text-[10px] font-semibold">
+                      {formatTaskDate(task.createdAt)}
+                    </span>
+                  </div>
+
+                  {/* Right: Actions + Assignee */}
+                  <div className="flex items-center gap-2 relative">
+                    {/* Floating Hover Actions Toolbar */}
+                    <div className="flex items-center gap-0.5 bg-white/95 backdrop-blur-md border border-amber-900/10 rounded-xl shadow-lg p-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 absolute right-8 bottom-[-2px] z-10">
+                      {prevStatus && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatusChange(task.id, prevStatus);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="Move back"
+                        >
+                          <ArrowLeft size={11} />
+                        </button>
+                      )}
+                      {nextStatus && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatusChange(task.id, nextStatus);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-amber-700 hover:bg-slate-55 transition-colors cursor-pointer"
+                          title="Move forward"
+                        >
+                          <ArrowRight size={11} />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteTask(task.id, task.title);
+                        }}
+                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Delete task"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+
+                    {/* Avatar Selection wrapper */}
+                    <div className="relative z-0">
+                      <AssigneeSelector
+                        task={task}
+                        members={members}
+                        currentUserId={currentUserId}
+                        onChange={onAssigneeChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {tasks.length === 0 && (
+            <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-amber-500/10 rounded-3xl bg-white/20 shadow-3xs p-4">
+              <span className="text-xl mb-1.5 opacity-70">📥</span>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Empty Column</p>
+              <p className="text-[9px] text-slate-400/90 mt-0.5">No tasks in this stage</p>
+            </div>
+          )}
+        </div>
+
+        {/* Add Task Button at Bottom */}
+        <button
+          onClick={() => onAddTask(status)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-slate-650 hover:text-amber-700 bg-white/60 hover:bg-white border border-amber-900/5 hover:border-amber-500/20 rounded-2xl text-xs font-extrabold shadow-3xs hover:shadow-2xs transition-all duration-250 cursor-pointer"
+        >
+          <Plus size={13} className="text-amber-600 stroke-[2.5]" />
+          <span>Add Task</span>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full">
       {/* TO DO COLUMN */}
-      <div className="rounded-2xl bg-slate-100/60 border border-slate-200/50 p-3.5 flex flex-col gap-3 min-h-[550px] w-full">
-        <div className="flex items-center justify-between px-1 mb-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              To Do
-            </h3>
-            {todoTasks.length > 0 && (
-              <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">
-                {todoTasks.length}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[600px] pr-1">
-          {todoTasks.map((task) => (
-            <div
-              key={task.id}
-              className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-[0_2px_4px_rgba(15,23,42,0.01)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative"
-            >
-              <h4 className="text-xs font-semibold text-slate-800 leading-snug">
-                {task.title}
-              </h4>
-              {task.description && (
-                <p className="text-[10px] text-slate-400 mt-1 leading-normal truncate">
-                  {task.description}
-                </p>
-              )}
-              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
-                {/* Left: Task Key / Badge */}
-                <div className="flex items-center gap-1.5">
-                  <span className="flex items-center justify-center w-4 h-4 rounded bg-slate-100 text-slate-500 shrink-0">
-                    <Circle size={10} />
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400">
-                    {projectPrefix}-{taskNumberMap.get(task.id)}
-                  </span>
-                </div>
-
-                {/* Right: Actions + Assignee */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => onStatusChange(task.id, "in_progress")}
-                      className="p-1 rounded text-slate-400 hover:text-[#2d4a3e] hover:bg-slate-100 transition-colors cursor-pointer"
-                      title="Start task"
-                    >
-                      <ArrowRight size={12} />
-                    </button>
-                    <button
-                      onClick={() => onDeleteTask(task.id, task.title)}
-                      className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="Delete task"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="shrink-0">
-                    {task.assignee ? (
-                      task.assignee.avatarUrl ? (
-                        <img
-                          src={task.assignee.avatarUrl}
-                          alt={task.assignee.fullName || task.assignee.email}
-                          className="w-5 h-5 rounded-full object-cover border border-slate-200 shadow-sm"
-                        />
-                      ) : (
-                        <div
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border border-white shadow-sm uppercase ${getAvatarBgColor(
-                            task.assignee.fullName || task.assignee.email
-                          )}`}
-                          title={task.assignee.fullName || task.assignee.email}
-                        >
-                          {getUserInitials(task.assignee.fullName, task.assignee.email)}
-                        </div>
-                      )
-                    ) : (
-                      <div
-                        className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm"
-                        title="Unassigned"
-                      >
-                        <User size={10} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {todoTasks.length === 0 && (
-            <div className="py-8 text-center border border-dashed border-slate-200 rounded-xl">
-              <p className="text-[10px] text-slate-400">No tasks here</p>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => onAddTask("todo")}
-          className="w-full flex items-center justify-start gap-1.5 px-2 py-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        >
-          <Plus size={14} />
-          <span>Create</span>
-        </button>
-      </div>
+      {renderColumn(
+        "To Do",
+        "todo",
+        todoTasks,
+        "bg-gradient-to-r before:from-blue-400 before:to-indigo-500",
+        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 shadow-3xs shrink-0">
+          <ListTodo size={12} />
+        </span>,
+        "bg-blue-50 text-blue-700 border border-blue-100/60",
+        "in_progress",
+        undefined
+      )}
 
       {/* IN PROGRESS COLUMN */}
-      <div className="rounded-2xl bg-slate-100/60 border border-slate-200/50 p-3.5 flex flex-col gap-3 min-h-[550px] w-full">
-        <div className="flex items-center justify-between px-1 mb-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              In Progress
-            </h3>
-            {inProgressTasks.length > 0 && (
-              <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">
-                {inProgressTasks.length}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[600px] pr-1">
-          {inProgressTasks.map((task) => (
-            <div
-              key={task.id}
-              className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-[0_2px_4px_rgba(15,23,42,0.01)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative"
-            >
-              <h4 className="text-xs font-semibold text-slate-800 leading-snug">
-                {task.title}
-              </h4>
-              {task.description && (
-                <p className="text-[10px] text-slate-400 mt-1 leading-normal truncate">
-                  {task.description}
-                </p>
-              )}
-              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
-                {/* Left: Task Key / Badge */}
-                <div className="flex items-center gap-1.5">
-                  <span className="flex items-center justify-center w-4 h-4 rounded bg-amber-100 text-amber-600 shrink-0">
-                    <Clock size={10} />
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400">
-                    {projectPrefix}-{taskNumberMap.get(task.id)}
-                  </span>
-                </div>
-
-                {/* Right: Actions + Assignee */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => onStatusChange(task.id, "todo")}
-                      className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                      title="Move back to To Do"
-                    >
-                      <ArrowLeft size={12} />
-                    </button>
-                    <button
-                      onClick={() => onStatusChange(task.id, "done")}
-                      className="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
-                      title="Mark as Done"
-                    >
-                      <CheckCircle2 size={12} />
-                    </button>
-                    <button
-                      onClick={() => onDeleteTask(task.id, task.title)}
-                      className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="Delete task"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="shrink-0">
-                    {task.assignee ? (
-                      task.assignee.avatarUrl ? (
-                        <img
-                          src={task.assignee.avatarUrl}
-                          alt={task.assignee.fullName || task.assignee.email}
-                          className="w-5 h-5 rounded-full object-cover border border-slate-200 shadow-sm"
-                        />
-                      ) : (
-                        <div
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border border-white shadow-sm uppercase ${getAvatarBgColor(
-                            task.assignee.fullName || task.assignee.email
-                          )}`}
-                          title={task.assignee.fullName || task.assignee.email}
-                        >
-                          {getUserInitials(task.assignee.fullName, task.assignee.email)}
-                        </div>
-                      )
-                    ) : (
-                      <div
-                        className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm"
-                        title="Unassigned"
-                      >
-                        <User size={10} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {inProgressTasks.length === 0 && (
-            <div className="py-8 text-center border border-dashed border-slate-200 rounded-xl">
-              <p className="text-[10px] text-slate-400">No tasks here</p>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => onAddTask("in_progress")}
-          className="w-full flex items-center justify-start gap-1.5 px-2 py-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        >
-          <Plus size={14} />
-          <span>Create</span>
-        </button>
-      </div>
+      {renderColumn(
+        "In Progress",
+        "in_progress",
+        inProgressTasks,
+        "bg-gradient-to-r before:from-amber-400 before:to-orange-500",
+        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-50 border border-amber-250/50 text-amber-600 shadow-3xs shrink-0">
+          <Clock size={12} className="animate-spin-slow" />
+        </span>,
+        "bg-amber-50 text-amber-700 border border-amber-250/60",
+        "done",
+        "todo"
+      )}
 
       {/* DONE COLUMN */}
-      <div className="rounded-2xl bg-slate-100/60 border border-slate-200/50 p-3.5 flex flex-col gap-3 min-h-[550px] w-full">
-        <div className="flex items-center justify-between px-1 mb-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Done
-            </h3>
-            {doneTasks.length > 0 && (
-              <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">
-                {doneTasks.length}
-              </span>
-            )}
-            <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
-          </div>
-        </div>
+      {renderColumn(
+        "Done",
+        "done",
+        doneTasks,
+        "bg-gradient-to-r before:from-red-400 before:to-rose-500",
+        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-50 border border-rose-250/50 text-rose-600 shadow-3xs shrink-0">
+          <CheckCircle2 size={12} />
+        </span>,
+        "bg-rose-50 text-rose-700 border border-rose-250/60",
+        undefined,
+        "in_progress"
+      )}
 
-        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[600px] pr-1">
-          {doneTasks.map((task) => (
-            <div
-              key={task.id}
-              className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-[0_2px_4px_rgba(15,23,42,0.01)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative"
-            >
-              <h4 className="text-xs font-semibold text-slate-400 leading-snug line-through">
-                {task.title}
-              </h4>
-              {task.description && (
-                <p className="text-[10px] text-slate-400 mt-1 leading-normal truncate line-through">
-                  {task.description}
-                </p>
-              )}
-              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
-                {/* Left: Task Key / Badge */}
-                <div className="flex items-center gap-1.5">
-                  <span className="flex items-center justify-center w-4 h-4 rounded bg-emerald-50 text-emerald-600 shrink-0">
-                    <CheckCircle2 size={10} />
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400 line-through">
-                    {projectPrefix}-{taskNumberMap.get(task.id)}
-                  </span>
-                </div>
-
-                {/* Right: Actions + Assignee */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => onStatusChange(task.id, "in_progress")}
-                      className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                      title="Reopen task"
-                    >
-                      <ArrowLeft size={12} />
-                    </button>
-                    <button
-                      onClick={() => onDeleteTask(task.id, task.title)}
-                      className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="Delete task"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="shrink-0">
-                    {task.assignee ? (
-                      task.assignee.avatarUrl ? (
-                        <img
-                          src={task.assignee.avatarUrl}
-                          alt={task.assignee.fullName || task.assignee.email}
-                          className="w-5 h-5 rounded-full object-cover border border-slate-200 shadow-sm"
-                        />
-                      ) : (
-                        <div
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border border-white shadow-sm uppercase ${getAvatarBgColor(
-                            task.assignee.fullName || task.assignee.email
-                          )}`}
-                          title={task.assignee.fullName || task.assignee.email}
-                        >
-                          {getUserInitials(task.assignee.fullName, task.assignee.email)}
-                        </div>
-                      )
-                    ) : (
-                      <div
-                        className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm"
-                        title="Unassigned"
-                      >
-                        <User size={10} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {doneTasks.length === 0 && (
-            <div className="py-8 text-center border border-dashed border-slate-200 rounded-xl">
-              <p className="text-[10px] text-slate-400">No tasks here</p>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => onAddTask("done")}
-          className="w-full flex items-center justify-start gap-1.5 px-2 py-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        >
-          <Plus size={14} />
-          <span>Create</span>
-        </button>
-      </div>
+      <TaskDetailsModal
+        task={selectedTask}
+        members={members}
+        isOpen={selectedTaskId !== null}
+        onClose={() => setSelectedTaskId(null)}
+        projectPrefix={projectPrefix}
+        taskNumber={selectedTaskId ? taskNumberMap.get(selectedTaskId) : undefined}
+        currentUserId={currentUserId}
+        onAssigneeChange={onAssigneeChange}
+      />
     </div>
   );
 }

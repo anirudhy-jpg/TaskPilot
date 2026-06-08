@@ -61,10 +61,10 @@ export function Features() {
             return (
               <div
                 key={index}
-                className="group relative rounded-lg border border-slate-200 bg-white p-6 hover:border-[#2d4a3e]/35 transition-all duration-150 shadow-sm"
+                className="group relative rounded-lg border border-slate-200 bg-white p-6 hover:border-amber-500/40 transition-all duration-150 shadow-sm"
               >
                 {/* Feature Icon */}
-                <div className="w-9 h-9 rounded bg-[#f8fafc] border border-slate-200 text-[#2d4a3e] flex items-center justify-center mb-5 group-hover:text-[#2d4a3e]/85 transition-colors">
+                <div className="w-9 h-9 rounded bg-[#f8fafc] border border-slate-200 text-amber-600 flex items-center justify-center mb-5 group-hover:text-amber-500 transition-colors">
                   <Icon className="w-4 h-4" />
                 </div>
 

@@ -8,7 +8,50 @@ export class WorkspaceService {
   static async getWorkspaceForUser(userId: string): Promise<Workspace | null> {
     const supabase = await createClient()
 
-    // First try as owner
+    // 1. Check if active_workspace_id cookie exists and is valid for this user
+    try {
+      const { cookies } = await import("next/headers")
+      const cookieStore = await cookies()
+      const activeWorkspaceId = cookieStore.get("active_workspace_id")?.value
+      if (activeWorkspaceId) {
+        // Verify user is owner or member of this workspace
+        const { data: isOwner } = await supabase
+          .from("workspaces")
+          .select("id")
+          .eq("id", activeWorkspaceId)
+          .eq("owner_id", userId)
+          .maybeSingle()
+
+        if (isOwner) {
+          const { data: ws } = await supabase
+            .from("workspaces")
+            .select("*")
+            .eq("id", activeWorkspaceId)
+            .single()
+          if (ws) return mapWorkspace(ws)
+        }
+
+        const { data: isMember } = await supabase
+          .from("workspace_members")
+          .select("id")
+          .eq("workspace_id", activeWorkspaceId)
+          .eq("user_id", userId)
+          .maybeSingle()
+
+        if (isMember) {
+          const { data: ws } = await supabase
+            .from("workspaces")
+            .select("*")
+            .eq("id", activeWorkspaceId)
+            .single()
+          if (ws) return mapWorkspace(ws)
+        }
+      }
+    } catch (err) {
+      console.warn("Could not retrieve active_workspace_id from cookies:", err)
+    }
+
+    // 2. Default: First try as owner
     const { data: ownedWs, error: ownErr } = await supabase
       .from("workspaces")
       .select("*")
@@ -25,7 +68,7 @@ export class WorkspaceService {
       return mapWorkspace(ownedWs)
     }
 
-    // Then try as member
+    // 3. Then try as member
     const { data: memberRow, error: memErr } = await supabase
       .from("workspace_members")
       .select("workspace_id")

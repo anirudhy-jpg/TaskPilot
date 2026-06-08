@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/supabase/server"
 import { WorkspaceService } from "@/services/workspace.service"
 import { ProjectService } from "@/services/project.service"
 import { TaskService } from "@/services/task.service"
+import { MemberService } from "@/services/member.service"
 import { ProjectsList } from "@/components/workspace/ProjectsList"
 
 export default async function ProjectsPage() {
@@ -13,6 +14,7 @@ export default async function ProjectsPage() {
   if (!workspace) redirect("/workspace")
 
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
+  const members = await MemberService.getMembersByWorkspace(workspace.id)
 
   // Fetch tasks for each project
   const projectsWithTasks = await Promise.all(
@@ -23,6 +25,6 @@ export default async function ProjectsPage() {
   )
 
   return (
-    <ProjectsList projects={projectsWithTasks} workspaceId={workspace.id} />
+    <ProjectsList projects={projectsWithTasks} workspaceId={workspace.id} members={members} currentUserId={user.id} />
   )
 }

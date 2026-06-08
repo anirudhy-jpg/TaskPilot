@@ -43,7 +43,7 @@ export function InteractiveDemo() {
     {
       id: "done",
       title: "Done",
-      color: "border-t-emerald-500",
+      color: "border-t-rose-500",
       tasks: [
         { id: "6", title: "Deploy initial Supabase schema", category: "DevOps", priority: "High" },
       ],
@@ -145,7 +145,7 @@ export function InteractiveDemo() {
       case "Design":
         return "bg-violet-500/10 text-violet-400 border-violet-500/20"
       default:
-        return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+        return "bg-amber-500/10 text-amber-400 border-amber-500/20"
     }
   }
 
@@ -236,12 +236,12 @@ export function InteractiveDemo() {
                 className="flex flex-col gap-4 bg-slate-900/30 rounded-2xl border border-white/[0.03] p-4 min-h-[350px] relative overflow-hidden"
               >
                 {/* Column Top Accent */}
-                <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${col.id === 'todo' ? 'from-indigo-500' : col.id === 'progress' ? 'from-violet-500' : 'from-emerald-500'} to-transparent`} />
+                <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${col.id === 'todo' ? 'from-indigo-500' : col.id === 'progress' ? 'from-violet-500' : 'from-rose-500'} to-transparent`} />
 
                 {/* Column Header */}
                 <div className="flex items-center justify-between text-sm font-semibold text-slate-300 mt-1">
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${col.id === 'todo' ? 'bg-indigo-500' : col.id === 'progress' ? 'bg-violet-500' : 'bg-emerald-500'}`} />
+                    <span className={`w-2 h-2 rounded-full ${col.id === 'todo' ? 'bg-indigo-500' : col.id === 'progress' ? 'bg-violet-500' : 'bg-rose-500'}`} />
                     <span>{col.title}</span>
                   </div>
                   <span className="px-2 py-0.5 rounded-full bg-white/5 text-xs text-slate-500">

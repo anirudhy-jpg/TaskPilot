@@ -14,10 +14,11 @@ export async function loginAction(input: LoginInput): Promise<ActionResponse> {
   try {
     await AuthService.signIn(input)
     isSuccess = true
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred during sign in."
     return {
       success: false,
-      error: error.message || "An unknown error occurred during sign in.",
+      error: message,
     }
   }
 
@@ -33,10 +34,11 @@ export async function signupAction(input: SignupInput): Promise<ActionResponse> 
   try {
     await AuthService.signUp(input)
     isSuccess = true
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred during sign up."
     return {
       success: false,
-      error: error.message || "An unknown error occurred during sign up.",
+      error: message,
     }
   }
 
@@ -52,11 +54,18 @@ export async function logoutAction(): Promise<void> {
   try {
     await AuthService.signOut()
     isSuccess = true
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Signout error:", error)
   }
 
   if (isSuccess) {
+    try {
+      const { cookies } = await import("next/headers")
+      const cookieStore = await cookies()
+      cookieStore.delete("active_workspace_id")
+    } catch (cookieErr) {
+      console.error("Failed to delete active_workspace_id cookie:", cookieErr)
+    }
     redirect("/login")
   }
 }

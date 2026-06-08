@@ -5,10 +5,7 @@ import { WorkspaceService } from "@/services/workspace.service"
 import { ProjectService } from "@/services/project.service"
 import { TaskService } from "@/services/task.service"
 import { Sidebar } from "@/components/workspace/Sidebar"
-import { Logo } from "@/components/ui/logo"
-import { Button } from "@/components/ui/button"
-import { logoutAction } from "@/actions/auth/auth.actions"
-import { LogOut } from "lucide-react"
+import { Header } from "@/components/workspace/Header"
 
 export default async function WorkspaceLayout({
   children,
@@ -66,46 +63,21 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans w-full">
+    <div className="min-h-screen bg-gradient-to-br from-[#fffdf9] via-[#fbfaf8] to-[#f6f5f0] dark:from-[#0f0e0c] dark:via-[#131211] dark:to-[#181613] text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full relative overflow-hidden">
+      {/* Ambient glows (High-vibrancy gold, smoky dark, and warm rose-red highlights) */}
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[55%] rounded-full bg-amber-400/20 dark:bg-amber-500/12 blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[45%] rounded-full bg-rose-500/15 dark:bg-rose-600/8 blur-[130px] pointer-events-none" />
+      <div className="absolute top-[30%] right-[15%] w-[40%] h-[40%] rounded-full bg-amber-500/15 dark:bg-amber-500/8 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[20%] left-[10%] w-[35%] h-[35%] rounded-full bg-slate-400/12 dark:bg-slate-800/10 blur-[110px] pointer-events-none" />
+
       {/* ── Navbar ─────────────────────────────────────────── */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-50 w-full">
-        <div className="w-full px-6 h-14 flex items-center justify-between">
-          <Logo size="md" />
-
-          <div className="flex items-center gap-3">
-            {/* User chip */}
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
-              <div className="w-6 h-6 rounded-full bg-[#2d4a3e]/10 flex items-center justify-center text-[#2d4a3e] text-xs font-semibold uppercase">
-                {profile?.fullName?.[0] ||
-                  profile?.email?.[0] ||
-                  user.email?.[0] ||
-                  "?"}
-              </div>
-              <span className="text-xs font-semibold text-slate-600 hidden sm:inline-block truncate max-w-[150px]">
-                {profile?.fullName || profile?.email || user.email}
-              </span>
-            </div>
-
-            {/* Logout */}
-            <form action={logoutAction}>
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon"
-                className="text-slate-500 hover:text-slate-900 hover:bg-slate-50 cursor-pointer"
-              >
-                <LogOut size={18} />
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <Header profile={profile} user={user} />
 
       {/* ── Main Area ──────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden w-full">
+      <div className="flex-1 flex overflow-hidden w-full relative z-10">
         <Sidebar workspaceName={workspaceName} projects={projectsWithTasks} />
 
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-[#f8fafc] flex flex-col gap-6">
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-transparent flex flex-col gap-6 relative">
           {children}
         </main>
       </div>

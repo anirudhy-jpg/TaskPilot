@@ -114,7 +114,7 @@ export function LoginForm() {
             className={`bg-slate-50 text-slate-900 placeholder-slate-400 rounded-lg h-10 w-full transition-all ${
               validationErrors.email
                 ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
-                : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+                : "border-slate-200 focus-visible:ring-amber-500/10 focus-visible:border-amber-500"
             }`}
           />
           {validationErrors.email && (
@@ -144,7 +144,7 @@ export function LoginForm() {
               className={`bg-slate-50 text-slate-900 placeholder-slate-400 pr-10 rounded-lg h-10 w-full transition-all ${
                 validationErrors.password
                   ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20"
-                  : "border-slate-200 focus-visible:ring-[#2d4a3e]/10 focus-visible:border-[#2d4a3e]"
+                  : "border-slate-200 focus-visible:ring-amber-500/10 focus-visible:border-amber-500"
               }`}
             />
             <button
@@ -163,11 +163,11 @@ export function LoginForm() {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#2d4a3e] hover:bg-[#20352c] text-white font-medium py-2.5 rounded-lg transition-all shadow-sm active:scale-[0.98] mt-2 flex items-center justify-center gap-2 h-10 border-0 cursor-pointer text-sm font-semibold"
+          className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-all shadow-sm active:scale-[0.98] mt-2 flex items-center justify-center gap-2 h-10 border-0 cursor-pointer text-sm font-semibold"
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin text-white" />
+              <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
               Verifying...
             </>
           ) : (
@@ -200,7 +200,7 @@ export function LoginForm() {
       {/* Footer link */}
       <div className="mt-6 text-center text-xs text-slate-500">
         Don't have an account?{" "}
-        <Link href="/signup" className="text-[#2d4a3e] hover:underline font-semibold ml-1">
+        <Link href="/signup" className="text-amber-600 hover:underline font-semibold ml-1">
           Create one
         </Link>
       </div>
