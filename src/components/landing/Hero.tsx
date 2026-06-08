@@ -19,15 +19,12 @@ export function Hero({ user }: HeroProps) {
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto flex flex-col items-center">
-          {/* Version tag */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border border-slate-200 bg-white text-[11px] font-semibold text-slate-600 mb-6 uppercase tracking-wider shadow-sm">
-            <span>Version 1.2 is live</span>
-          </div>
+
 
           {/* Heading */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1] mb-6">
             Task tracking, <br />
-            <span className="text-[#2d4a3e]">built for developers.</span>
+            <span className="text-amber-600">built for developers.</span>
           </h1>
 
           {/* Subheading */}
@@ -39,17 +36,17 @@ export function Hero({ user }: HeroProps) {
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center w-full sm:w-auto mb-16">
             {user ? (
               <Link href="/workspace" className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto bg-[#2d4a3e] hover:bg-[#20352c] text-white font-medium px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm">
+                <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm shadow-amber-500/10">
                   Enter Workspace
-                  <ArrowRight className="w-4 h-4 text-white" />
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="/signup" className="w-full sm:w-auto">
-                  <Button className="w-full sm:w-auto bg-[#2d4a3e] hover:bg-[#20352c] text-white font-medium px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm">
+                  <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm shadow-amber-500/10">
                     Start Free Trial
-                    <ArrowRight className="w-4 h-4 text-white" />
+                    <ArrowRight className="w-4 h-4 text-slate-950" />
                   </Button>
                 </Link>
                 <Link href="/login" className="w-full sm:w-auto">
@@ -67,19 +64,19 @@ export function Hero({ user }: HeroProps) {
           {/* Trust features */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-4 px-6 rounded-lg border border-slate-200 bg-white w-full max-w-2xl mb-16 shadow-sm">
             <div className="flex items-center gap-2.5 justify-center sm:justify-start">
-              <CheckCircle2 className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
               <div className="text-left">
                 <div className="text-xs font-semibold text-slate-900">Kanban workflow</div>
               </div>
             </div>
             <div className="flex items-center gap-2.5 justify-center sm:justify-start">
-              <Zap className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+              <Zap className="w-4 h-4 text-amber-500 shrink-0" />
               <div className="text-left">
                 <div className="text-xs font-semibold text-slate-900">GitHub integration</div>
               </div>
             </div>
             <div className="flex items-center gap-2.5 justify-center sm:justify-start">
-              <Shield className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+              <Shield className="w-4 h-4 text-amber-500 shrink-0" />
               <div className="text-left">
                 <div className="text-xs font-semibold text-slate-900">Supabase database</div>
               </div>
@@ -131,7 +128,7 @@ export function Hero({ user }: HeroProps) {
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                         Sprint Board 01
-                        <span className="text-[10px] px-1.5 py-0.5 rounded border border-[#2d4a3e]/30 text-[#2d4a3e] font-semibold bg-[#2d4a3e]/5">Active</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-600 font-semibold bg-amber-500/5">Active</span>
                       </h3>
                     </div>
                     <div className="w-20 h-6 rounded bg-slate-50 border border-slate-200" />
@@ -149,7 +146,7 @@ export function Hero({ user }: HeroProps) {
                         <div className="text-[11px] font-bold text-slate-900">Integrate GitHub Login</div>
                         <div className="flex justify-between items-center text-[9px] text-slate-500">
                           <span>Sprint 01</span>
-                          <span className="px-1.5 py-0.5 rounded bg-[#2d4a3e]/5 text-[#2d4a3e] border border-[#2d4a3e]/10 text-[8px]">High</span>
+                          <span className="px-1.5 py-0.5 rounded bg-rose-500/5 text-rose-600 border border-rose-500/10 text-[8px]">High</span>
                         </div>
                       </div>
                     </div>
@@ -164,7 +161,7 @@ export function Hero({ user }: HeroProps) {
                         <div className="text-[11px] font-bold text-slate-900">Upgrade Auth Layout & Forms</div>
                         <div className="flex justify-between items-center text-[9px] text-slate-500">
                           <span>Design</span>
-                          <span className="px-1.5 py-0.5 rounded bg-[#2d4a3e]/5 text-[#2d4a3e] border border-[#2d4a3e]/10 text-[8px]">High</span>
+                          <span className="px-1.5 py-0.5 rounded bg-rose-500/5 text-rose-600 border border-rose-500/10 text-[8px]">High</span>
                         </div>
                       </div>
                     </div>

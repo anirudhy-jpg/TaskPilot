@@ -76,30 +76,75 @@ export class MemberService {
 
     if (uniqueUserIds.length === 0) return []
 
-    const { data, error } = await supabase
+    // Fetch workspace_id of the project to filter and avoid cross-workspace duplicates
+    const { data: projectData } = await supabase
+      .from("projects")
+      .select("workspace_id")
+      .eq("id", projectId)
+      .single()
+
+    const workspaceId = projectData?.workspace_id
+
+    let query = supabase
       .from("workspace_members")
       .select(`
         *,
         profile:profiles!workspace_members_user_id_fkey(email, full_name, avatar_url)
       `)
       .in("user_id", uniqueUserIds)
+      .neq("role", "owner")
+
+    if (workspaceId) {
+      query = query.eq("workspace_id", workspaceId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       // Fallback without join
-      const { data: fallbackData, error: fallbackErr } = await supabase
+      let fallbackQuery = supabase
         .from("workspace_members")
         .select("*")
         .in("user_id", uniqueUserIds)
+        .neq("role", "owner")
+
+      if (workspaceId) {
+        fallbackQuery = fallbackQuery.eq("workspace_id", workspaceId)
+      }
+
+      const { data: fallbackData, error: fallbackErr } = await fallbackQuery
 
       if (fallbackErr) {
         console.error("Error fetching members by project:", fallbackErr)
         return []
       }
 
-      return (fallbackData || []).map((row) => mapMember(row, null))
+      return (fallbackData || [])
+        .map((row) => mapMember(row, null))
+        .filter((m) => m.role !== "owner")
     }
 
-    return (data || []).map((row) => mapMember(row, row.profile))
+    return (data || [])
+      .map((row) => mapMember(row, row.profile))
+      .filter((m) => m.role !== "owner")
+  }
+
+  /**
+   * Remove a member from a workspace.
+   */
+  static async removeMember(workspaceId: string, memberId: string): Promise<void> {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from("workspace_members")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("id", memberId)
+
+    if (error) {
+      console.error("Error removing member:", error)
+      throw new Error(error.message)
+    }
   }
 }
 

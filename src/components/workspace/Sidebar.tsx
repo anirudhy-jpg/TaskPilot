@@ -71,22 +71,22 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
   }
 
   return (
-    <aside className="w-64 border-r border-slate-200 bg-slate-50/80 p-4 flex flex-col gap-1 shrink-0 select-none hidden md:flex">
+    <aside className="w-64 border-r border-amber-900/10 bg-white/50 backdrop-blur-xl p-5 flex flex-col gap-1 shrink-0 select-none hidden md:flex">
       {/* Workspace Label */}
       <div className="px-3 mb-3">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+        <div className="text-[10px] font-bold text-amber-800/60 uppercase tracking-wider mb-1">
           Workspace
         </div>
-        <div className="text-sm font-semibold text-slate-800 truncate">
+        <div className="text-sm font-bold text-slate-800 truncate">
           {workspaceName}
         </div>
       </div>
 
       {/* Divider */}
-      <div className="border-b border-slate-200 mb-2" />
+      <div className="border-b border-amber-950/10 mb-3" />
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-0.5">
+      <nav className="flex flex-col gap-1">
         {navItems.map(({ label, href, icon: Icon }) => {
           const active = isActive(href)
           return (
@@ -94,18 +94,17 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
               key={href}
               href={href}
               className={`
-                flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium
-                transition-all duration-150
+                flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all duration-250 group
                 ${
                   active
-                    ? "bg-white border border-slate-200 text-slate-900 font-semibold shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20 scale-[1.03]"
+                    : "text-slate-655 hover:text-slate-900 hover:bg-white/80 hover:translate-x-1"
                 }
               `}
             >
               <Icon
                 size={16}
-                className={active ? "text-[#2d4a3e]" : "text-slate-400"}
+                className={active ? "text-slate-950" : "text-slate-400 group-hover:text-slate-700"}
               />
               <span>{label}</span>
             </Link>
@@ -116,40 +115,40 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
       {/* Projects Section */}
       {projects.length > 0 && (
         <div className="mt-5 flex flex-col gap-1">
-          <div className="px-3 text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1 flex items-center justify-between">
+          <div className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
             <span>Projects Board</span>
-            <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-medium">
+            <span className="text-[9px] bg-amber-600/10 text-amber-800 px-2 py-0.5 rounded-full font-bold">
               {projects.length}
             </span>
           </div>
 
-          <div className="flex flex-col gap-0.5 max-h-[350px] overflow-y-auto pr-1">
+          <div className="flex flex-col gap-1 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
             {projects.map((project) => {
               const isProjectActive = activeProjectId === project.id
               const isExpanded = expandedProjects.has(project.id)
 
               return (
                 <div key={project.id} className="flex flex-col mb-1">
-                  <div className="flex items-center justify-between w-full rounded-lg text-xs font-medium transition-all duration-150 hover:bg-white/60">
+                  <div className="flex items-center justify-between w-full rounded-xl text-xs font-medium transition-all duration-200 hover:bg-white/50">
                     <Link
                       href={`/projects/${project.id}`}
-                      className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-l-lg ${
+                      className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-l-xl ${
                         isProjectActive
-                          ? "text-slate-900 font-semibold bg-white/40 border-l-2 border-[#2d4a3e]"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "text-amber-950 font-extrabold bg-gradient-to-r from-amber-50 to-white/70 border-l-3 border-amber-600 shadow-3xs"
+                          : "text-slate-655 hover:text-slate-950 hover:translate-x-0.5"
                       }`}
                     >
                       <FolderKanban
                         size={14}
                         className={
-                          isProjectActive ? "text-[#2d4a3e]" : "text-slate-400"
+                          isProjectActive ? "text-amber-600" : "text-slate-400"
                         }
                       />
                       <span className="truncate">{project.name}</span>
                     </Link>
                     <button
                       onClick={() => toggleProjectExpand(project.id)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      className="p-1.5 text-slate-450 hover:text-slate-650 cursor-pointer"
                     >
                       {isExpanded ? (
                         <ChevronDown size={12} />
@@ -161,12 +160,12 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
 
                   {/* Task list inside project */}
                   {isExpanded && (
-                    <div className="pl-6 flex flex-col gap-0.5 border-l border-slate-200 ml-5 py-1">
+                    <div className="pl-5 flex flex-col gap-1 border-l border-amber-900/5 ml-5 py-1.5">
                       {project.tasks && project.tasks.length > 0 ? (
                         project.tasks.map((task) => {
                           const statusDotColor =
                             task.status === "done"
-                              ? "bg-emerald-500"
+                              ? "bg-rose-500"
                               : task.status === "in_progress"
                               ? "bg-amber-500"
                               : "bg-slate-400"
@@ -206,7 +205,7 @@ export function Sidebar(props: SidebarProps) {
   return (
     <Suspense
       fallback={
-        <div className="w-64 border-r border-slate-200 bg-slate-50/80 p-4" />
+        <div className="w-64 border-r border-amber-900/5 bg-white/45 backdrop-blur-lg p-5" />
       }
     >
       <SidebarContent {...props} />

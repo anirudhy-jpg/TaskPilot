@@ -51,9 +51,9 @@ export function TechStack() {
             return (
               <div
                 key={index}
-                className="bg-white border border-slate-200 rounded-lg p-6 hover:border-[#2d4a3e]/35 transition-colors duration-150 shadow-sm"
+                className="bg-white border border-slate-200 rounded-lg p-6 hover:border-amber-500/40 transition-colors duration-150 shadow-sm"
               >
-                <div className="w-9 h-9 rounded bg-[#f8fafc] border border-slate-200 flex items-center justify-center text-[#2d4a3e] mb-4">
+                <div className="w-9 h-9 rounded bg-[#f8fafc] border border-slate-200 flex items-center justify-center text-amber-600 mb-4">
                   <Icon className="w-4 h-4" />
                 </div>
                 <h3 className="text-xs font-bold text-slate-900 mb-2">{tech.name}</h3>
@@ -66,19 +66,19 @@ export function TechStack() {
         {/* Features Checklist */}
         <div className="mt-16 pt-12 border-t border-slate-200 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs text-slate-600 justify-items-center">
           <div className="flex items-center gap-2.5 w-full max-w-xs">
-            <CheckCircle2 className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Full Social GitHub Integration</span>
           </div>
           <div className="flex items-center gap-2.5 w-full max-w-xs">
-            <CheckCircle2 className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Encrypted Server-Side Middleware</span>
           </div>
           <div className="flex items-center gap-2.5 w-full max-w-xs">
-            <CheckCircle2 className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Optimistic Client-State Updates</span>
           </div>
           <div className="flex items-center gap-2.5 w-full max-w-xs">
-            <CheckCircle2 className="w-4 h-4 text-[#2d4a3e] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Robust PostgreSQL Database Engine</span>
           </div>
         </div>

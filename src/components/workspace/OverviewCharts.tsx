@@ -34,19 +34,22 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
         <SummaryCard
           label="Total Projects"
           value={totalProjects}
-          color="bg-blue-50 text-blue-700"
+          color="text-amber-700 bg-amber-50 border-amber-100/60"
+          hoverColor="hover:border-amber-500/20 hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.12)]"
           icon="📁"
         />
         <SummaryCard
           label="Total Tasks"
           value={totalTasks}
-          color="bg-violet-50 text-violet-700"
+          color="text-teal-700 bg-teal-50 border-teal-100/60"
+          hoverColor="hover:border-teal-500/20 hover:shadow-[0_12px_24px_-8px_rgba(20,184,166,0.12)]"
           icon="📋"
         />
         <SummaryCard
           label="Completed"
           value={tasksByStatus.find((d) => d.name === "Done")?.value || 0}
-          color="bg-emerald-50 text-emerald-700"
+          color="text-indigo-700 bg-indigo-50 border-indigo-100/60"
+          hoverColor="hover:border-indigo-500/20 hover:shadow-[0_12px_24px_-8px_rgba(99,102,241,0.12)]"
           icon="✅"
         />
         <SummaryCard
@@ -54,15 +57,16 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
           value={
             tasksByStatus.find((d) => d.name === "In Progress")?.value || 0
           }
-          color="bg-amber-50 text-amber-700"
+          color="text-amber-700 bg-amber-50 border-amber-100/60"
+          hoverColor="hover:border-amber-500/20 hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.12)]"
           icon="⏳"
         />
       </div>
 
       {/* ── Pie Chart — Tasks by Status ───────────────────── */}
-      <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
-        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#2d4a3e] inline-block" />
+      <div className="p-6 rounded-2xl bg-white/75 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse" />
           Tasks by Status
         </h3>
         {hasTaskData ? (
@@ -85,10 +89,12 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid #e2e8f0",
-                    fontSize: "12px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(45, 74, 62, 0.1)",
+                    fontSize: "11px",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+                    background: "rgba(255, 255, 255, 0.95)",
+                    backdropFilter: "blur(4px)",
                   }}
                 />
                 <Legend
@@ -106,9 +112,9 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
       </div>
 
       {/* ── Bar Chart — Tasks per Project ─────────────────── */}
-      <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
-        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#2d4a3e] inline-block" />
+      <div className="p-6 rounded-2xl bg-white/75 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse" />
           Tasks per Project
         </h3>
         {hasProjectData ? (
@@ -120,13 +126,13 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
+                  stroke="rgba(148, 163, 184, 0.08)"
                   vertical={false}
                 />
                 <XAxis
                   dataKey="name"
                   tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={{ stroke: "#e2e8f0" }}
+                  axisLine={{ stroke: "rgba(148, 163, 184, 0.15)" }}
                   tickLine={false}
                 />
                 <YAxis
@@ -137,10 +143,12 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
                 />
                 <Tooltip
                   contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid #e2e8f0",
-                    fontSize: "12px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(45, 74, 62, 0.1)",
+                    fontSize: "11px",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+                    background: "rgba(255, 255, 255, 0.95)",
+                    backdropFilter: "blur(4px)",
                   }}
                 />
                 <Legend
@@ -152,14 +160,14 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
                 <Bar
                   dataKey="total"
                   name="Total Tasks"
-                  fill="#94a3b8"
+                  fill="#cbd5e1"
                   radius={[4, 4, 0, 0]}
                   barSize={28}
                 />
                 <Bar
                   dataKey="completed"
                   name="Completed"
-                  fill="#2d4a3e"
+                  fill="#f59e0b"
                   radius={[4, 4, 0, 0]}
                   barSize={28}
                 />
@@ -180,22 +188,26 @@ function SummaryCard({
   label,
   value,
   color,
+  hoverColor,
   icon,
 }: {
   label: string
   value: number
   color: string
+  hoverColor: string
   icon: string
 }) {
   return (
-    <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.02)]">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-base">{icon}</span>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+    <div className={`p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between ${hoverColor}`}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
           {label}
         </span>
+        <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm border shadow-3xs ${color}`}>
+          {icon}
+        </span>
       </div>
-      <div className="text-2xl font-bold text-slate-900">{value}</div>
+      <div className="text-3xl font-extrabold text-slate-800 tracking-tight">{value}</div>
     </div>
   )
 }
