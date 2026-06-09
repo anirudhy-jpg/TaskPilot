@@ -45,9 +45,10 @@ const navItems = [
 interface SidebarProps {
   workspaceName: string
   projects?: (Project & { tasks: Task[] })[]
+  ownerEmail?: string | null
 }
 
-function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
+function SidebarContent({ workspaceName, projects = [], ownerEmail = null }: SidebarProps) {
   const pathname = usePathname()
   const params = useParams()
   const activeProjectId = params?.projectId as string || null
@@ -73,17 +74,25 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
   return (
     <aside className="w-64 border-r border-amber-900/10 bg-white/50 backdrop-blur-xl p-5 flex flex-col gap-1 shrink-0 select-none hidden md:flex">
       {/* Workspace Label */}
-      <div className="px-3 mb-3">
-        <div className="text-[10px] font-bold text-amber-800/60 uppercase tracking-wider mb-1">
-          Workspace
+      <div className="px-3 mb-3 flex items-center justify-between">
+        <div>
+          <div className="text-[10px] font-bold text-amber-800/60 uppercase tracking-wider mb-1">
+            Workspace
+          </div>
+          <div className="text-sm font-bold text-slate-800 truncate max-w-[140px]" title={workspaceName}>
+            {workspaceName}
+          </div>
         </div>
-        <div className="text-sm font-bold text-slate-800 truncate">
-          {workspaceName}
-        </div>
+        <Link
+          href="/workspaces"
+          className="text-[10px] text-amber-600 hover:text-amber-800 font-extrabold hover:underline cursor-pointer border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 rounded-md transition-all active:scale-[0.95]"
+        >
+          Switch
+        </Link>
       </div>
 
       {/* Divider */}
-      <div className="border-b border-amber-950/10 mb-3" />
+      <div className="border-b border-amber-955/10 mb-3" />
 
       {/* Navigation */}
       <nav className="flex flex-col gap-1">
@@ -134,8 +143,8 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
                       href={`/projects/${project.id}`}
                       className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-l-xl ${
                         isProjectActive
-                          ? "text-amber-950 font-extrabold bg-gradient-to-r from-amber-50 to-white/70 border-l-3 border-amber-600 shadow-3xs"
-                          : "text-slate-655 hover:text-slate-950 hover:translate-x-0.5"
+                          ? "text-amber-955 font-extrabold bg-gradient-to-r from-amber-50 to-white/70 border-l-3 border-amber-600 shadow-3xs"
+                          : "text-slate-655 hover:text-slate-955 hover:translate-x-0.5"
                       }`}
                     >
                       <FolderKanban
@@ -144,7 +153,14 @@ function SidebarContent({ workspaceName, projects = [] }: SidebarProps) {
                           isProjectActive ? "text-amber-600" : "text-slate-400"
                         }
                       />
-                      <span className="truncate">{project.name}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="truncate leading-normal">{project.name}</span>
+                        {(project.creatorName || project.creatorEmail) && (
+                          <span className="text-[9px] text-slate-450 font-normal truncate mt-0.5" title={`Created by: ${project.creatorEmail}`}>
+                            created by: {project.creatorName || project.creatorEmail}
+                          </span>
+                        )}
+                      </div>
                     </Link>
                     <button
                       onClick={() => toggleProjectExpand(project.id)}

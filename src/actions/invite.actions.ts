@@ -11,12 +11,13 @@ export interface ActionResponse<T = unknown> {
 }
 
 /**
- * Server action to generate an invitation link for a member.
+ * Server action for a member.
  */
 export async function createInvitationAction(
   workspaceId: string,
   email: string,
-  role: "admin" | "member"
+  role: "admin" | "member",
+  projectId?: string | null
 ): Promise<ActionResponse<string>> {
   try {
     const { user } = await requireUser()
@@ -28,7 +29,8 @@ export async function createInvitationAction(
       workspaceId,
       email,
       role,
-      user.id
+      user.id,
+      projectId
     )
 
     revalidatePath("/members")

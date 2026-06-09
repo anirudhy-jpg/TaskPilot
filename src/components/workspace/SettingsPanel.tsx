@@ -1,8 +1,13 @@
-import React from "react"
-import { User, LogOut, Mail, Calendar, Shield, Lock, Lightbulb } from "lucide-react"
+"use client"
+
+import React, { useState, useTransition } from "react"
+import { User, LogOut, Mail, Calendar, Shield, Lock, Lightbulb, DoorOpen, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { logoutAction } from "@/actions/auth/auth.actions"
+import { leaveWorkspaceAction, deleteWorkspaceAction } from "@/actions/workspace/workspace-hub.actions"
+import { useRouter } from "next/navigation"
 import type { UserProfile } from "@/types/auth.types"
+import { DeleteConfirmModal } from "@/components/workspace/modals/DeleteConfirmModal"
 
 interface SettingsPanelProps {
   profile: UserProfile | null
@@ -12,9 +17,57 @@ interface SettingsPanelProps {
     created_at?: string
     app_metadata?: { provider?: string }
   }
+  isWorkspaceOwner?: boolean
+  workspaceId?: string | null
+  workspaceName?: string
 }
 
-export function SettingsPanel({ profile, user }: SettingsPanelProps) {
+export function SettingsPanel({
+  profile,
+  user,
+  isWorkspaceOwner = true,
+  workspaceId = null,
+  workspaceName = "",
+}: SettingsPanelProps) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+
+  const handleLeaveWorkspace = () => {
+    setIsLeaveModalOpen(true)
+  }
+
+  const handleLeaveConfirm = () => {
+    if (!workspaceId) return
+    setErrorMsg(null)
+    setIsLeaveModalOpen(false)
+    startTransition(async () => {
+      const res = await leaveWorkspaceAction(workspaceId)
+      if (res.success) {
+        router.push("/workspace")
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to leave workspace.")
+      }
+    })
+  }
+
+  const handleDeleteConfirm = () => {
+    if (!workspaceId) return
+    setErrorMsg(null)
+    setIsDeleteModalOpen(false)
+    startTransition(async () => {
+      const res = await deleteWorkspaceAction(workspaceId)
+      if (res.success) {
+        router.push("/workspace")
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to delete workspace.")
+      }
+    })
+  }
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -97,25 +150,91 @@ export function SettingsPanel({ profile, user }: SettingsPanelProps) {
           </div>
 
           {/* Account Actions */}
-          <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <div className="flex items-center gap-2 text-red-650 mb-4">
-              <LogOut size={18} />
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Account Actions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+              <div className="flex items-center gap-2 text-red-650 mb-4">
+                <LogOut size={18} />
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Account Actions</h3>
+              </div>
+              <p className="text-xs text-slate-505 mb-5">
+                Sign out of your account. You will be redirected to the login page.
+              </p>
+              <form action={logoutAction}>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  size="sm"
+                  className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9 animate-all"
+                >
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
+                </Button>
+              </form>
             </div>
-            <p className="text-xs text-slate-505 mb-5">
-              Sign out of your account. You will be redirected to the login page.
-            </p>
-            <form action={logoutAction}>
-              <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9"
-              >
-                <LogOut size={14} />
-                <span>Sign Out</span>
-              </Button>
-            </form>
+
+            {!isWorkspaceOwner && workspaceId && (
+              <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+                <div className="flex items-center gap-2 text-red-650 mb-4">
+                  <DoorOpen size={18} />
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
+                </div>
+                <p className="text-xs text-slate-505 mb-5">
+                  Leave the current workspace "{workspaceName}". You will lose access to all its projects.
+                </p>
+                {errorMsg && <p className="text-xs text-red-605 mb-3">{errorMsg}</p>}
+                <Button
+                  onClick={handleLeaveWorkspace}
+                  disabled={isPending}
+                  variant="destructive"
+                  size="sm"
+                  className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9 animate-all"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Leaving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <DoorOpen size={14} />
+                      <span>Leave Workspace</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {isWorkspaceOwner && workspaceId && (
+              <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-2 text-red-650 mb-4">
+                  <Trash2 size={18} />
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
+                </div>
+                <p className="text-xs text-slate-505 mb-5">
+                  Permanently delete this workspace "{workspaceName}". All projects, tasks, and data will be destroyed.
+                </p>
+                {errorMsg && <p className="text-xs text-red-605 mb-3">{errorMsg}</p>}
+                <Button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  disabled={isPending}
+                  variant="destructive"
+                  size="sm"
+                  className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9 animate-all"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} />
+                      <span>Delete Workspace</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -184,6 +303,22 @@ export function SettingsPanel({ profile, user }: SettingsPanelProps) {
           </div>
         </div>
       </div>
+      <DeleteConfirmModal
+        isOpen={isLeaveModalOpen}
+        onClose={() => setIsLeaveModalOpen(false)}
+        type="leave_workspace"
+        name={workspaceName}
+        isPending={isPending}
+        onConfirm={handleLeaveConfirm}
+      />
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        type="delete_workspace"
+        name={workspaceName}
+        isPending={isPending}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   )
 }

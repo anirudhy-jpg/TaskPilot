@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { Project, Task, TaskStatus, WorkspaceMember, TaskPriority } from "@/types/workspace.types";
 import { AssigneeSelector } from "./AssigneeSelector";
-import { TaskDetailsModal } from "./TaskDetailsModal";
+import { TaskDetailsModal } from "./modals/TaskDetailsModal";
 
 interface KanbanBoardProps {
   project: Project & { tasks: Task[] };
@@ -94,7 +94,10 @@ export function getVisualPriority(task: Task): TaskPriority {
 
 function formatTaskDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  return `${month} ${day}`;
 }
 
 export function KanbanBoard({

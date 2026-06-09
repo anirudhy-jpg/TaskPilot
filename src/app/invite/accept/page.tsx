@@ -62,6 +62,7 @@ export default async function AcceptInvitePage({ searchParams }: PageProps) {
             role={details.invitation.role}
             email={details.invitation.email}
             currentUserEmail={user?.email || null}
+            projectName={details.projectName}
           />
         ) : null}
       </div>

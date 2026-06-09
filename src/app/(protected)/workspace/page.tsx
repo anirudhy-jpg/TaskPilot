@@ -8,6 +8,8 @@ import { ProfileService } from "@/services/profile.service"
 import { OverviewCharts } from "@/components/workspace/OverviewCharts"
 import type { WorkspaceAnalytics } from "@/types/workspace.types"
 
+export const dynamic = "force-dynamic"
+
 export default async function WorkspaceOverviewPage() {
   const { user } = await requireUser()
 

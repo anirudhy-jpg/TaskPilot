@@ -3,7 +3,8 @@
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { acceptInvitationAction, declineInvitationAction } from "@/actions/invite.actions"
-import { Shield, User, LogIn, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { logoutAction } from "@/actions/auth/auth.actions"
+import { Shield, User, LogIn, CheckCircle2, XCircle, Loader2, FolderKanban } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AcceptInviteClientProps {
@@ -13,6 +14,7 @@ interface AcceptInviteClientProps {
   role: "admin" | "member"
   email: string
   currentUserEmail: string | null
+  projectName?: string | null
 }
 
 export function AcceptInviteClient({
@@ -22,6 +24,7 @@ export function AcceptInviteClient({
   role,
   email,
   currentUserEmail,
+  projectName = null,
 }: AcceptInviteClientProps) {
   const router = useRouter()
   const [loadingAction, setLoadingAction] = useState<"accept" | "decline" | null>(null)
@@ -73,9 +76,7 @@ export function AcceptInviteClient({
           <Button
             variant="outline"
             onClick={async () => {
-              // Sign out and redirect
-              await fetch("/auth/signout", { method: "POST" })
-              router.push("/login")
+              await logoutAction()
             }}
             className="w-full text-slate-650 hover:text-slate-850 hover:bg-slate-50 border-slate-200 cursor-pointer rounded-xl py-2"
           >
@@ -168,12 +169,24 @@ export function AcceptInviteClient({
           ) : (
             <User size={16} className="text-slate-500" />
           )}
-          <span className="text-xs font-semibold text-slate-650">Invited Role</span>
+          <span className="text-xs font-semibold text-slate-655">Invited Role</span>
         </div>
         <span className="text-xs font-bold text-slate-900 capitalize px-2 py-1 rounded bg-white border border-slate-200">
           {role}
         </span>
       </div>
+
+      {projectName && (
+        <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FolderKanban size={16} className="text-amber-600" />
+            <span className="text-xs font-semibold text-slate-655">Assigned Project</span>
+          </div>
+          <span className="text-xs font-bold text-slate-900 truncate max-w-[180px]" title={projectName}>
+            {projectName}
+          </span>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg p-3 text-center font-medium">

@@ -1,7 +1,10 @@
 import React from "react"
 import { requireUser } from "@/lib/supabase/server"
 import { ProfileService } from "@/services/profile.service"
+import { WorkspaceService } from "@/services/workspace.service"
 import { SettingsPanel } from "@/components/workspace/SettingsPanel"
+
+export const dynamic = "force-dynamic"
 
 export default async function SettingsPage() {
   const { user } = await requireUser()
@@ -13,6 +16,18 @@ export default async function SettingsPage() {
     // ignore
   }
 
+  // Get active workspace details
+  const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
+  const isWorkspaceOwner = workspace ? workspace.ownerId === user.id : true
+  const workspaceId = workspace ? workspace.id : null
+  const workspaceName = workspace ? workspace.name : ""
+
+  console.log("=== DEBUG SETTINGS ===")
+  console.log("User ID:", user.id)
+  console.log("Active Workspace:", workspace)
+  console.log("Is Owner:", isWorkspaceOwner)
+  console.log("======================")
+
   return (
     <SettingsPanel
       profile={profile}
@@ -22,6 +37,9 @@ export default async function SettingsPage() {
         created_at: user.created_at,
         app_metadata: user.app_metadata,
       }}
+      isWorkspaceOwner={isWorkspaceOwner}
+      workspaceId={workspaceId}
+      workspaceName={workspaceName}
     />
   )
 }

@@ -2,9 +2,9 @@
 
 import React, { useState, useTransition, useEffect } from "react"
 import { Shield, Crown, User, UserPlus, Trash2, Clock, Loader2, MoreVertical } from "lucide-react"
-import type { WorkspaceMember, MemberRole } from "@/types/workspace.types"
+import type { WorkspaceMember, MemberRole, Project } from "@/types/workspace.types"
 import type { Invitation } from "@/services/invite.service"
-import { InviteMemberModal } from "@/components/workspace/InviteMemberModal"
+import { InviteMemberModal } from "@/components/workspace/modals/InviteMemberModal"
 import { createInvitationAction, revokeInvitationAction } from "@/actions/invite.actions"
 import { removeWorkspaceMemberAction } from "@/actions/workspace/workspace.actions"
 import { DeleteConfirmModal } from "@/components/workspace/modals/DeleteConfirmModal"
@@ -32,6 +32,7 @@ interface MembersListProps {
   canInvite: boolean
   currentUserRole: MemberRole
   currentUserId: string
+  projects?: Project[]
 }
 
 const roleConfig: Record<
@@ -65,6 +66,7 @@ export function MembersList({
   canInvite,
   currentUserRole,
   currentUserId,
+  projects = [],
 }: MembersListProps) {
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -93,11 +95,15 @@ export function MembersList({
     return (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2)
   })
 
-  const handleInviteSubmit = async (email: string, role: "admin" | "member"): Promise<string | null> => {
+  const handleInviteSubmit = async (
+    email: string,
+    role: "admin" | "member",
+    projectId?: string | null
+  ): Promise<string | null> => {
     return new Promise((resolve, reject) => {
       startTransition(async () => {
         try {
-          const res = await createInvitationAction(workspaceId, email, role)
+          const res = await createInvitationAction(workspaceId, email, role, projectId)
           if (res.success && res.data) {
             resolve(res.data)
           } else {
@@ -322,6 +328,7 @@ export function MembersList({
           onClose={() => setIsInviteOpen(false)}
           isPending={isPending}
           onInvite={handleInviteSubmit}
+          projects={projects}
         />
       )}
 

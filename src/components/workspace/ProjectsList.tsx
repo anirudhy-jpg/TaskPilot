@@ -13,6 +13,7 @@ import {
   Circle,
   Clock,
   CheckCircle2,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Project, Task, TaskStatus, WorkspaceMember } from "@/types/workspace.types";
@@ -23,12 +24,15 @@ import {
   updateTaskAssigneeAction,
   deleteTaskAction,
   deleteProjectAction,
+  addProjectMemberAction,
+  removeProjectMemberAction,
 } from "@/actions/workspace/workspace.actions";
 
 // Import custom modals
 import { CreateProjectModal } from "./modals/CreateProjectModal";
 import { CreateTaskModal } from "./modals/CreateTaskModal";
 import { DeleteConfirmModal } from "./modals/DeleteConfirmModal";
+import { ManageProjectMembersModal } from "./modals/ManageProjectMembersModal";
 import { KanbanBoard } from "./KanbanBoard";
 
 interface ProjectsListProps {
@@ -62,8 +66,17 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
+  // Find project members & eligible workspace members
+  const workspaceOwner = members.find((m) => m.role === "owner");
+  const isWorkspaceOwner = workspaceOwner?.userId === currentUserId;
+
+  const projectMemberUserIds = activeProject?.memberUserIds || [];
+  const currentProjectMembers = members.filter((m) => projectMemberUserIds.includes(m.userId));
+  const eligibleMembers = members.filter((m) => !projectMemberUserIds.includes(m.userId));
+
   // Modal State Variables
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
   const [createTaskProjectId, setCreateTaskProjectId] = useState<string | null>(
     null,
   );
@@ -77,6 +90,26 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
 
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleAddProjectMember = async (userId: string) => {
+    if (!activeProject) return;
+    const res = await addProjectMemberAction(activeProject.id, userId);
+    if (res.success) {
+      router.refresh();
+    } else {
+      throw new Error(res.error || "Failed to add member.");
+    }
+  };
+
+  const handleRemoveProjectMember = async (userId: string) => {
+    if (!activeProject) return;
+    const res = await removeProjectMemberAction(activeProject.id, userId);
+    if (res.success) {
+      router.refresh();
+    } else {
+      throw new Error(res.error || "Failed to remove member.");
+    }
+  };
 
   // ─── Actions ────────────────────────────────────────────────
   const handleCreateProject = (name: string, description?: string) => {
@@ -189,10 +222,43 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
                 <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 font-extrabold text-xs shadow-3xs border border-amber-500/20 shrink-0">
                   {activeProject.name.slice(0, 2).toUpperCase()}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
                     {activeProject.name}
                   </h1>
+
+                  {/* Overlapping Avatar Stack of Project Members */}
+                  <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
+                    <div className="flex items-center">
+                      {currentProjectMembers.slice(0, 4).map((m, i) => (
+                        <div
+                          key={m.userId}
+                          className={`w-6 h-6 rounded-full bg-amber-500/10 text-amber-600 border border-white flex items-center justify-center font-extrabold text-[9px] shadow-2xs shrink-0 select-none ${
+                            i > 0 ? "-ml-2" : ""
+                          }`}
+                          title={m.profile?.fullName || m.profile?.email}
+                        >
+                          {(m.profile?.fullName || m.profile?.email || "?")[0].toUpperCase()}
+                        </div>
+                      ))}
+                      {currentProjectMembers.length > 4 && (
+                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 border border-white flex items-center justify-center font-bold text-[8px] -ml-2 shadow-2xs select-none">
+                          +{currentProjectMembers.length - 4}
+                        </div>
+                      )}
+                    </div>
+
+                    {isWorkspaceOwner && (
+                      <button
+                        onClick={() => setIsManageMembersOpen(true)}
+                        className="text-slate-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                        title="Manage project members"
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                    )}
+                  </div>
+
                   <button
                     onClick={() =>
                       setDeleteTarget({
@@ -211,6 +277,11 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
               {activeProject.description && (
                 <p className="text-xs text-slate-550 mt-1.5 pl-11 max-w-2xl leading-relaxed">
                   {activeProject.description}
+                </p>
+              )}
+              {(activeProject.creatorEmail || activeProject.creatorName) && (
+                <p className="text-[10px] text-slate-400 pl-11 mt-1 font-semibold">
+                  created by: <span className="text-slate-550 font-bold">{activeProject.creatorName || activeProject.creatorEmail}</span>
                 </p>
               )}
             </>
@@ -288,7 +359,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
               <h3 className="text-base font-semibold text-slate-800 mb-1">
                 No Projects Yet
               </h3>
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+              <p className="text-xs text-slate-550 mb-4 leading-relaxed">
                 Create a project to start planning workloads and managing
                 pipelines.
               </p>
@@ -351,6 +422,12 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
                       ) : (
                         <p className="text-[11px] text-slate-400 italic mb-4 h-8">
                           No description provided.
+                        </p>
+                      )}
+
+                      {(project.creatorEmail || project.creatorName) && (
+                        <p className="text-[10px] text-slate-450 font-semibold mb-3 -mt-2">
+                          created by: <span className="text-slate-600 font-bold">{project.creatorName || project.creatorEmail}</span>
                         </p>
                       )}
 
@@ -492,6 +569,17 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
         name={deleteTarget?.name || ""}
         isPending={isPending}
         onConfirm={handleDeleteConfirmSubmit}
+      />
+
+      <ManageProjectMembersModal
+        isOpen={isManageMembersOpen}
+        onClose={() => setIsManageMembersOpen(false)}
+        projectId={activeProject?.id || ""}
+        projectName={activeProject?.name || ""}
+        currentMembers={currentProjectMembers}
+        eligibleMembers={eligibleMembers}
+        onAddMember={handleAddProjectMember}
+        onRemoveMember={handleRemoveProjectMember}
       />
     </div>
   );

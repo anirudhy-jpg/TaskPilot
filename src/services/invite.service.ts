@@ -10,12 +10,14 @@ export interface Invitation {
   invitedBy: string;
   createdAt: string;
   expiresAt: string;
+  projectId?: string | null;
 }
 
 export interface InvitationDetails {
   invitation: Invitation;
   workspaceName: string;
   inviterName: string;
+  projectName?: string | null;
 }
 
 export class InviteService {
@@ -27,6 +29,7 @@ export class InviteService {
     email: string,
     role: "admin" | "member",
     invitedBy: string,
+    projectId?: string | null,
   ): Promise<string> {
     const supabase = await createClient();
 
@@ -102,6 +105,7 @@ export class InviteService {
         status: "pending",
         invited_by: invitedBy,
         expires_at: expiresAt.toISOString(),
+        project_id: projectId || null,
       });
 
     if (inviteErr) {
@@ -120,7 +124,7 @@ export class InviteService {
   }
 
   /**
-   * Fetch invitation details by token, including workspace name and inviter name.
+   * Fetch invitation details by token, including workspace name, inviter name, and project name.
    */
   static async getInvitationByToken(
     token: string,
@@ -150,6 +154,7 @@ export class InviteService {
       invitedBy: inviteRow.invited_by,
       createdAt: inviteRow.created_at,
       expiresAt: inviteRow.expires_at,
+      projectId: inviteRow.project_id,
     };
 
     // Fetch workspace name
@@ -166,10 +171,22 @@ export class InviteService {
       .eq("id", invitation.invitedBy)
       .maybeSingle();
 
+    // Fetch project name if projectId exists
+    let projectName = null;
+    if (invitation.projectId) {
+      const { data: projData } = await supabase
+        .from("projects")
+        .select("name")
+        .eq("id", invitation.projectId)
+        .maybeSingle();
+      projectName = projData?.name || null;
+    }
+
     return {
       invitation,
       workspaceName: wsData?.name || "Unknown Workspace",
       inviterName: inviterData?.full_name || inviterData?.email || "Someone",
+      projectName,
     };
   }
 
@@ -214,11 +231,27 @@ export class InviteService {
       .maybeSingle();
 
     if (existingMember) {
-      // Mark invitation accepted anyway since they are already a member
+      // 4.5 If invitation has a projectId, insert into project_members even if already a workspace member
+      if (invitation.projectId) {
+        const { error: projMemberErr } = await supabase
+          .from("project_members")
+          .insert({
+            project_id: invitation.projectId,
+            user_id: userId,
+          });
+
+        if (projMemberErr) {
+          console.warn("Could not assign existing member to project:", projMemberErr);
+        }
+      }
+
+      // Mark all pending invitations for this email in this workspace as accepted
       await supabase
         .from("workspace_invitations")
         .update({ status: "accepted" })
-        .eq("id", invitation.id);
+        .eq("workspace_id", invitation.workspaceId)
+        .eq("email", invitation.email)
+        .eq("status", "pending");
 
       return invitation.workspaceId;
     }
@@ -237,11 +270,27 @@ export class InviteService {
       throw new Error(memberErr.message);
     }
 
-    // 6. Update invitation status to accepted
+    // 5.5 If invitation has a projectId, insert into project_members
+    if (invitation.projectId) {
+      const { error: projMemberErr } = await supabase
+        .from("project_members")
+        .insert({
+          project_id: invitation.projectId,
+          user_id: userId,
+        });
+
+      if (projMemberErr) {
+        console.warn("Could not assign member to project (might already be member):", projMemberErr);
+      }
+    }
+
+    // 6. Update all pending invitations for this email in this workspace to accepted
     const { error: updateErr } = await supabase
       .from("workspace_invitations")
       .update({ status: "accepted" })
-      .eq("id", invitation.id);
+      .eq("workspace_id", invitation.workspaceId)
+      .eq("email", invitation.email)
+      .eq("status", "pending");
 
     if (updateErr) {
       console.error("Error updating invitation status:", updateErr);

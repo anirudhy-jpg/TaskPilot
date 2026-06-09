@@ -3,8 +3,8 @@
 import React, { useEffect, useRef } from "react";
 import { X, Circle, Clock, CheckCircle2, User, Calendar, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import type { Task, WorkspaceMember } from "@/types/workspace.types";
-import { getUserInitials, getAvatarBgColor, getVisualPriority } from "./KanbanBoard";
-import { AssigneeSelector } from "./AssigneeSelector";
+import { getUserInitials, getAvatarBgColor, getVisualPriority } from "../KanbanBoard";
+import { AssigneeSelector } from "../AssigneeSelector";
 
 interface TaskDetailsModalProps {
   task: Task | null;

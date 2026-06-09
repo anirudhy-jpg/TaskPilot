@@ -97,6 +97,7 @@ export class WorkspaceService {
     return mapWorkspace(ws)
   }
 
+
   /**
    * Create a new workspace and add the creator as owner in workspace_members.
    */
@@ -151,6 +152,34 @@ export class WorkspaceService {
     }
 
     return data ? mapWorkspace(data) : null
+  }
+
+  /**
+   * Delete a workspace.
+   */
+  static async deleteWorkspace(workspaceId: string, ownerId: string): Promise<void> {
+    const supabase = await createClient()
+
+    // Verify ownership
+    const { data: ws } = await supabase
+      .from("workspaces")
+      .select("owner_id")
+      .eq("id", workspaceId)
+      .maybeSingle()
+
+    if (!ws || ws.owner_id !== ownerId) {
+      throw new Error("Unauthorized: Only the workspace owner can delete this workspace.")
+    }
+
+    const { error } = await supabase
+      .from("workspaces")
+      .delete()
+      .eq("id", workspaceId)
+
+    if (error) {
+      console.error("Error deleting workspace:", error)
+      throw new Error(error.message)
+    }
   }
 }
 
