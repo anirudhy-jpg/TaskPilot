@@ -152,7 +152,14 @@ export function MembersList({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`space-y-8 relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+      {/* Premium top linear loading bar showing sync state */}
+      {isPending && (
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-[9999] overflow-hidden">
+          <div className="h-full bg-amber-450 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
         <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, Suspense } from "react";
+import React, { useState, useTransition, Suspense, useOptimistic } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -34,6 +34,7 @@ import { CreateTaskModal } from "./modals/CreateTaskModal";
 import { DeleteConfirmModal } from "./modals/DeleteConfirmModal";
 import { ManageProjectMembersModal } from "./modals/ManageProjectMembersModal";
 import { KanbanBoard } from "./KanbanBoard";
+import { ProjectsDashboardGrid } from "./ProjectsDashboardGrid";
 
 interface ProjectsListProps {
   projects: (Project & { tasks: Task[] })[];
@@ -64,11 +65,78 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
   const params = useParams();
   const activeProjectId = params?.projectId as string || null;
 
-  const activeProject = projects.find((p) => p.id === activeProjectId);
+  // React 19 Optimistic state hook for immediate UI feedback on CRUD operations
+  const [optimisticProjects, setOptimisticProjects] = useOptimistic(
+    projects,
+    (
+      state,
+      action:
+        | { type: "update_task_status"; taskId: string; status: TaskStatus }
+        | { type: "update_task_assignee"; taskId: string; assigneeId: string | null }
+        | { type: "delete_task"; taskId: string }
+        | { type: "delete_project"; projectId: string }
+        | { type: "add_project_member"; projectId: string; userId: string }
+        | { type: "remove_project_member"; projectId: string; userId: string }
+        | { type: "create_project"; project: Project & { tasks: Task[] } }
+        | { type: "create_task"; projectId: string; task: Task }
+    ) => {
+      switch (action.type) {
+        case "update_task_status":
+          return state.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === action.taskId ? { ...t, status: action.status } : t
+            ),
+          }));
+        case "update_task_assignee":
+          return state.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === action.taskId ? { ...t, assigneeId: action.assigneeId } : t
+            ),
+          }));
+        case "delete_task":
+          return state.map((p) => ({
+            ...p,
+            tasks: p.tasks.filter((t) => t.id !== action.taskId),
+          }));
+        case "delete_project":
+          return state.filter((p) => p.id !== action.projectId);
+        case "add_project_member":
+          return state.map((p) =>
+            p.id === action.projectId
+              ? { ...p, memberUserIds: [...(p.memberUserIds || []), action.userId] }
+              : p
+          );
+        case "remove_project_member":
+          return state.map((p) =>
+            p.id === action.projectId
+              ? { ...p, memberUserIds: (p.memberUserIds || []).filter((id) => id !== action.userId) }
+              : p
+          );
+        case "create_project":
+          return [...state, action.project];
+        case "create_task":
+          return state.map((p) =>
+            p.id === action.projectId
+              ? { ...p, tasks: [...p.tasks, action.task] }
+              : p
+          );
+        default:
+          return state;
+      }
+    }
+  );
+
+  const activeProject = optimisticProjects.find((p) => p.id === activeProjectId);
 
   // Find project members & eligible workspace members
   const workspaceOwner = members.find((m) => m.role === "owner");
   const isWorkspaceOwner = workspaceOwner?.userId === currentUserId;
+
+  const currentUserMember = members.find((m) => m.userId === currentUserId);
+  const currentUserRole = currentUserMember?.role || (isWorkspaceOwner ? "owner" : "member");
+  const isWorkspaceMember = currentUserRole === "member";
 
   const projectMemberUserIds = activeProject?.memberUserIds || [];
   const currentProjectMembers = members.filter((m) => projectMemberUserIds.includes(m.userId));
@@ -77,9 +145,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
   // Modal State Variables
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
-  const [createTaskProjectId, setCreateTaskProjectId] = useState<string | null>(
-    null,
-  );
+  const [createTaskProjectId, setCreateTaskProjectId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "project" | "task";
     id: string;
@@ -91,34 +157,65 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleAddProjectMember = async (userId: string) => {
-    if (!activeProject) return;
-    const res = await addProjectMemberAction(activeProject.id, userId);
-    if (res.success) {
-      router.refresh();
-    } else {
-      throw new Error(res.error || "Failed to add member.");
-    }
+  const handleAddProjectMember = (userId: string): Promise<void> => {
+    if (!activeProject) return Promise.resolve();
+    setErrorMsg(null);
+    return new Promise((resolve, reject) => {
+      startTransition(async () => {
+        setOptimisticProjects({ type: "add_project_member", projectId: activeProject.id, userId });
+        const res = await addProjectMemberAction(activeProject.id, userId);
+        if (res.success) {
+          router.refresh();
+          resolve();
+        } else {
+          setErrorMsg(res.error || "Failed to add member.");
+          reject(new Error(res.error || "Failed to add member."));
+        }
+      });
+    });
   };
 
-  const handleRemoveProjectMember = async (userId: string) => {
-    if (!activeProject) return;
-    const res = await removeProjectMemberAction(activeProject.id, userId);
-    if (res.success) {
-      router.refresh();
-    } else {
-      throw new Error(res.error || "Failed to remove member.");
-    }
+  const handleRemoveProjectMember = (userId: string): Promise<void> => {
+    if (!activeProject) return Promise.resolve();
+    setErrorMsg(null);
+    return new Promise((resolve, reject) => {
+      startTransition(async () => {
+        setOptimisticProjects({ type: "remove_project_member", projectId: activeProject.id, userId });
+        const res = await removeProjectMemberAction(activeProject.id, userId);
+        if (res.success) {
+          router.refresh();
+          resolve();
+        } else {
+          setErrorMsg(res.error || "Failed to remove member.");
+          reject(new Error(res.error || "Failed to remove member."));
+        }
+      });
+    });
   };
 
-  // ─── Actions ────────────────────────────────────────────────
   const handleCreateProject = (name: string, description?: string) => {
     setErrorMsg(null);
     startTransition(async () => {
+      const tempId = "temp-" + Date.now();
+      const tempProject = {
+        id: tempId,
+        workspaceId,
+        name,
+        description: description || null,
+        status: "active" as const,
+        createdAt: new Date().toISOString(),
+        tasks: [],
+        memberUserIds: [currentUserId || ""],
+      };
+      setOptimisticProjects({ type: "create_project", project: tempProject });
+      setIsCreateProjectOpen(false);
       const res = await createProjectAction(workspaceId, name, description);
       if (res.success) {
-        setIsCreateProjectOpen(false);
-        router.refresh();
+        if (res.projectId) {
+          router.push(`/projects/${res.projectId}`);
+        } else {
+          router.refresh();
+        }
       } else {
         setErrorMsg(res.error || "Failed to create project.");
       }
@@ -134,16 +231,38 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
     if (!createTaskProjectId) return;
     setErrorMsg(null);
     startTransition(async () => {
-      const res = await createTaskAction({
+      const selectedAssignee = members.find((m) => m.userId === assigneeId)?.profile || null;
+      const tempTask = {
+        id: "temp-" + Date.now(),
         projectId: createTaskProjectId,
         title,
-        description,
+        description: description || null,
         status: status || "todo",
-        priority: "medium",
+        priority: "medium" as const,
+        assigneeId: assigneeId || null,
+        createdAt: new Date().toISOString(),
+        assignee: selectedAssignee ? {
+          fullName: selectedAssignee.fullName || null,
+          email: selectedAssignee.email || "",
+          avatarUrl: selectedAssignee.avatarUrl || null,
+        } : undefined,
+      };
+      setOptimisticProjects({
+        type: "create_task",
+        projectId: createTaskProjectId,
+        task: tempTask,
+      });
+      setCreateTaskProjectId(null);
+
+      const res = await createTaskAction({
+        projectId: tempTask.projectId,
+        title,
+        description,
+        status: tempTask.status,
+        priority: tempTask.priority,
         assigneeId: assigneeId || undefined,
       });
       if (res.success) {
-        setCreateTaskProjectId(null);
         router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to create task.");
@@ -154,6 +273,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
   function handleStatusChange(taskId: string, status: TaskStatus) {
     setErrorMsg(null);
     startTransition(async () => {
+      setOptimisticProjects({ type: "update_task_status", taskId, status });
       const res = await updateTaskStatusAction(taskId, status);
       if (res.success) {
         router.refresh();
@@ -166,6 +286,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
   function handleAssigneeChange(taskId: string, assigneeId: string | null) {
     setErrorMsg(null);
     startTransition(async () => {
+      setOptimisticProjects({ type: "update_task_assignee", taskId, assigneeId });
       const res = await updateTaskAssigneeAction(taskId, assigneeId);
       if (res.success) {
         router.refresh();
@@ -188,31 +309,38 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
   function handleDeleteConfirmSubmit() {
     if (!deleteTarget) return;
     setErrorMsg(null);
+    const target = deleteTarget;
+    setDeleteTarget(null);
     startTransition(async () => {
       let res;
-      if (deleteTarget.type === "project") {
-        res = await deleteProjectAction(deleteTarget.id);
-        if (res.success && activeProjectId === deleteTarget.id) {
+      if (target.type === "project") {
+        setOptimisticProjects({ type: "delete_project", projectId: target.id });
+        res = await deleteProjectAction(target.id);
+        if (res.success && activeProjectId === target.id) {
           router.push("/projects");
         }
       } else {
-        res = await deleteTaskAction(deleteTarget.id);
+        setOptimisticProjects({ type: "delete_task", taskId: target.id });
+        res = await deleteTaskAction(target.id);
       }
 
       if (res.success) {
-        setDeleteTarget(null);
         router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to execute delete action.");
-        setDeleteTarget(null);
       }
     });
   }
 
-
-
   return (
-    <div className="space-y-6 flex flex-col h-full w-full select-none">
+    <div className="space-y-6 flex flex-col h-full w-full select-none relative">
+      {/* Premium top linear loading bar showing sync state */}
+      {isPending && (
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-[9999] overflow-hidden">
+          <div className="h-full bg-amber-450 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
         <div>
@@ -259,19 +387,21 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
                     )}
                   </div>
 
-                  <button
-                    onClick={() =>
-                      setDeleteTarget({
-                        type: "project",
-                        id: activeProject.id,
-                        name: activeProject.name,
-                      })
-                    }
-                    className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Delete project"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {!isWorkspaceMember && (
+                    <button
+                      onClick={() =>
+                        setDeleteTarget({
+                          type: "project",
+                          id: activeProject.id,
+                          name: activeProject.name,
+                        })
+                      }
+                      className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Delete project"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
               {activeProject.description && (
@@ -290,7 +420,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
               <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
                 Projects Dashboard
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-505 mt-0.5">
                 Overview of all active projects and task pipelines
               </p>
             </div>
@@ -309,20 +439,22 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
               </Button>
             </Link>
           ) : (
-            <Button
-              size="sm"
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-3xs text-xs font-black rounded-xl px-4 py-2"
-              onClick={() => setIsCreateProjectOpen(true)}
-            >
-              <Plus size={14} className="mr-1.5" />
-              <span>New Project</span>
-            </Button>
+            !isWorkspaceMember && (
+              <Button
+                size="sm"
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-3xs text-xs font-black rounded-xl px-4 py-2"
+                onClick={() => setIsCreateProjectOpen(true)}
+              >
+                <Plus size={14} className="mr-1.5" />
+                <span>New Project</span>
+              </Button>
+            )
           )}
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600 flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-xs text-red-605 flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-150">
           <span>{errorMsg}</span>
           <button
             onClick={() => setErrorMsg(null)}
@@ -333,211 +465,38 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
         </div>
       )}
 
-      {/* ─── Main Content Views ─────────────────────────────── */}
-      {activeProject ? (
-        /* ─── VIEW 1: KANBAN BOARD ─── */
-        <KanbanBoard
-          project={activeProject}
-          members={members}
-          currentUserId={currentUserId}
-          onAddTask={(status) => {
-            setNewTaskStatus(status);
-            setCreateTaskProjectId(activeProject.id);
-          }}
-          onDeleteTask={(id, title) =>
-            setDeleteTarget({ type: "task", id, name: title })
-          }
-          onStatusChange={handleStatusChange}
-          onAssigneeChange={handleAssigneeChange}
-        />
-      ) : (
-        /* ─── VIEW 2: ALL PROJECTS GRID ─── */
-        <>
-          {projects.length === 0 ? (
-            <div className="p-12 rounded-xl bg-white border border-slate-200 text-center shadow-sm max-w-lg mx-auto mt-8">
-              <div className="text-4xl mb-4">📂</div>
-              <h3 className="text-base font-semibold text-slate-800 mb-1">
-                No Projects Yet
-              </h3>
-              <p className="text-xs text-slate-550 mb-4 leading-relaxed">
-                Create a project to start planning workloads and managing
-                pipelines.
-              </p>
-              <Button
-                size="sm"
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold cursor-pointer"
-                onClick={() => setIsCreateProjectOpen(true)}
-              >
-                Create Your First Project
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {projects.map((project) => {
-                const totalTasks = project.tasks?.length || 0;
-                const completedTasks =
-                  project.tasks?.filter((t) => t.status === "done").length || 0;
-                const progressPercent =
-                  totalTasks > 0
-                    ? Math.round((completedTasks / totalTasks) * 100)
-                    : 0;
-
-                return (
-                  <div
-                    key={project.id}
-                    onClick={() =>
-                      router.push(`/projects/${project.id}`)
-                    }
-                    className="bg-white/70 backdrop-blur-md border border-amber-900/5 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_16px_32px_-8px_rgba(245,158,11,0.1)] hover:-translate-y-1 hover:border-amber-500/20 transition-all duration-305 flex flex-col justify-between min-h-[380px] group cursor-pointer"
-                  >
-                    {/* Card Top Details */}
-                    <div>
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2">
-                          <FolderKanban size={16} className="text-amber-600" />
-                          <span className="text-sm font-extrabold text-slate-800 group-hover:text-amber-700 group-hover:underline truncate max-w-[170px]">
-                            {project.name}
-                          </span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget({
-                              type: "project",
-                              id: project.id,
-                              name: project.name,
-                            });
-                          }}
-                          className="text-slate-350 hover:text-red-500 p-1 rounded hover:bg-slate-50 transition-colors cursor-pointer"
-                          title="Delete Project"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-
-                      {project.description ? (
-                        <p className="text-[11px] text-slate-500 leading-relaxed truncate-2-lines mb-4 h-8 overflow-hidden">
-                          {project.description}
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-slate-400 italic mb-4 h-8">
-                          No description provided.
-                        </p>
-                      )}
-
-                      {(project.creatorEmail || project.creatorName) && (
-                        <p className="text-[10px] text-slate-450 font-semibold mb-3 -mt-2">
-                          created by: <span className="text-slate-600 font-bold">{project.creatorName || project.creatorEmail}</span>
-                        </p>
-                      )}
-
-                      {/* Progress bar */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1.5">
-                          <span>Progress</span>
-                          <span>
-                            {completedTasks}/{totalTasks} tasks (
-                            {progressPercent}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-amber-500/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-amber-500 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Mini task list overview */}
-                      <div className="border-t border-amber-955/10 pt-3">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                          Tasks Pipeline
-                        </div>
-                        <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1 scrollbar-thin">
-                          {project.tasks && project.tasks.length > 0 ? (
-                            project.tasks.map((task) => {
-                              const cfg = statusConfig[task.status];
-                              const StatusIcon = cfg.icon;
-
-                              return (
-                                <div
-                                  key={task.id}
-                                  className="flex items-center justify-between gap-2 py-1 px-2 rounded-lg hover:bg-white/80 transition-colors group/task"
-                                >
-                                  <div className="flex items-center gap-2 truncate">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        cycleTaskStatus(task.id, task.status);
-                                      }}
-                                      className={`${cfg.color} hover:opacity-80 transition-opacity cursor-pointer shrink-0`}
-                                      title={`Status: ${cfg.label}. Click to cycle.`}
-                                    >
-                                      <StatusIcon size={12} />
-                                    </button>
-                                    <span
-                                      className={`text-[11px] truncate ${
-                                        task.status === "done"
-                                          ? "line-through text-slate-400"
-                                          : "text-slate-700 font-medium"
-                                      }`}
-                                    >
-                                      {task.title}
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteTarget({
-                                        type: "task",
-                                        id: task.id,
-                                        name: task.title,
-                                      });
-                                    }}
-                                    className="text-slate-350 hover:text-red-500 opacity-0 group-hover/task:opacity-100 transition-opacity p-0.5 rounded cursor-pointer"
-                                    title="Delete task"
-                                  >
-                                    <Trash2 size={11} />
-                                  </button>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <span className="text-[10px] text-slate-400 italic pl-1">
-                              No tasks in this project.
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Footer Actions */}
-                    <div className="pt-4 mt-4 border-t border-amber-955/10 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-extrabold text-amber-600 group-hover:text-amber-700 flex items-center gap-1">
-                        Open Board <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
-                      </span>
-
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        className="border-amber-500/35 hover:bg-amber-500/10 text-amber-700 hover:text-amber-800 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNewTaskStatus("todo");
-                          setCreateTaskProjectId(project.id);
-                        }}
-                      >
-                        <Plus size={10} className="mr-1" />
-                        <span>Add Task</span>
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
+      {/* ─── Main Content Views with loading overlay filter ─────────────────────────────── */}
+      <div className={`transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+        {activeProject ? (
+          /* ─── VIEW 1: KANBAN BOARD ─── */
+          <KanbanBoard
+            project={activeProject}
+            members={members}
+            currentUserId={currentUserId}
+            onAddTask={(status) => {
+              setNewTaskStatus(status);
+              setCreateTaskProjectId(activeProject.id);
+            }}
+            onDeleteTask={(id, title) =>
+              setDeleteTarget({ type: "task", id, name: title })
+            }
+            onStatusChange={handleStatusChange}
+            onAssigneeChange={handleAssigneeChange}
+          />
+        ) : (
+          /* ─── VIEW 2: ALL PROJECTS GRID ─── */
+          <ProjectsDashboardGrid
+            optimisticProjects={optimisticProjects}
+            statusConfig={statusConfig}
+            cycleTaskStatus={cycleTaskStatus}
+            setDeleteTarget={setDeleteTarget}
+            setNewTaskStatus={setNewTaskStatus}
+            setCreateTaskProjectId={setCreateTaskProjectId}
+            setIsCreateProjectOpen={setIsCreateProjectOpen}
+            isWorkspaceMember={isWorkspaceMember}
+          />
+        )}
+      </div>
 
       {/* ─── MODALS ─────────────────────────────────────────── */}
 
@@ -553,7 +512,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
         isOpen={!!createTaskProjectId}
         onClose={() => setCreateTaskProjectId(null)}
         projectName={
-          projects.find((p) => p.id === createTaskProjectId)?.name || ""
+          optimisticProjects.find((p) => p.id === createTaskProjectId)?.name || ""
         }
         isPending={isPending}
         initialStatus={newTaskStatus}

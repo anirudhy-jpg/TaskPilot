@@ -21,7 +21,7 @@ export default async function MembersPage() {
 
   const currentUserMemberRow = members.find(m => m.userId === user.id)
   const currentUserRole = currentUserMemberRow?.role || (workspace.ownerId === user.id ? "owner" : "member")
-  const canInvite = true
+  const canInvite = currentUserRole !== "member"
 
   return (
     <MembersList

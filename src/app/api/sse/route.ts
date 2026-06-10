@@ -78,7 +78,13 @@ export async function GET(req: NextRequest) {
                   type: "invitation",
                   payload
                 })}\n\n`
-                controller.enqueue(encoder.encode(sseMessage))
+                if (!req.signal.aborted) {
+                  try {
+                    controller.enqueue(encoder.encode(sseMessage))
+                  } catch (err) {
+                    clearInterval(interval)
+                  }
+                }
               }
             }
           }
@@ -88,13 +94,27 @@ export async function GET(req: NextRequest) {
       }
 
       // Initial query
-      await poll()
+      if (!req.signal.aborted) {
+        await poll()
+      }
 
       // Set up polling interval every 5 seconds
       const interval = setInterval(async () => {
+        if (req.signal.aborted) {
+          clearInterval(interval)
+          return
+        }
         await poll()
+        if (req.signal.aborted) {
+          clearInterval(interval)
+          return
+        }
         // Send a ping to keep connection alive
-        controller.enqueue(encoder.encode(": ping\n\n"))
+        try {
+          controller.enqueue(encoder.encode(": ping\n\n"))
+        } catch (err) {
+          clearInterval(interval)
+        }
       }, 5000)
 
       // Clean up on client disconnect

@@ -19,12 +19,12 @@ export async function createProjectAction(
   workspaceId: string,
   name: string,
   description?: string
-): Promise<ActionResponse> {
+): Promise<ActionResponse & { projectId?: string }> {
   try {
-    await ProjectService.createProject(workspaceId, name, description)
+    const project = await ProjectService.createProject(workspaceId, name, description)
     revalidatePath("/workspace")
     revalidatePath("/projects", "layout")
-    return { success: true }
+    return { success: true, projectId: project.id }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create project."
     return {

@@ -1,16 +1,19 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { Logo } from "@/components/ui/logo"
 import { Button } from "@/components/ui/button"
 import { logoutAction } from "@/actions/auth/auth.actions"
-import { leaveWorkspaceAction, deleteWorkspaceAction } from "@/actions/workspace/workspace-hub.actions"
-import { LogOut, DoorOpen, Trash2 } from "lucide-react"
+import { leaveWorkspaceAction, deleteWorkspaceAction, switchActiveWorkspaceAction } from "@/actions/workspace/workspace-hub.actions"
+import { LogOut, DoorOpen, Trash2, ChevronDown, Briefcase } from "lucide-react"
 import type { UserProfile } from "@/types/auth.types"
+import type { Workspace } from "@/types/workspace.types"
 import { HeaderInbox } from "@/components/workspace/HeaderInbox"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { DeleteConfirmModal } from "@/components/workspace/modals/DeleteConfirmModal"
+import { SwitchWorkspaceModal } from "@/components/workspace/modals/SwitchWorkspaceModal"
+import { SwitchingWorkspaceLoading } from "@/components/workspace/SwitchingWorkspaceLoading"
 
 interface HeaderProps {
   profile: UserProfile | null
@@ -24,6 +27,8 @@ interface HeaderProps {
   isWorkspaceOwner?: boolean
   workspaceId?: string | null
   workspaceName?: string
+  workspaces?: Workspace[]
+  currentUserId?: string
 }
 
 export function Header({
@@ -32,12 +37,19 @@ export function Header({
   isWorkspaceOwner = true,
   workspaceId = null,
   workspaceName = "",
+  workspaces = [],
+  currentUserId = "",
 }: HeaderProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
+  const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false)
+
+  useEffect(() => {
+    setIsSwitchingWorkspace(false)
+  }, [workspaceId, pathname])
 
   const handleLeaveConfirm = async () => {
     if (!workspaceId) return
@@ -58,31 +70,40 @@ export function Header({
     }
   }
 
-  const handleDeleteConfirm = async () => {
-    if (!workspaceId) return
-    setIsDeleting(true)
-    try {
-      const res = await deleteWorkspaceAction(workspaceId)
-      if (res.success) {
-        setIsDeleteModalOpen(false)
-        router.push("/workspace")
-        router.refresh()
-      } else {
-        alert(res.error || "Failed to delete workspace.")
-      }
-    } catch {
-      alert("An unexpected error occurred.")
-    } finally {
-      setIsDeleting(false)
+  const handleSwitchWorkspace = async (targetId: string) => {
+    setIsSwitchingWorkspace(true)
+    const res = await switchActiveWorkspaceAction(targetId)
+    if (res.success) {
+      router.push("/workspace")
+      router.refresh()
+    } else {
+      setIsSwitchingWorkspace(false)
+      throw new Error(res.error || "Failed to switch workspace.")
     }
   }
 
   return (
     <header className="border-b border-amber-900/10 bg-white/50 backdrop-blur-xl sticky top-0 z-50 w-full select-none">
       <div className="w-full px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="cursor-pointer">
-          <Logo size="md" />
-        </Link>
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/" className="cursor-pointer shrink-0">
+            <Logo size="md" />
+          </Link>
+          {workspaceId && workspaces && workspaces.length > 0 && (
+            <>
+              <div className="h-4 w-px bg-amber-900/15 shrink-0" />
+              <button
+                onClick={() => setIsSwitchModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-slate-800 transition-all cursor-pointer font-bold text-xs shrink-0 select-none animate-in fade-in"
+                title="Switch Workspace"
+              >
+                <Briefcase size={12} className="text-amber-600 shrink-0" />
+                <span className="truncate max-w-[120px]">{workspaceName}</span>
+                <ChevronDown size={12} className="text-slate-500 shrink-0" />
+              </button>
+            </>
+          )}
+        </div>
 
         <div className="flex items-center gap-3">
           {/* Notification Inbox Bell */}
@@ -102,50 +123,27 @@ export function Header({
           </div>
 
           {/* Action: Delete Workspace (if owner) or Leave Workspace (if member) */}
-          {workspaceId && (
-            isWorkspaceOwner ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  className="text-slate-550 hover:text-red-650 hover:bg-red-500/10 cursor-pointer rounded-full transition-colors w-8 h-8"
-                  title={`Delete workspace "${workspaceName}"`}
-                >
-                  <Trash2 size={15} className="stroke-[2.5]" />
-                </Button>
-                <DeleteConfirmModal
-                  isOpen={isDeleteModalOpen}
-                  onClose={() => setIsDeleteModalOpen(false)}
-                  type="delete_workspace"
-                  name={workspaceName}
-                  isPending={isDeleting}
-                  onConfirm={handleDeleteConfirm}
-                />
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsLeaveModalOpen(true)}
-                  className="text-slate-550 hover:text-red-650 hover:bg-red-500/10 cursor-pointer rounded-full transition-colors w-8 h-8"
-                  title={`Leave workspace "${workspaceName}"`}
-                >
-                  <DoorOpen size={15} className="stroke-[2.5]" />
-                </Button>
-                <DeleteConfirmModal
-                  isOpen={isLeaveModalOpen}
-                  onClose={() => setIsLeaveModalOpen(false)}
-                  type="leave_workspace"
-                  name={workspaceName}
-                  isPending={isLeaving}
-                  onConfirm={handleLeaveConfirm}
-                />
-              </>
-            )
+          {workspaceId && !isWorkspaceOwner && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsLeaveModalOpen(true)}
+                className="text-slate-550 hover:text-red-650 hover:bg-red-500/10 cursor-pointer rounded-full transition-colors w-8 h-8"
+                title={`Leave workspace "${workspaceName}"`}
+              >
+                <DoorOpen size={15} className="stroke-[2.5]" />
+              </Button>
+              <DeleteConfirmModal
+                isOpen={isLeaveModalOpen}
+                onClose={() => setIsLeaveModalOpen(false)}
+                type="leave_workspace"
+                name={workspaceName}
+                isPending={isLeaving}
+                onConfirm={handleLeaveConfirm}
+              />
+            </>
           )}
 
           {/* Always show logout/signout button if owner or if not inside a workspace */}
@@ -164,6 +162,15 @@ export function Header({
           )}
         </div>
       </div>
+      <SwitchWorkspaceModal
+        isOpen={isSwitchModalOpen}
+        onClose={() => setIsSwitchModalOpen(false)}
+        workspaces={workspaces}
+        activeWorkspaceId={workspaceId}
+        currentUserId={currentUserId}
+        onSwitchWorkspace={handleSwitchWorkspace}
+      />
+      {isSwitchingWorkspace && <SwitchingWorkspaceLoading />}
     </header>
   )
 }

@@ -6,6 +6,7 @@ import { ProjectService } from "@/services/project.service"
 import { TaskService } from "@/services/task.service"
 import { Sidebar } from "@/components/workspace/Sidebar"
 import { Header } from "@/components/workspace/Header"
+import { WorkspaceHubService } from "@/services/workspace-hub.service"
 
 export const dynamic = "force-dynamic"
 
@@ -77,6 +78,14 @@ export default async function WorkspaceLayout({
     }
   }
 
+  // Fetch workspaces for switcher
+  let workspaces: any[] = []
+  try {
+    workspaces = await WorkspaceHubService.getWorkspacesForUser(user.id)
+  } catch (err) {
+    console.error("Error loading workspaces for layout switcher:", err)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fffdf9] via-[#fbfaf8] to-[#f6f5f0] dark:from-[#0f0e0c] dark:via-[#131211] dark:to-[#181613] text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full relative overflow-hidden">
       {/* Ambient glows (High-vibrancy gold, smoky dark, and warm rose-red highlights) */}
@@ -92,6 +101,8 @@ export default async function WorkspaceLayout({
         isWorkspaceOwner={workspace ? workspace.ownerId === user.id : true}
         workspaceId={workspace?.id || null}
         workspaceName={workspaceName}
+        workspaces={workspaces}
+        currentUserId={user.id}
       />
 
       {/* ── Main Area ──────────────────────────────────────── */}

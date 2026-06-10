@@ -181,6 +181,38 @@ export class WorkspaceService {
       throw new Error(error.message)
     }
   }
+
+  /**
+   * Rename a workspace.
+   */
+  static async renameWorkspace(workspaceId: string, name: string, ownerId: string): Promise<Workspace> {
+    const supabase = await createClient()
+
+    // Verify ownership
+    const { data: ws } = await supabase
+      .from("workspaces")
+      .select("owner_id")
+      .eq("id", workspaceId)
+      .maybeSingle()
+
+    if (!ws || ws.owner_id !== ownerId) {
+      throw new Error("Unauthorized: Only the workspace owner can rename this workspace.")
+    }
+
+    const { data, error } = await supabase
+      .from("workspaces")
+      .update({ name })
+      .eq("id", workspaceId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error renaming workspace:", error)
+      throw new Error(error.message)
+    }
+
+    return mapWorkspace(data)
+  }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────

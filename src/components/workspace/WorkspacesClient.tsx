@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import type { Workspace } from "@/types/workspace.types"
 import { switchActiveWorkspaceAction, createWorkspaceAction, leaveWorkspaceAction, deleteWorkspaceAction } from "@/actions/workspace/workspace-hub.actions"
 import { DeleteConfirmModal } from "@/components/workspace/modals/DeleteConfirmModal"
+import { SwitchingWorkspaceLoading } from "@/components/workspace/SwitchingWorkspaceLoading"
 
 interface WorkspacesClientProps {
   workspaces: Workspace[]
@@ -232,7 +233,14 @@ export function WorkspacesClient({
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none">
+    <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+      {/* Premium top linear loading bar showing sync state */}
+      {isPending && (
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-[9999] overflow-hidden">
+          <div className="h-full bg-amber-450 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col gap-1 border-b border-amber-900/10 pb-5">
         <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl flex items-center gap-2">
@@ -333,6 +341,7 @@ export function WorkspacesClient({
         isPending={deletingId !== null}
         onConfirm={handleDeleteConfirm}
       />
+      {switchingId !== null && <SwitchingWorkspaceLoading />}
     </div>
   )
 }

@@ -68,6 +68,7 @@ export function SettingsPanel({
       }
     })
   }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -90,7 +91,7 @@ export function SettingsPanel({
 
             {/* Avatar + Name */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 flex items-center justify-center text-white text-xl font-black shadow-md shadow-amber-550/15 uppercase">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 flex items-center justify-center text-white text-xl font-black shadow-md shadow-amber-555/15 uppercase">
                 {profile?.fullName?.[0] ||
                   profile?.email?.[0] ||
                   user.email?.[0] ||
@@ -174,7 +175,7 @@ export function SettingsPanel({
 
             {!isWorkspaceOwner && workspaceId && (
               <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                <div className="flex items-center gap-2 text-red-650 mb-4">
+                <div className="flex items-center gap-2 text-red-655 mb-4">
                   <DoorOpen size={18} />
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
                 </div>
@@ -206,7 +207,7 @@ export function SettingsPanel({
 
             {isWorkspaceOwner && workspaceId && (
               <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-2 text-red-650 mb-4">
+                <div className="flex items-center gap-2 text-red-655 mb-4">
                   <Trash2 size={18} />
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
                 </div>

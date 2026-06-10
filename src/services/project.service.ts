@@ -82,7 +82,7 @@ export class ProjectService {
       throw new Error("Unauthorized")
     }
 
-    // Check permissions: Anyone who is a member or owner of the workspace can create projects
+    // Check permissions: Only workspace owners and admins can create projects
     const { data: ws } = await supabase
       .from("workspaces")
       .select("owner_id")
@@ -97,10 +97,10 @@ export class ProjectService {
       .maybeSingle()
 
     const isOwner = ws?.owner_id === user.id
-    const isMember = memberInfo !== null
+    const userRole = memberInfo?.role || (isOwner ? "owner" : null)
 
-    if (!isOwner && !isMember) {
-      throw new Error("Unauthorized: Only workspace members can create projects.")
+    if (userRole === "member" || !userRole) {
+      throw new Error("Unauthorized: Workspace members are not allowed to create projects.")
     }
 
     // Only include columns that are guaranteed to exist
@@ -223,7 +223,7 @@ export class ProjectService {
       throw new Error("Project not found")
     }
 
-    // Check permissions: Only workspace owners/admins or the project creator can delete
+    // Check permissions: Only workspace owners and admins can delete projects
     const { data: ws } = await supabase
       .from("workspaces")
       .select("owner_id")
@@ -238,7 +238,13 @@ export class ProjectService {
       .maybeSingle()
 
     const isWorkspaceOwner = ws?.owner_id === user.id
-    const isWorkspaceAdmin = memberInfo?.role === "admin" || memberInfo?.role === "owner"
+    const userRole = memberInfo?.role || (isWorkspaceOwner ? "owner" : "member")
+
+    if (userRole === "member") {
+      throw new Error("Unauthorized: Workspace members are not allowed to delete projects.")
+    }
+
+    const isWorkspaceAdmin = userRole === "admin" || userRole === "owner"
     const isProjectCreator = project.created_by === user.id
 
     if (!isWorkspaceOwner && !isWorkspaceAdmin && !isProjectCreator) {

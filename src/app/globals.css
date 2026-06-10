@@ -50,6 +50,7 @@
   --animate-bounce-slow: bounce-slow 6s ease-in-out infinite;
   --animate-float: float-around 8s ease-in-out infinite;
   --animate-spin-slow: spin-slow 25s linear infinite;
+  --animate-loading-bar: loading-bar 1.5s ease-in-out infinite;
 
   @keyframes bounce-slow {
     0%, 100% { transform: translateY(0); }
@@ -62,6 +63,11 @@
   @keyframes spin-slow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+  @keyframes loading-bar {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
   }
 }
 
