@@ -8,9 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { signupAction } from "@/actions/auth/auth.actions"
 import { signupSchema } from "@/validation/auth.validation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export function SignupForm() {
+  const searchParams = useSearchParams()
+  const next = searchParams.get("next")
+
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -57,7 +61,7 @@ export function SignupForm() {
 
     setLoading(true)
     try {
-      const response = await signupAction({ name, email, password })
+      const response = await signupAction({ name, email, password }, next)
       if (response && !response.success) {
         const errMsg = response.error || "Failed to create account. Please try again."
         if (errMsg.toLowerCase().includes("email") || errMsg.toLowerCase().includes("already")) {
@@ -223,10 +227,9 @@ export function SignupForm() {
         <span>Continue with GitHub</span>
       </Button>
 
-      {/* Footer link */}
       <div className="mt-6 text-center text-xs text-slate-500">
         Already have an account?{" "}
-        <Link href="/login" className="text-amber-600 hover:underline font-semibold ml-1">
+        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-amber-600 hover:underline font-semibold ml-1">
           Sign In
         </Link>
       </div>

@@ -33,8 +33,12 @@ export interface Project {
   description: string | null
   status: ProjectStatus
   createdAt: string
+  createdBy?: string
+  creatorEmail?: string | null
+  creatorName?: string | null
   // Nested tasks (populated when needed)
   tasks?: Task[]
+  memberUserIds?: string[]
 }
 
 // ─── Task ────────────────────────────────────────────────────

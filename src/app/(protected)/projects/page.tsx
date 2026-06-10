@@ -7,6 +7,8 @@ import { TaskService } from "@/services/task.service"
 import { MemberService } from "@/services/member.service"
 import { ProjectsList } from "@/components/workspace/ProjectsList"
 
+export const dynamic = "force-dynamic"
+
 export default async function ProjectsPage() {
   const { user } = await requireUser()
 
@@ -16,11 +18,12 @@ export default async function ProjectsPage() {
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
   const members = await MemberService.getMembersByWorkspace(workspace.id)
 
-  // Fetch tasks for each project
+  // Fetch tasks and memberUserIds for each project
   const projectsWithTasks = await Promise.all(
     projects.map(async (project) => {
       const tasks = await TaskService.getTasksByProject(project.id)
-      return { ...project, tasks }
+      const memberUserIds = await ProjectService.getProjectMemberUserIds(project.id)
+      return { ...project, tasks, memberUserIds }
     })
   )
 

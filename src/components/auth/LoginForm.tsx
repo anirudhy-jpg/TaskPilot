@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label"
 import { loginAction } from "@/actions/auth/auth.actions"
 import { loginSchema } from "@/validation/auth.validation"
 
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export function LoginForm() {
-
+  const searchParams = useSearchParams()
+  const next = searchParams.get("next")
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -58,7 +60,7 @@ export function LoginForm() {
 
     setLoading(true)
     try {
-      const response = await loginAction({ email, password })
+      const response = await loginAction({ email, password }, next)
       if (response && !response.success) {
         const errMsg = response.error || "Failed to sign in. Please check your credentials."
         if (errMsg.toLowerCase().includes("credential") || errMsg.toLowerCase().includes("invalid")) {

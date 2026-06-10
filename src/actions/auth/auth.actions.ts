@@ -9,7 +9,10 @@ export interface ActionResponse {
   error?: string
 }
 
-export async function loginAction(input: LoginInput): Promise<ActionResponse> {
+export async function loginAction(
+  input: LoginInput,
+  redirectTo?: string | null
+): Promise<ActionResponse> {
   let isSuccess = false
   try {
     await AuthService.signIn(input)
@@ -23,13 +26,16 @@ export async function loginAction(input: LoginInput): Promise<ActionResponse> {
   }
 
   if (isSuccess) {
-    redirect("/workspace")
+    redirect(redirectTo || "/workspace")
   }
 
   return { success: false }
 }
 
-export async function signupAction(input: SignupInput): Promise<ActionResponse> {
+export async function signupAction(
+  input: SignupInput,
+  redirectTo?: string | null
+): Promise<ActionResponse> {
   let isSuccess = false
   try {
     await AuthService.signUp(input)
@@ -43,7 +49,7 @@ export async function signupAction(input: SignupInput): Promise<ActionResponse> 
   }
 
   if (isSuccess) {
-    redirect("/login")
+    redirect(redirectTo ? `/login?next=${encodeURIComponent(redirectTo)}` : "/login")
   }
 
   return { success: false }

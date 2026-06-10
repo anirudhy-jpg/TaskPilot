@@ -1,7 +1,7 @@
 # TaskPilot Development Progress Report
-**Date:** June 5, 2026
+**Date:** June 9, 2026
 
-Today's progress focuses on implementing the core Workspace management, project dashboards, Kanban task board, and transitioning the routing architecture from a `/dashboard` layout to a dedicated `/workspace` workspace structure.
+Recent progress focuses on implementing the real-time member invitation system, securing project visibility restrictions, establishing a dedicated workspace switcher dashboard, and implementing clean leave workspace mechanics with portal-based modal confirmations.
 
 ---
 
@@ -14,7 +14,7 @@ We evolved the application's layout paths to consolidate all protected user acti
 
 ---
 
-## 2. Workspace Protected Pages (`src/app/(protected)/workspace/`)
+## 2. Workspace Protected Pages & Real-time Integration
 Created the full set of dashboard sub-directories and routes under the protected workspace folder structure:
 - `layout.tsx`: The primary container layout for protected views, initializing the workspace sidebar, active profile loader, and dynamic sub-page panels.
 - `page.tsx` (Overview): The landing dashboard panel containing active project metrics, quick statistics cards, and chart components.
@@ -22,36 +22,29 @@ Created the full set of dashboard sub-directories and routes under the protected
 - `members/page.tsx` (Teammates Panel): Displays collaborators in the current workspace.
 - `teams/page.tsx` (Sub-Teams Panel): Manages specialized organization groups.
 - `settings/page.tsx` (Workspace Preferences): Updates workspace profiles, names, and metadata.
+- `/workspaces/page.tsx` (Workspace Switcher Hub): A separate cockpit showing owned vs. member workspaces, allowing fast cookie-based active workspace switching and leaving.
 
 ---
 
-## 3. Database Services & Schemas (`src/services/`)
-Created modular services interfacing with Supabase to provide data layers for the workspace features:
-- **Workspace Service (`workspace.service.ts`):** Manages queries to retrieve active workspaces for authenticated users, create new workspace objects, and fetch specific workspaces.
-- **Project Service (`project.service.ts`):** Integrates methods to get workspace projects, create new projects with descriptions, fetch single project data, and delete projects.
-- **Task Service (`task.service.ts`):** Supports Kanban boards by providing actions to list tasks by project or workspace, construct new tasks, update status fields (enabling drag/move logic), and delete tasks.
-- **Member Service (`member.service.ts`):** Fetches membership rosters, maps joined profiles (emails, names, avatars), and correlates project task assignments.
-- **Types definition (`src/types/workspace.types.ts`):** Defined types for `Workspace`, `Project`, `Task`, `WorkspaceMember`, and other entities.
-- **Row-Level Security Policies (`supabase_rls_policies.sql`):** Authored strict PostgreSQL RLS policies to restrict read/write permissions on workspaces, members, projects, and tasks to authenticated workspace participants.
+## 3. Real-Time Invitation System & API Routes
+We built an asynchronous member invitation and project-assignment pipeline:
+- **SSE Stream (`/api/sse/route.ts`):** Keeps a persistent, low-overhead event connection open to poll for new invites and update the header icon bell count badge in real time.
+- **Accept/Reject Endpoints (`/api/invitations/accept` & `/api/invitations/reject`):** Updates invitation tables, sets target layouts in cookies, and revalidates Next.js layout routes.
+- **Postgres Trigger (`handle_accepted_invitation`):** Executes in PostgreSQL, automatically registering accepted users to project memberships with a default `'member'` role.
+- **Project Visibility RLS Constraints**: Restricts regular member access to SELECT/VIEW only projects they are assigned to inside `project_members`, rather than exposing all projects in the workspace.
 
 ---
 
-## 4. UI Components (`src/components/workspace/`)
+## 4. UI Components & UX Enhancements
 Designed and styled interactive frontend elements matching the project's **"Crisp Light & Pine"** design theme:
 - **`Sidebar.tsx`:** Dynamic navigation bar showing logo, routes, active profile summary, and a workspace selector dropdown.
-- **`OverviewCharts.tsx`:** Displays high-level analytics cards including active project tallies, total tasks, and completion metrics.
-- **`ProjectsList.tsx`:** Standardized grid of active projects featuring descriptions, metadata, and direct navigation links to view their corresponding Kanban boards.
-- **`KanbanBoard.tsx`:** A fully-featured drag/click board split into standard stages (`todo`, `in_progress`, `done`). Features add-task forms, status update triggers, and task deletion controls.
-- **`MembersList.tsx` & `TeamsList.tsx`:** Interactive grids showing team details and active members.
-- **`SettingsPanel.tsx`:** Interactive panel allowing the editing of workspace properties.
-- **Modal Controllers (`src/components/workspace/modals/`):**
-  - `CreateProjectModal.tsx`: Handled modal submission to add new projects.
-  - `CreateTaskModal.tsx`: Simplified dynamic form to instantly add tasks to projects.
-  - `DeleteConfirmModal.tsx`: Confirmation popover checking all critical workspace deletion events.
+- **`HeaderInbox.tsx`:** Bell notification badge that listens to real-time events and enables users to accept/reject invites from any page.
+- **`Header.tsx`**: Replaces the **Sign Out** button with a **Leave Workspace** button if the active workspace is a member workspace.
+- **`DeleteConfirmModal.tsx`**: Uses React `createPortal` to render directly inside `document.body`, preventing layout elements with `backdrop-filter` or `sticky` from clipping or displacing the modal dialog.
+- **Date Hydration fix**: Enforced deterministic date formats on the client-rendered board cards.
 
 ---
 
 ## 5. Next Steps
 1. **Drag-and-Drop Implementation:** Enhance the visual drag-and-drop feedback on the `KanbanBoard` columns.
-2. **Invitation Workflows:** Fully wire the front-end member invitation triggers to email notifications/database joins.
-3. **Database Migration:** Apply the written RLS SQL policies directly onto the live Supabase project to enforce tenant isolation.
+2. **Notification History Page**: Add a permanent archive list of past invitations and action items.

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { Project, Task, TaskStatus, WorkspaceMember, TaskPriority } from "@/types/workspace.types";
 import { AssigneeSelector } from "./AssigneeSelector";
-import { TaskDetailsModal } from "./TaskDetailsModal";
+import { TaskDetailsModal } from "./modals/TaskDetailsModal";
 
 interface KanbanBoardProps {
   project: Project & { tasks: Task[] };
@@ -94,7 +94,10 @@ export function getVisualPriority(task: Task): TaskPriority {
 
 function formatTaskDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  return `${month} ${day}`;
 }
 
 export function KanbanBoard({
@@ -107,21 +110,39 @@ export function KanbanBoard({
   onAssigneeChange,
 }: KanbanBoardProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const selectedTask = project.tasks?.find((t) => t.id === selectedTaskId) || null;
+  const selectedTask = React.useMemo(() => {
+    return project.tasks?.find((t) => t.id === selectedTaskId) || null;
+  }, [project.tasks, selectedTaskId]);
 
   // Filter tasks into columns
-  const todoTasks = project.tasks?.filter((t) => t.status === "todo") || [];
-  const inProgressTasks = project.tasks?.filter((t) => t.status === "in_progress") || [];
-  const doneTasks = project.tasks?.filter((t) => t.status === "done") || [];
+  const todoTasks = React.useMemo(() => {
+    return project.tasks?.filter((t) => t.status === "todo") || [];
+  }, [project.tasks]);
+
+  const inProgressTasks = React.useMemo(() => {
+    return project.tasks?.filter((t) => t.status === "in_progress") || [];
+  }, [project.tasks]);
+
+  const doneTasks = React.useMemo(() => {
+    return project.tasks?.filter((t) => t.status === "done") || [];
+  }, [project.tasks]);
 
   // Create a map from task.id to index for keying
-  const sortedTasks = project.tasks
-    ? [...project.tasks].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      )
-    : [];
-  const taskNumberMap = new Map(sortedTasks.map((t, idx) => [t.id, idx + 1]));
-  const projectPrefix = getProjectInitials(project.name);
+  const sortedTasks = React.useMemo(() => {
+    return project.tasks
+      ? [...project.tasks].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )
+      : [];
+  }, [project.tasks]);
+
+  const taskNumberMap = React.useMemo(() => {
+    return new Map(sortedTasks.map((t, idx) => [t.id, idx + 1]));
+  }, [sortedTasks]);
+
+  const projectPrefix = React.useMemo(() => {
+    return getProjectInitials(project.name);
+  }, [project.name]);
 
   // Helper to render columns
   const renderColumn = (

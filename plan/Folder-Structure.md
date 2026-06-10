@@ -20,8 +20,10 @@ taskpilot/
 │   ├── actions/                  # Next.js Server Actions grouped by feature
 │   │   ├── auth/                 # Authentication actions (login, signup, logout)
 │   │   │   └── auth.actions.ts
+│   │   ├── invite.actions.ts      # Invitation sending server actions
 │   │   └── workspace/            # Workspace management actions (CRUD actions)
-│   │       └── workspace.actions.ts
+│   │       ├── workspace.actions.ts
+│   │       └── workspace-hub.actions.ts # Isolated active workspace switching & leaving actions
 │   ├── app/                      # Next.js App Router root layout & routing
 │   │   ├── (auth)/               # Public authentication pages route group
 │   │   │   ├── callback/         # OAuth callback route for Supabase Auth redirect
@@ -42,8 +44,19 @@ taskpilot/
 │   │   │   │   └── page.tsx
 │   │   │   ├── teams/            # Teams overview page
 │   │   │   │   └── page.tsx
-│   │   │   └── workspace/        # Workspace overview page
+│   │   │   ├── workspace/        # Workspace overview page
+│   │   │   │   └── page.tsx
+│   │   │   └── workspaces/       # Workspace switcher hub page (owned & membered workspaces)
+│   │   │       ├── loading.tsx   # Loading skeletal framework
 │   │   │       └── page.tsx
+│   │   ├── api/                  # API endpoints
+│   │   │   ├── invitations/      # Invitation endpoints
+│   │   │   │   ├── accept/
+│   │   │   │   │   └── route.ts  # Accepts invite, cookies set, auto-joins project
+│   │   │   │   └── reject/
+│   │   │   │       └── route.ts  # Rejects invite
+│   │   │   └── sse/
+│   │   │       └── route.ts      # SSE Real-time invitations event stream listener
 │   │   ├── favicon.ico           # Application favicon
 │   │   ├── globals.css           # Global Tailwind and app-wide CSS styles
 │   │   ├── layout.tsx            # Main HTML layout wrapper
@@ -71,13 +84,16 @@ taskpilot/
 │   │       │   ├── CreateProjectModal.tsx
 │   │       │   ├── CreateTaskModal.tsx
 │   │       │   └── DeleteConfirmModal.tsx
+│   │       ├── Header.tsx        # Top navbar containing profile chip and switcher/leave button
+│   │       ├── HeaderInbox.tsx   # SSE Real-time bell notification inbox dropdown component
 │   │       ├── KanbanBoard.tsx   # Project task board with drag & drop support
 │   │       ├── MembersList.tsx   # Workspace members rendering
 │   │       ├── OverviewCharts.tsx# Analytics/charts dashboard
 │   │       ├── ProjectsList.tsx  # Project list and grid cards rendering
 │   │       ├── SettingsPanel.tsx # Workspace settings manager
 │   │       ├── Sidebar.tsx       # Sidebar navigation menu
-│   │       └── TeamsList.tsx     # Team listing component
+│   │       ├── TeamsList.tsx     # Team listing component
+│   │       └── WorkspacesClient.tsx # Client dashboard for switcher page
 │   ├── lib/                      # Shared utility functions and third-party SDK clients
 │   │   ├── proxy/                # Proxy authentication middleware logic
 │   │   │   ├── auth.ts
@@ -93,19 +109,20 @@ taskpilot/
 │   │   ├── profile.service.ts    # Profile table queries
 │   │   ├── project.service.ts    # Projects CRUD DB queries
 │   │   ├── task.service.ts       # Tasks CRUD and status update queries
-│   │   └── workspace.service.ts  # Workspaces CRUD queries
+│   │   ├── workspace.service.ts  # Workspaces CRUD queries
+│   │   └── workspace-hub.service.ts # Isolated workspace switcher & leaving queries
 │   ├── types/                    # Shared TypeScript interfaces & types
 │   │   ├── auth.types.ts
 │   │   └── workspace.types.ts
 │   └── validation/               # Zod schemas for input validation
 │       └── auth.validation.ts
-├── supabase_rls_policies.sql     # Database setup schema, tables, and RLS policies
-├── components.json               # Shadcn UI configuration file
-├── eslint.config.mjs             # ESLint rules configuration
-├── next.config.ts                # Next.js compiler and runtime configuration
-├── package.json                  # Dependencies and scripts definitions
-├── postcss.config.mjs            # PostCSS plugin settings
-└── tsconfig.json                 # TypeScript compiler configuration
+│ ├── supabase_rls_policies.sql     # Database setup schema, tables, and RLS policies
+│ ├── components.json               # Shadcn UI configuration file
+│ ├── eslint.config.mjs             # ESLint rules configuration
+│ ├── next.config.ts                # Next.js compiler and runtime configuration
+│ ├── package.json                  # Dependencies and scripts definitions
+│ ├── postcss.config.mjs            # PostCSS plugin settings
+│ └── tsconfig.json                 # TypeScript compiler configuration
 ```
 
 ## Core Modules & Folders Breakdown

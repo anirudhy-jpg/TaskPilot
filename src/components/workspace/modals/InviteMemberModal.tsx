@@ -1,12 +1,14 @@
 import React, { useState } from "react"
-import { X, Copy, Check, Shield, User, Loader2 } from "lucide-react"
+import { X, Check, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { Project } from "@/types/workspace.types"
 
 interface InviteMemberModalProps {
   isOpen: boolean
   onClose: () => void
   isPending: boolean
-  onInvite: (email: string, role: "admin" | "member") => Promise<string | null>
+  onInvite: (email: string, role: "admin" | "member", projectId?: string | null) => Promise<string | null>
+  projects?: Project[]
 }
 
 export function InviteMemberModal({
@@ -14,11 +16,12 @@ export function InviteMemberModal({
   onClose,
   isPending,
   onInvite,
+  projects = [],
 }: InviteMemberModalProps) {
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<"admin" | "member">("member")
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState("")
+  const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!isOpen) return null
@@ -27,9 +30,9 @@ export function InviteMemberModal({
     if (!email.trim()) return
     setError(null)
     try {
-      const url = await onInvite(email.trim(), role)
+      const url = await onInvite(email.trim(), role, selectedProjectId || null)
       if (url) {
-        setInviteUrl(url)
+        setIsSuccess(true)
       } else {
         setError("Failed to generate invitation link.")
       }
@@ -39,34 +42,28 @@ export function InviteMemberModal({
     }
   }
 
-  const handleCopy = async () => {
-    if (!inviteUrl) return
-    try {
-      await navigator.clipboard.writeText(inviteUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("Failed to copy link:", err)
-    }
-  }
-
   const handleReset = () => {
     setEmail("")
     setRole("member")
-    setInviteUrl(null)
-    setCopied(false)
+    setSelectedProjectId("")
+    setIsSuccess(false)
     setError(null)
     onClose()
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleReset()
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+    >
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
-            {inviteUrl ? "Invitation Created!" : "Invite New Member"}
+            {isSuccess ? "Success!" : "Invite New Member"}
           </h3>
           <button
             onClick={handleReset}
@@ -82,7 +79,7 @@ export function InviteMemberModal({
           </div>
         )}
 
-        {!inviteUrl ? (
+        {!isSuccess ? (
           /* Input Form */
           <div className="space-y-4">
             <div>
@@ -147,6 +144,31 @@ export function InviteMemberModal({
               </div>
             </div>
 
+            {/* Project Selection for Members */}
+            {projects.length > 0 && (
+              <div>
+                <label className="text-xs font-semibold text-slate-500 block mb-1">
+                  Assign to Project (Optional)
+                </label>
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  disabled={isPending}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-800 cursor-pointer"
+                >
+                  <option value="">No initial project assignment</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                  Assigning a project restricts a regular workspace member to only see the selected project.
+                </p>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <Button
                 variant="ghost"
@@ -166,47 +188,34 @@ export function InviteMemberModal({
                 {isPending ? (
                   <span className="flex items-center gap-1.5">
                     <Loader2 size={12} className="animate-spin" />
-                    Generating...
+                    Sending...
                   </span>
                 ) : (
-                  "Generate Invite Link"
+                  "Send Invitation"
                 )}
               </Button>
             </div>
           </div>
         ) : (
           /* Success View */
-          <div className="space-y-4">
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Copy the unique link below to invite <span className="font-semibold text-slate-800">{email}</span> as a <span className="font-semibold text-slate-800">{role}</span>. This link will expire in 7 days.
-            </p>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={inviteUrl}
-                className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-500 focus:outline-none"
-              />
-              <Button
-                size="sm"
-                onClick={handleCopy}
-                className={`cursor-pointer ${
-                  copied
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-amber-500 hover:bg-amber-600 text-slate-950"
-                } text-xs font-black flex items-center gap-1 shrink-0 h-9`}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? "Copied" : "Copy Link"}
-              </Button>
+          <div className="space-y-4 py-2">
+            <div className="flex flex-col items-center justify-center text-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
+                <Check size={22} className="stroke-[3]" />
+              </div>
+              <div className="text-sm font-bold text-slate-800">
+                Send invitation successfully
+              </div>
+              <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed">
+                An invitation email notification has been generated for <span className="font-semibold text-slate-700">{email}</span>.
+              </p>
             </div>
 
             <div className="flex items-center justify-end pt-2 border-t border-slate-100">
               <Button
                 size="sm"
                 onClick={handleReset}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black cursor-pointer"
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black cursor-pointer w-full"
               >
                 Done
               </Button>

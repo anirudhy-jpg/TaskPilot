@@ -2,9 +2,9 @@
 
 import React, { useState, useTransition, useEffect } from "react"
 import { Shield, Crown, User, UserPlus, Trash2, Clock, Loader2, MoreVertical } from "lucide-react"
-import type { WorkspaceMember, MemberRole } from "@/types/workspace.types"
+import type { WorkspaceMember, MemberRole, Project } from "@/types/workspace.types"
 import type { Invitation } from "@/services/invite.service"
-import { InviteMemberModal } from "@/components/workspace/InviteMemberModal"
+import { InviteMemberModal } from "@/components/workspace/modals/InviteMemberModal"
 import { createInvitationAction, revokeInvitationAction } from "@/actions/invite.actions"
 import { removeWorkspaceMemberAction } from "@/actions/workspace/workspace.actions"
 import { DeleteConfirmModal } from "@/components/workspace/modals/DeleteConfirmModal"
@@ -32,6 +32,7 @@ interface MembersListProps {
   canInvite: boolean
   currentUserRole: MemberRole
   currentUserId: string
+  projects?: Project[]
 }
 
 const roleConfig: Record<
@@ -65,6 +66,7 @@ export function MembersList({
   canInvite,
   currentUserRole,
   currentUserId,
+  projects = [],
 }: MembersListProps) {
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -93,11 +95,15 @@ export function MembersList({
     return (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2)
   })
 
-  const handleInviteSubmit = async (email: string, role: "admin" | "member"): Promise<string | null> => {
+  const handleInviteSubmit = async (
+    email: string,
+    role: "admin" | "member",
+    projectId?: string | null
+  ): Promise<string | null> => {
     return new Promise((resolve, reject) => {
       startTransition(async () => {
         try {
-          const res = await createInvitationAction(workspaceId, email, role)
+          const res = await createInvitationAction(workspaceId, email, role, projectId)
           if (res.success && res.data) {
             resolve(res.data)
           } else {
@@ -146,7 +152,14 @@ export function MembersList({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`space-y-8 relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+      {/* Premium top linear loading bar showing sync state */}
+      {isPending && (
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-[9999] overflow-hidden">
+          <div className="h-full bg-amber-450 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
         <div>
@@ -322,6 +335,7 @@ export function MembersList({
           onClose={() => setIsInviteOpen(false)}
           isPending={isPending}
           onInvite={handleInviteSubmit}
+          projects={projects}
         />
       )}
 
