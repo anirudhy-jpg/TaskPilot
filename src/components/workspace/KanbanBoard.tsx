@@ -1,24 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
-  Plus,
-  Trash2,
-  ArrowRight,
-  ArrowLeft,
-  Circle,
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  rectIntersection,
+  getFirstCollision,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  type CollisionDetection,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
+import {
+  ListTodo,
   Clock,
   CheckCircle2,
-  User,
-  Calendar,
-  ListTodo,
-  AlertCircle,
-  AlertTriangle,
-  Info,
 } from "lucide-react";
 import type { Project, Task, TaskStatus, WorkspaceMember, TaskPriority } from "@/types/workspace.types";
-import { AssigneeSelector } from "./AssigneeSelector";
 import { TaskDetailsModal } from "./modals/TaskDetailsModal";
+import {
+  KanbanColumn,
+  TaskCard,
+  groupTasksByColumn,
+  computeDragResult,
+  getColumnFromDropTarget,
+} from "./kanban";
+import type { KanbanColumnDef, TaskDragData } from "./kanban";
+
+// ─── Shared utility exports (used by AssigneeSelector, TaskDetailsModal) ────
 
 interface KanbanBoardProps {
   project: Project & { tasks: Task[] };
@@ -28,9 +44,12 @@ interface KanbanBoardProps {
   onDeleteTask: (id: string, title: string) => void;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
+  onTasksReorder?: (updates: { id: string; status: TaskStatus; position: number }[]) => void;
 }
 
-function getProjectInitials(name: string): string {
+// ─── Shared Helpers (exported for use by other components) ───
+
+export function getProjectInitials(name: string): string {
   if (!name) return "TASK";
   const cleanName = name.replace(/[^a-zA-Z0-9\s]/g, "").trim();
   const words = cleanName.split(/\s+/);
@@ -43,7 +62,7 @@ function getProjectInitials(name: string): string {
 export function getUserInitials(name?: string | null, email?: string | null): string {
   const display = name || email || "?";
   if (display === "?") return "?";
-  
+
   if (!name && email) {
     const parts = email.split("@")[0].split(/[\._-]/);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -57,14 +76,14 @@ export function getUserInitials(name?: string | null, email?: string | null): st
 
 export function getAvatarBgColor(identifier: string): string {
   const colors = [
-    "bg-amber-500 text-white",     // Orange/yellow
-    "bg-blue-500 text-white",      // Blue
-    "bg-zinc-700 text-white",      // Charcoal
-    "bg-rose-500 text-white",      // Rose/red
-    "bg-violet-500 text-white",    // Violet
-    "bg-teal-500 text-white",      // Teal
-    "bg-indigo-500 text-white",    // Indigo
-    "bg-pink-500 text-white",      // Pink
+    "bg-amber-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-zinc-700 text-white",
+    "bg-rose-500 text-white",
+    "bg-violet-500 text-white",
+    "bg-teal-500 text-white",
+    "bg-indigo-500 text-white",
+    "bg-pink-500 text-white",
   ];
   let hash = 0;
   for (let i = 0; i < identifier.length; i++) {
@@ -74,31 +93,49 @@ export function getAvatarBgColor(identifier: string): string {
   return colors[index];
 }
 
-// Deterministic visual priority assigner for UI presentation
 export function getVisualPriority(task: Task): TaskPriority {
-  if (task.priority && task.priority !== "medium") {
-    return task.priority;
-  }
-  const titleLower = task.title.toLowerCase();
-  if (titleLower.includes("bug") || titleLower.includes("fix") || titleLower.includes("critical") || titleLower.includes("urgent")) {
-    return "high";
-  }
-  if (titleLower.includes("clean") || titleLower.includes("refactor") || titleLower.includes("doc") || titleLower.includes("test")) {
-    return "low";
-  }
-  const charCode = task.id.charCodeAt(0) || 0;
-  if (charCode % 3 === 0) return "high";
-  if (charCode % 3 === 1) return "low";
-  return "medium";
+  return task.priority || "medium";
 }
 
-function formatTaskDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const month = months[date.getMonth()];
-  const day = date.getDate();
-  return `${month} ${day}`;
-}
+// ─── Column Definitions ─────────────────────────────────────
+
+const COLUMN_DEFS: KanbanColumnDef[] = [
+  {
+    id: "todo",
+    title: "To Do",
+    accentClass: "bg-gradient-to-r before:from-blue-400 before:to-indigo-500",
+    headerIcon: (
+      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 shadow-3xs shrink-0">
+        <ListTodo size={12} />
+      </span>
+    ),
+    badgeBg: "bg-blue-50 text-blue-700 border border-blue-100/60",
+  },
+  {
+    id: "in_progress",
+    title: "In Progress",
+    accentClass: "bg-gradient-to-r before:from-amber-400 before:to-orange-500",
+    headerIcon: (
+      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-50 border border-amber-250/50 text-amber-600 shadow-3xs shrink-0">
+        <Clock size={12} className="animate-spin-slow" />
+      </span>
+    ),
+    badgeBg: "bg-amber-50 text-amber-700 border border-amber-250/60",
+  },
+  {
+    id: "done",
+    title: "Done",
+    accentClass: "bg-gradient-to-r before:from-red-400 before:to-rose-500",
+    headerIcon: (
+      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-50 border border-rose-250/50 text-rose-600 shadow-3xs shrink-0">
+        <CheckCircle2 size={12} />
+      </span>
+    ),
+    badgeBg: "bg-rose-50 text-rose-700 border border-rose-250/60",
+  },
+];
+
+// ─── Main KanbanBoard Component ─────────────────────────────
 
 export function KanbanBoard({
   project,
@@ -108,255 +145,374 @@ export function KanbanBoard({
   onDeleteTask,
   onStatusChange,
   onAssigneeChange,
+  onTasksReorder,
 }: KanbanBoardProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const selectedTask = React.useMemo(() => {
-    return project.tasks?.find((t) => t.id === selectedTaskId) || null;
-  }, [project.tasks, selectedTaskId]);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
-  // Filter tasks into columns
-  const todoTasks = React.useMemo(() => {
-    return project.tasks?.filter((t) => t.status === "todo") || [];
-  }, [project.tasks]);
+  // Local task state for optimistic drag-and-drop updates
+  const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
 
-  const inProgressTasks = React.useMemo(() => {
-    return project.tasks?.filter((t) => t.status === "in_progress") || [];
-  }, [project.tasks]);
+  // Use local tasks during drag, otherwise project tasks
+  const tasks = localTasks ?? project.tasks ?? [];
 
-  const doneTasks = React.useMemo(() => {
-    return project.tasks?.filter((t) => t.status === "done") || [];
-  }, [project.tasks]);
+  // Snapshot for rollback on error
+  const preDropSnapshot = useRef<Task[] | null>(null);
 
-  // Create a map from task.id to index for keying
-  const sortedTasks = React.useMemo(() => {
-    return project.tasks
-      ? [...project.tasks].sort(
-          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        )
-      : [];
-  }, [project.tasks]);
+  const selectedTask = useMemo(() => {
+    return tasks.find((t) => t.id === selectedTaskId) || null;
+  }, [tasks, selectedTaskId]);
 
-  const taskNumberMap = React.useMemo(() => {
+  // Group tasks into columns
+  const tasksByColumn = useMemo(() => groupTasksByColumn(tasks), [tasks]);
+
+  // Task numbering (by creation order, preserved from original)
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }, [tasks]);
+
+  const taskNumberMap = useMemo(() => {
     return new Map(sortedTasks.map((t, idx) => [t.id, idx + 1]));
   }, [sortedTasks]);
 
-  const projectPrefix = React.useMemo(() => {
+  const projectPrefix = useMemo(() => {
     return getProjectInitials(project.name);
   }, [project.name]);
 
-  // Helper to render columns
-  const renderColumn = (
-    title: string,
-    status: TaskStatus,
-    tasks: Task[],
-    accentClass: string,
-    headerIcon: React.ReactNode,
-    badgeBg: string,
-    nextStatus?: TaskStatus,
-    prevStatus?: TaskStatus
-  ) => {
-    return (
-      <div className={`rounded-3xl bg-white/40 backdrop-blur-md border border-amber-900/5 p-5 flex flex-col gap-4 min-h-[600px] w-full relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:${accentClass} shadow-xs`}>
-        {/* Column Header */}
-        <div className="flex items-center justify-between px-1.5 mb-1.5">
-          <div className="flex items-center gap-2.5">
-            {headerIcon}
-            <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-              {title}
-            </h3>
-            {tasks.length > 0 && (
-              <span className={`text-[10px] ${badgeBg} px-2 py-0.5 rounded-full font-black shadow-2xs`}>
-                {tasks.length}
-              </span>
-            )}
-          </div>
-        </div>
+  // Synchronize local tasks with server tasks when props change
+  React.useEffect(() => {
+    if (!localTasks) return;
 
-        {/* Task Cards Stack */}
-        <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[600px] pr-1 scrollbar-thin">
-          {tasks.map((task) => {
-            const visualPriority = getVisualPriority(task);
-            const priorityStyles = {
-              high: {
-                border: "border-l-[3.5px] border-l-rose-450",
-                badge: "bg-rose-50 text-rose-600 border-rose-100/60 rounded-full",
-                icon: <AlertCircle size={9} className="text-rose-500" />,
-                label: "High"
-              },
-              medium: {
-                border: "border-l-[3.5px] border-l-amber-450",
-                badge: "bg-amber-50 text-amber-700 border-amber-200/40 rounded-full",
-                icon: <AlertTriangle size={9} className="text-amber-600" />,
-                label: "Medium"
-              },
-              low: {
-                border: "border-l-[3.5px] border-l-slate-400",
-                badge: "bg-slate-50 text-slate-650 border-slate-100 rounded-full",
-                icon: <Info size={9} className="text-slate-400" />,
-                label: "Low"
-              }
-            }[visualPriority];
+    // If task count changed (add/delete), reset to server tasks
+    if (project.tasks.length !== localTasks.length) {
+      setLocalTasks(null);
+      return;
+    }
 
-            return (
-              <div
-                key={task.id}
-                onClick={() => setSelectedTaskId(task.id)}
-                className={`p-5 bg-white/80 backdrop-blur-md hover:bg-white/95 rounded-2xl border border-amber-900/5 hover:border-amber-500/20 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_16px_32px_-8px_rgba(245,158,11,0.1)] hover:-translate-y-1 transition-all duration-300 group relative cursor-pointer ${priorityStyles.border}`}
-              >
-                {/* Top Badge Row */}
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                    {projectPrefix}-{taskNumberMap.get(task.id)}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider shadow-3xs ${priorityStyles.badge}`}>
-                    {priorityStyles.icon}
-                    <span>{priorityStyles.label}</span>
-                  </span>
-                </div>
+    const serverTaskMap = new Map(project.tasks.map((t) => [t.id, t]));
 
-                {/* Task Title */}
-                <h4 className={`text-xs sm:text-[13.5px] font-extrabold text-slate-800 leading-snug group-hover:text-amber-700 transition-colors ${status === "done" ? "line-through text-slate-400 font-medium" : ""}`}>
-                  {task.title}
-                </h4>
+    // Check if the set of IDs matches
+    const idMismatch = localTasks.some((t) => !serverTaskMap.has(t.id));
+    if (idMismatch) {
+      setLocalTasks(null);
+      return;
+    }
 
-                {/* Task Description */}
-                {task.description && (
-                  <p className={`text-[11px] text-slate-500 mt-1 leading-normal line-clamp-2 ${status === "done" ? "line-through text-slate-400" : ""}`}>
-                    {task.description}
-                  </p>
-                )}
+    // Update fields in localTasks from server data (excluding status/position during drag)
+    setLocalTasks((current) => {
+      if (!current) return null;
+      let changed = false;
+      const updated = current.map((localTask) => {
+        const serverTask = serverTaskMap.get(localTask.id);
+        if (!serverTask) return localTask;
 
-                <div className="h-[1px] bg-amber-955/10 my-3.5" />
+        // Check if any visible field changed
+        const titleChanged = localTask.title !== serverTask.title;
+        const descChanged = localTask.description !== serverTask.description;
+        const assigneeChanged = localTask.assigneeId !== serverTask.assigneeId || 
+                                localTask.assignee?.email !== serverTask.assignee?.email;
+        const priorityChanged = localTask.priority !== serverTask.priority;
+        
+        // Only sync status and position if not actively dragging
+        const statusOrPosChanged = !activeTaskId && (
+          localTask.status !== serverTask.status || 
+          localTask.position !== serverTask.position
+        );
 
-                {/* Card Footer */}
-                <div className="flex items-center justify-between">
-                  {/* Left: Created Date */}
-                  <div className="flex items-center gap-1 text-slate-400">
-                    <Calendar size={11} className="text-slate-400" />
-                    <span className="text-[10px] font-semibold">
-                      {formatTaskDate(task.createdAt)}
-                    </span>
-                  </div>
+        if (titleChanged || descChanged || assigneeChanged || priorityChanged || statusOrPosChanged) {
+          changed = true;
+          return {
+            ...localTask,
+            title: serverTask.title,
+            description: serverTask.description,
+            assigneeId: serverTask.assigneeId,
+            assignee: serverTask.assignee,
+            priority: serverTask.priority,
+            status: activeTaskId ? localTask.status : serverTask.status,
+            position: activeTaskId ? localTask.position : serverTask.position,
+          };
+        }
+        return localTask;
+      });
 
-                  {/* Right: Actions + Assignee */}
-                  <div className="flex items-center gap-2 relative">
-                    {/* Floating Hover Actions Toolbar */}
-                    <div className="flex items-center gap-0.5 bg-white/95 backdrop-blur-md border border-amber-900/10 rounded-xl shadow-lg p-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 absolute right-8 bottom-[-2px] z-10">
-                      {prevStatus && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onStatusChange(task.id, prevStatus);
-                          }}
-                          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                          title="Move back"
-                        >
-                          <ArrowLeft size={11} />
-                        </button>
-                      )}
-                      {nextStatus && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onStatusChange(task.id, nextStatus);
-                          }}
-                          className="p-1 rounded text-slate-400 hover:text-amber-700 hover:bg-slate-55 transition-colors cursor-pointer"
-                          title="Move forward"
-                        >
-                          <ArrowRight size={11} />
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteTask(task.id, task.title);
-                        }}
-                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Delete task"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    </div>
+      return changed ? updated : current;
+    });
+  }, [project.tasks, localTasks, activeTaskId]);
 
-                    {/* Avatar Selection wrapper */}
-                    <div className="relative z-0">
-                      <AssigneeSelector
-                        task={task}
-                        members={members}
-                        currentUserId={currentUserId}
-                        onChange={onAssigneeChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+  // ─── DnD Collision Detection Strategy ───────────────────
+
+  const collisionDetectionStrategy: CollisionDetection = useCallback(
+    (args) => {
+      // Find intersections first
+      const intersections = rectIntersection(args);
+      let overId = getFirstCollision(intersections, "id");
+
+      if (overId != null) {
+        // If the overId starts with "column-", it's a column container
+        const columnId = String(overId).replace("column-", "") as TaskStatus;
+        const isColumn = COLUMN_DEFS.some((c) => c.id === columnId);
+
+        if (isColumn) {
+          const containerItems = tasksByColumn[columnId] || [];
+
+          // If the column has items, find the closest corners among those items
+          if (containerItems.length > 0) {
+            const itemIds = new Set(containerItems.map((item) => item.id));
+            const filteredContainers = args.droppableContainers.filter(
+              (container) => itemIds.has(String(container.id))
             );
-          })}
 
-          {tasks.length === 0 && (
-            <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-amber-500/10 rounded-3xl bg-white/20 shadow-3xs p-4">
-              <span className="text-xl mb-1.5 opacity-70">📥</span>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Empty Column</p>
-              <p className="text-[9px] text-slate-400/90 mt-0.5">No tasks in this stage</p>
-            </div>
-          )}
-        </div>
+            const itemCollisions = closestCorners({
+              ...args,
+              droppableContainers: filteredContainers,
+            });
 
-        {/* Add Task Button at Bottom */}
-        <button
-          onClick={() => onAddTask(status)}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-slate-650 hover:text-amber-700 bg-white/60 hover:bg-white border border-amber-900/5 hover:border-amber-500/20 rounded-2xl text-xs font-extrabold shadow-3xs hover:shadow-2xs transition-all duration-250 cursor-pointer"
-        >
-          <Plus size={13} className="text-amber-600 stroke-[2.5]" />
-          <span>Add Task</span>
-        </button>
-      </div>
-    );
-  };
+            if (itemCollisions.length > 0) {
+              return itemCollisions;
+            }
+          }
+        }
+
+        return intersections;
+      }
+
+      return [];
+    },
+    [tasksByColumn]
+  );
+
+  // ─── DnD Sensors ─────────────────────────────────────────
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // ─── DnD Handlers ────────────────────────────────────────
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const data = event.active.data.current as TaskDragData | undefined;
+      if (data?.type === "task") {
+        setActiveTaskId(data.task.id);
+        // Take a snapshot for possible rollback
+        preDropSnapshot.current = [...tasks];
+      }
+    },
+    [tasks]
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeData = active.data.current as TaskDragData | undefined;
+      if (!activeData || activeData.type !== "task") return;
+
+      // Find active task's current column status from local state (or initial data)
+      const activeTask = localTasks?.find((t) => t.id === String(active.id));
+      const activeColumnId = activeTask ? activeTask.status : activeData.columnId;
+
+      const overColumnId = getColumnFromDropTarget(over, tasksByColumn);
+      if (!overColumnId) return;
+
+      // Only update local tasks state in handleDragOver if crossing columns
+      if (activeColumnId !== overColumnId) {
+        setLocalTasks((prev) => {
+          const current = prev ?? [...tasks];
+          const currentGrouped = groupTasksByColumn(current);
+          const result = computeDragResult(
+            String(active.id),
+            String(over.id),
+            currentGrouped,
+            current
+          );
+          return result ? result.updatedTasks : current;
+        });
+      }
+    },
+    [localTasks, tasks, tasksByColumn]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveTaskId(null);
+
+      const originalTasks = preDropSnapshot.current;
+      preDropSnapshot.current = null;
+
+      if (!over || !originalTasks) {
+        setLocalTasks(originalTasks);
+        return;
+      }
+
+      // If localTasks is null, we use originalTasks (no cross-column movement took place)
+      const currentTasks = localTasks ?? originalTasks;
+
+      const originalMap = new Map(originalTasks.map((t) => [t.id, t]));
+      const activeTaskOriginal = originalMap.get(String(active.id));
+      if (!activeTaskOriginal) {
+        setLocalTasks(null);
+        return;
+      }
+
+      // Determine target column where drag ended
+      const overColumnId = getColumnFromDropTarget(over, groupTasksByColumn(currentTasks));
+      if (!overColumnId) {
+        setLocalTasks(null);
+        return;
+      }
+
+      const sourceCol = activeTaskOriginal.status;
+      const targetCol = overColumnId;
+
+      let finalTasks = [...currentTasks];
+
+      if (sourceCol === targetCol) {
+        // Same-column reorder: calculate the new ordering using arrayMove
+        const grouped = groupTasksByColumn(currentTasks);
+        const columnTasks = [...grouped[sourceCol]];
+        const oldIndex = columnTasks.findIndex((t) => t.id === String(active.id));
+        let newIndex = columnTasks.findIndex((t) => t.id === String(over.id));
+        if (newIndex === -1) {
+          newIndex = columnTasks.length - 1;
+        }
+
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          const reordered = arrayMove(columnTasks, oldIndex, newIndex);
+          const columnTaskIds = new Set(reordered.map((t) => t.id));
+          finalTasks = currentTasks.map((task) => {
+            if (columnTaskIds.has(task.id)) {
+              const idx = reordered.findIndex((t) => t.id === task.id);
+              return { ...task, position: idx };
+            }
+            return task;
+          });
+        }
+      } else {
+        // Cross-column move: position mapping check
+        const grouped = groupTasksByColumn(currentTasks);
+        finalTasks = currentTasks.map((task) => {
+          const colTasks = grouped[task.status];
+          const idx = colTasks.findIndex((t) => t.id === task.id);
+          return { ...task, position: idx >= 0 ? idx : task.position };
+        });
+      }
+
+      // Reset local tasks state immediately
+      setLocalTasks(null);
+
+      // Compare finalTasks with originalTasks to find all status/position changes
+      const finalGrouped = groupTasksByColumn(finalTasks);
+      const positionUpdates: { id: string; status: TaskStatus; position: number }[] = [];
+
+      // Re-index source column
+      finalGrouped[sourceCol].forEach((task, index) => {
+        const orig = originalMap.get(task.id);
+        if (!orig || orig.status !== task.status || orig.position !== index) {
+          positionUpdates.push({ id: task.id, status: sourceCol, position: index });
+        }
+      });
+
+      // Re-index target column (if cross-column)
+      if (sourceCol !== targetCol) {
+        finalGrouped[targetCol].forEach((task, index) => {
+          const orig = originalMap.get(task.id);
+          if (!orig || orig.status !== task.status || orig.position !== index) {
+            positionUpdates.push({ id: task.id, status: targetCol, position: index });
+          }
+        });
+      }
+
+      if (positionUpdates.length > 0 && onTasksReorder) {
+        onTasksReorder(positionUpdates);
+      }
+    },
+    [localTasks, onTasksReorder]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTaskId(null);
+    setLocalTasks(preDropSnapshot.current);
+    preDropSnapshot.current = null;
+  }, []);
+
+  // Find the active task for drag overlay
+  const activeTask = useMemo(() => {
+    if (!activeTaskId) return null;
+    return tasks.find((t) => t.id === activeTaskId) || null;
+  }, [activeTaskId, tasks]);
+
+  const activeTaskColumn = useMemo(() => {
+    if (!activeTask) return null;
+    return COLUMN_DEFS.find((c) => c.id === activeTask.status) || null;
+  }, [activeTask]);
+
+  const handleSelectTask = useCallback((taskId: string) => {
+    setSelectedTaskId(taskId);
+  }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full">
-      {/* TO DO COLUMN */}
-      {renderColumn(
-        "To Do",
-        "todo",
-        todoTasks,
-        "bg-gradient-to-r before:from-blue-400 before:to-indigo-500",
-        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 shadow-3xs shrink-0">
-          <ListTodo size={12} />
-        </span>,
-        "bg-blue-50 text-blue-700 border border-blue-100/60",
-        "in_progress",
-        undefined
-      )}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetectionStrategy}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full">
+        {COLUMN_DEFS.map((column) => (
+          <KanbanColumn
+            key={column.id}
+            column={column}
+            tasks={tasksByColumn[column.id]}
+            members={members}
+            currentUserId={currentUserId}
+            projectPrefix={projectPrefix}
+            taskNumberMap={taskNumberMap}
+            onAddTask={onAddTask}
+            onAssigneeChange={onAssigneeChange}
+            onSelectTask={handleSelectTask}
+          />
+        ))}
+      </div>
 
-      {/* IN PROGRESS COLUMN */}
-      {renderColumn(
-        "In Progress",
-        "in_progress",
-        inProgressTasks,
-        "bg-gradient-to-r before:from-amber-400 before:to-orange-500",
-        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-50 border border-amber-250/50 text-amber-600 shadow-3xs shrink-0">
-          <Clock size={12} className="animate-spin-slow" />
-        </span>,
-        "bg-amber-50 text-amber-700 border border-amber-250/60",
-        "done",
-        "todo"
-      )}
-
-      {/* DONE COLUMN */}
-      {renderColumn(
-        "Done",
-        "done",
-        doneTasks,
-        "bg-gradient-to-r before:from-red-400 before:to-rose-500",
-        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-50 border border-rose-250/50 text-rose-600 shadow-3xs shrink-0">
-          <CheckCircle2 size={12} />
-        </span>,
-        "bg-rose-50 text-rose-700 border border-rose-250/60",
-        undefined,
-        "in_progress"
-      )}
+      {/* Drag Overlay — floating card that follows the cursor */}
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+      }}>
+        {activeTask && activeTaskColumn && (
+          <TaskCard
+            task={activeTask}
+            status={activeTask.status}
+            members={members}
+            currentUserId={currentUserId}
+            projectPrefix={projectPrefix}
+            taskNumber={taskNumberMap.get(activeTask.id)}
+            isDragOverlay
+            onAssigneeChange={onAssigneeChange}
+            onSelectTask={() => {}}
+          />
+        )}
+      </DragOverlay>
 
       <TaskDetailsModal
         task={selectedTask}
@@ -368,6 +524,6 @@ export function KanbanBoard({
         currentUserId={currentUserId}
         onAssigneeChange={onAssigneeChange}
       />
-    </div>
+    </DndContext>
   );
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { X, UserPlus, Trash2, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Select } from "@/components/ui/select"
 import type { WorkspaceMember } from "@/types/workspace.types"
 
 interface ManageProjectMembersModalProps {
@@ -98,25 +99,21 @@ export function ManageProjectMembersModal({
             Add Existing Workspace Member
           </label>
           <div className="flex gap-2">
-            <select
+            <Select
               value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
+              onChange={setSelectedUserId}
+              options={eligibleMembers.map((m) => ({
+                value: m.userId,
+                label: `${m.profile?.fullName || m.profile?.email || m.userId} (${m.profile?.email || "No email"})`,
+              }))}
+              placeholder={
+                eligibleMembers.length === 0
+                  ? "All workspace members are assigned"
+                  : "Select a member..."
+              }
               disabled={isAdding || eligibleMembers.length === 0}
-              className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-800 cursor-pointer"
-            >
-              {eligibleMembers.length === 0 ? (
-                <option value="">All workspace members are assigned</option>
-              ) : (
-                <>
-                  <option value="">Select a member...</option>
-                  {eligibleMembers.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.profile?.fullName || m.profile?.email} ({m.profile?.email})
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
+              className="flex-1"
+            />
             <Button
               size="sm"
               onClick={handleAdd}

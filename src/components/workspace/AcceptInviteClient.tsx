@@ -118,9 +118,8 @@ export function AcceptInviteClient({
     try {
       const res = await acceptInvitationAction(token)
       if (res.success && res.data) {
-        // Redirect to workspace dashboard
-        router.push("/workspace")
-        router.refresh()
+        // Redirect to workspace dashboard using hard reload
+        window.location.href = "/workspace"
       } else {
         setError(res.error || "Failed to accept invitation.")
       }

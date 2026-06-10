@@ -128,6 +128,38 @@ export async function deleteTaskAction(
   }
 }
 
+// ─── Drag & Drop Actions ─────────────────────────────────────
+
+export async function moveTaskAction(
+  taskId: string,
+  status: TaskStatus,
+  position: number
+): Promise<ActionResponse> {
+  try {
+    await TaskService.moveTask(taskId, status, position)
+    revalidatePath("/workspace")
+    revalidatePath("/projects", "layout")
+    return { success: true }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to move task."
+    return { success: false, error: message }
+  }
+}
+
+export async function batchUpdateTaskPositionsAction(
+  updates: { id: string; status: TaskStatus; position: number }[]
+): Promise<ActionResponse> {
+  try {
+    await TaskService.batchUpdatePositions(updates)
+    revalidatePath("/workspace")
+    revalidatePath("/projects", "layout")
+    return { success: true }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update task positions."
+    return { success: false, error: message }
+  }
+}
+
 export async function removeWorkspaceMemberAction(
   workspaceId: string,
   memberId: string

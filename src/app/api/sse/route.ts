@@ -93,9 +93,9 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Initial query
+      // Initial query (run in background so response returns immediately)
       if (!req.signal.aborted) {
-        await poll()
+        poll();
       }
 
       // Set up polling interval every 5 seconds

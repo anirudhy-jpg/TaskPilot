@@ -11,7 +11,7 @@ export default async function TeamsPage() {
   const { user } = await requireUser()
 
   const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
-  if (!workspace) redirect("/workspace")
+  if (!workspace) redirect("/workspaces")
 
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
 

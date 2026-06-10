@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { X, Check, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Select } from "@/components/ui/select"
 import type { Project } from "@/types/workspace.types"
 
 interface InviteMemberModalProps {
@@ -150,19 +151,18 @@ export function InviteMemberModal({
                 <label className="text-xs font-semibold text-slate-500 block mb-1">
                   Assign to Project (Optional)
                 </label>
-                <select
+                <Select
                   value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  onChange={setSelectedProjectId}
+                  options={[
+                    { value: "", label: "No initial project assignment" },
+                    ...projects.map((project) => ({
+                      value: project.id,
+                      label: project.name,
+                    })),
+                  ]}
                   disabled={isPending}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-800 cursor-pointer"
-                >
-                  <option value="">No initial project assignment</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
+                />
                 <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
                   Assigning a project restricts a regular workspace member to only see the selected project.
                 </p>

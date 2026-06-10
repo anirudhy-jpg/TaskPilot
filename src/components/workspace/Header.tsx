@@ -58,8 +58,7 @@ export function Header({
       const res = await leaveWorkspaceAction(workspaceId)
       if (res.success) {
         setIsLeaveModalOpen(false)
-        router.push("/workspace")
-        router.refresh()
+        window.location.href = "/workspace"
       } else {
         alert(res.error || "Failed to leave workspace.")
       }
@@ -74,8 +73,7 @@ export function Header({
     setIsSwitchingWorkspace(true)
     const res = await switchActiveWorkspaceAction(targetId)
     if (res.success) {
-      router.push("/workspace")
-      router.refresh()
+      window.location.href = "/workspace"
     } else {
       setIsSwitchingWorkspace(false)
       throw new Error(res.error || "Failed to switch workspace.")

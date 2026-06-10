@@ -1,8 +1,8 @@
 import React, { useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { TaskStatus, WorkspaceMember, Task } from "@/types/workspace.types"
-import { AssigneeSelector } from "../AssigneeSelector"
+import { Select } from "@/components/ui/select"
+import type { TaskStatus, TaskPriority } from "@/types/workspace.types"
 
 interface CreateTaskModalProps {
   isOpen: boolean
@@ -10,10 +10,26 @@ interface CreateTaskModalProps {
   projectName: string
   isPending: boolean
   initialStatus: TaskStatus
-  members: WorkspaceMember[]
-  currentUserId?: string
-  onCreate: (title: string, description?: string, status?: TaskStatus, assigneeId?: string) => void
+  onCreate: (
+    title: string,
+    description?: string,
+    status?: TaskStatus,
+    assigneeId?: string,
+    priority?: TaskPriority
+  ) => void
 }
+
+const statusOptions = [
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "done", label: "Done" },
+]
+
+const priorityOptions = [
+  { value: "low", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "Hard" },
+]
 
 export function CreateTaskModal({
   isOpen,
@@ -21,33 +37,14 @@ export function CreateTaskModal({
   projectName,
   isPending,
   initialStatus,
-  members,
-  currentUserId,
   onCreate,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
   const [status, setStatus] = useState<TaskStatus>(initialStatus)
-  const [assigneeId, setAssigneeId] = useState("")
+  const [priority, setPriority] = useState<TaskPriority>("medium")
 
   if (!isOpen) return null
-
-  const selectedMember = members.find((m) => m.userId === assigneeId)
-  const mockTask = {
-    id: "new-task-temp-id",
-    assigneeId: assigneeId || null,
-    assignee: selectedMember?.profile
-      ? {
-          fullName: selectedMember.profile.fullName,
-          email: selectedMember.profile.email,
-          avatarUrl: selectedMember.profile.avatarUrl,
-        }
-      : null,
-  } as any
-
-  const handleAssigneeChange = (_taskId: string, newAssigneeId: string | null) => {
-    setAssigneeId(newAssigneeId || "")
-  }
 
   const handleSubmit = () => {
     if (!title.trim()) return
@@ -55,11 +52,12 @@ export function CreateTaskModal({
       title.trim(),
       desc.trim() || undefined,
       status,
-      assigneeId || undefined
+      undefined,
+      priority
     )
     setTitle("")
     setDesc("")
-    setAssigneeId("")
+    setPriority("medium")
   }
 
   return (
@@ -84,7 +82,7 @@ export function CreateTaskModal({
             <X size={18} />
           </button>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-500 block mb-1">
               Task Title
@@ -110,46 +108,26 @@ export function CreateTaskModal({
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 block mb-1">
                 Initial Status
               </label>
-              <select
+              <Select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 cursor-pointer"
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
+                onChange={(val) => setStatus(val as TaskStatus)}
+                options={statusOptions}
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 block mb-1">
-                Assignee
+                Priority
               </label>
-              <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-slate-200 bg-white min-h-[38px]">
-                <div className="relative z-10">
-                  <AssigneeSelector
-                    task={mockTask}
-                    members={members}
-                    currentUserId={currentUserId}
-                    onChange={handleAssigneeChange}
-                    size="large"
-                  />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-bold text-slate-700 truncate">
-                    {mockTask.assignee ? (mockTask.assignee.fullName || "Name not set") : "Unassigned"}
-                  </span>
-                  {mockTask.assignee?.email && (
-                    <span className="text-[9px] text-slate-400 font-semibold truncate mt-0.5">
-                      {mockTask.assignee.email}
-                    </span>
-                  )}
-                </div>
-              </div>
+              <Select
+                value={priority}
+                onChange={(val) => setPriority(val as TaskPriority)}
+                options={priorityOptions}
+              />
             </div>
           </div>
         </div>

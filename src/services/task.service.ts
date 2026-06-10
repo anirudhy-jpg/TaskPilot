@@ -11,19 +11,19 @@ export class TaskService {
     const { data, error } = await supabase
       .from("tasks")
       .select(`
-        id, project_id, title, description, status, assigned_to, created_at,
+        id, project_id, title, description, status, priority, position, assigned_to, created_at,
         assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
+      .order("position", { ascending: true })
 
     if (error) {
       // Fallback: query without the join and select only guaranteed columns
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("tasks")
-        .select("id, project_id, title, description, status, assigned_to, created_at")
+        .select("id, project_id, title, description, status, priority, position, assigned_to, created_at")
         .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
+        .order("position", { ascending: true })
 
       if (fallbackError) {
         console.error("Error fetching tasks:", fallbackError)
@@ -42,16 +42,9 @@ export class TaskService {
   static async getTasksByWorkspace(workspaceId: string): Promise<Task[]> {
     const supabase = await createClient()
 
-    // First get all project IDs for this workspace
-    const { data: projects, error: projErr } = await supabase
-      .from("projects")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-
-    if (projErr) {
-      console.error("Error fetching project IDs:", projErr)
-      throw new Error(projErr.message)
-    }
+    // Get the projects the user actually has access to
+    const { ProjectService } = await import("./project.service")
+    const projects = await ProjectService.getProjectsByWorkspace(workspaceId)
 
     if (!projects || projects.length === 0) return []
 
@@ -59,9 +52,9 @@ export class TaskService {
 
     const { data, error } = await supabase
       .from("tasks")
-      .select("id, project_id, title, description, status, assigned_to, created_at")
+      .select("id, project_id, title, description, status, priority, position, assigned_to, created_at")
       .in("project_id", projectIds)
-      .order("created_at", { ascending: false })
+      .order("position", { ascending: true })
 
     if (error) {
       console.error("Error fetching workspace tasks:", error)
@@ -84,20 +77,35 @@ export class TaskService {
   }): Promise<Task> {
     const supabase = await createClient()
 
+    // Calculate next position for new task: place at end of column
+    const targetStatus = input.status || "todo"
+    const { data: maxPosRow } = await supabase
+      .from("tasks")
+      .select("position")
+      .eq("project_id", input.projectId)
+      .eq("status", targetStatus)
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextPosition = (maxPosRow?.position ?? -1) + 1
+
     // Build insert data with only guaranteed existing columns
     const insertData: Record<string, unknown> = {
       project_id: input.projectId,
       title: input.title,
+      position: nextPosition,
     }
     if (input.description) insertData.description = input.description
     if (input.status) insertData.status = input.status
+    if (input.priority) insertData.priority = input.priority
     if (input.assigneeId) insertData.assigned_to = input.assigneeId
 
     const { data, error } = await supabase
       .from("tasks")
       .insert(insertData)
       .select(`
-        id, project_id, title, description, status, created_at, assigned_to,
+        id, project_id, title, description, status, priority, position, created_at, assigned_to,
         assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .single()
@@ -163,6 +171,52 @@ export class TaskService {
       throw new Error(error.message)
     }
   }
+
+  /**
+   * Move a task to a new status and/or position.
+   * Used by drag-and-drop to persist column changes and reordering.
+   */
+  static async moveTask(
+    taskId: string,
+    status: TaskStatus,
+    position: number
+  ): Promise<void> {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ status, position })
+      .eq("id", taskId)
+
+    if (error) {
+      console.error("Error moving task:", error)
+      throw new Error(error.message)
+    }
+  }
+
+  /**
+   * Batch update positions for multiple tasks in a column.
+   * Used after drag-and-drop to reindex affected tasks.
+   */
+  static async batchUpdatePositions(
+    updates: { id: string; status: TaskStatus; position: number }[]
+  ): Promise<void> {
+    const supabase = await createClient()
+
+    // Execute all updates concurrently for speed
+    const results = await Promise.all(
+      updates.map(async ({ id, status, position }) => {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ status, position })
+          .eq("id", id);
+        if (error) {
+          console.error(`Error updating position for task ${id}:`, error);
+          throw new Error(error.message);
+        }
+      })
+    );
+  }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -175,6 +229,7 @@ function mapTask(row: any, assigneeData: any): Task {
     description: row.description,
     status: row.status || "todo",
     priority: row.priority || "medium",
+    position: row.position ?? 0,
     assigneeId: row.assignee_id || row.assigned_to || null,
     createdAt: row.created_at,
     assignee: assigneeData

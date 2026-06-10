@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition, Suspense, useOptimistic } from "react";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Plus,
@@ -16,7 +17,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Project, Task, TaskStatus, WorkspaceMember } from "@/types/workspace.types";
+import type { Project, Task, TaskStatus, TaskPriority, WorkspaceMember } from "@/types/workspace.types";
 import {
   createProjectAction,
   createTaskAction,
@@ -26,6 +27,7 @@ import {
   deleteProjectAction,
   addProjectMemberAction,
   removeProjectMemberAction,
+  batchUpdateTaskPositionsAction,
 } from "@/actions/workspace/workspace.actions";
 
 // Import custom modals
@@ -33,7 +35,26 @@ import { CreateProjectModal } from "./modals/CreateProjectModal";
 import { CreateTaskModal } from "./modals/CreateTaskModal";
 import { DeleteConfirmModal } from "./modals/DeleteConfirmModal";
 import { ManageProjectMembersModal } from "./modals/ManageProjectMembersModal";
-import { KanbanBoard } from "./KanbanBoard";
+const KanbanBoard = dynamic(
+  () => import("./KanbanBoard").then((mod) => mod.KanbanBoard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full animate-pulse">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rounded-3xl bg-white/40 border border-amber-900/5 p-5 min-h-[600px] w-full">
+            <div className="h-6 w-24 bg-slate-200/60 rounded-lg mb-4" />
+            <div className="space-y-3.5">
+              {[0, 1].map((j) => (
+                <div key={j} className="h-32 bg-white/60 rounded-2xl border border-amber-900/5" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+  }
+);
 import { ProjectsDashboardGrid } from "./ProjectsDashboardGrid";
 
 interface ProjectsListProps {
@@ -79,6 +100,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
         | { type: "remove_project_member"; projectId: string; userId: string }
         | { type: "create_project"; project: Project & { tasks: Task[] } }
         | { type: "create_task"; projectId: string; task: Task }
+        | { type: "reorder_tasks"; projectId: string; updates: { id: string; status: TaskStatus; position: number }[] }
     ) => {
       switch (action.type) {
         case "update_task_status":
@@ -122,6 +144,25 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
               ? { ...p, tasks: [...p.tasks, action.task] }
               : p
           );
+        case "reorder_tasks": {
+          const updateMap = new Map(
+            action.updates.map((u) => [u.id, u])
+          );
+          return state.map((p) =>
+            p.id === action.projectId
+              ? {
+                  ...p,
+                  tasks: p.tasks.map((t) => {
+                    const update = updateMap.get(t.id);
+                    if (update) {
+                      return { ...t, status: update.status, position: update.position };
+                    }
+                    return t;
+                  }),
+                }
+              : p
+          );
+        }
         default:
           return state;
       }
@@ -227,18 +268,25 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
     description?: string,
     status?: TaskStatus,
     assigneeId?: string,
+    priority?: TaskPriority,
   ) => {
     if (!createTaskProjectId) return;
     setErrorMsg(null);
     startTransition(async () => {
       const selectedAssignee = members.find((m) => m.userId === assigneeId)?.profile || null;
+      const targetProject = optimisticProjects.find((p) => p.id === createTaskProjectId);
+      const nextPosition = targetProject
+        ? targetProject.tasks.filter((t) => t.status === (status || "todo")).length
+        : 0;
+
       const tempTask = {
         id: "temp-" + Date.now(),
         projectId: createTaskProjectId,
         title,
         description: description || null,
         status: status || "todo",
-        priority: "medium" as const,
+        priority: priority || "medium",
+        position: nextPosition,
         assigneeId: assigneeId || null,
         createdAt: new Date().toISOString(),
         assignee: selectedAssignee ? {
@@ -304,6 +352,26 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
           ? "done"
           : "todo";
     handleStatusChange(taskId, nextStatus);
+  }
+
+  function handleTasksReorder(
+    updates: { id: string; status: TaskStatus; position: number }[]
+  ) {
+    if (!activeProject) return;
+    setErrorMsg(null);
+    startTransition(async () => {
+      setOptimisticProjects({
+        type: "reorder_tasks",
+        projectId: activeProject.id,
+        updates,
+      });
+      const res = await batchUpdateTaskPositionsAction(updates);
+      if (res.success) {
+        router.refresh();
+      } else {
+        setErrorMsg(res.error || "Failed to save task positions.");
+      }
+    });
   }
 
   function handleDeleteConfirmSubmit() {
@@ -465,8 +533,8 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
         </div>
       )}
 
-      {/* ─── Main Content Views with loading overlay filter ─────────────────────────────── */}
-      <div className={`transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+      {/* ─── Main Content Views ─────────────────────────────────────────── */}
+      <div className="transition-all duration-300">
         {activeProject ? (
           /* ─── VIEW 1: KANBAN BOARD ─── */
           <KanbanBoard
@@ -482,6 +550,7 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
             }
             onStatusChange={handleStatusChange}
             onAssigneeChange={handleAssigneeChange}
+            onTasksReorder={handleTasksReorder}
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */
@@ -516,8 +585,6 @@ function BoardContent({ projects, workspaceId, members, currentUserId }: Project
         }
         isPending={isPending}
         initialStatus={newTaskStatus}
-        members={members}
-        currentUserId={currentUserId}
         onCreate={handleCreateTask}
       />
 

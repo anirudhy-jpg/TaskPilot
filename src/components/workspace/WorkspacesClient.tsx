@@ -55,8 +55,7 @@ export function WorkspacesClient({
     startTransition(async () => {
       const res = await leaveWorkspaceAction(workspaceId)
       if (res.success) {
-        router.refresh()
-        setLeavingId(null)
+        window.location.href = "/workspaces"
       } else {
         setErrorMsg(res.error || "Failed to leave workspace.")
         setLeavingId(null)
@@ -80,8 +79,7 @@ export function WorkspacesClient({
     startTransition(async () => {
       const res = await deleteWorkspaceAction(workspaceId)
       if (res.success) {
-        router.refresh()
-        setDeletingId(null)
+        window.location.href = "/workspaces"
       } else {
         setErrorMsg(res.error || "Failed to delete workspace.")
         setDeletingId(null)
@@ -93,7 +91,7 @@ export function WorkspacesClient({
   const handleSwitch = (workspaceId: string) => {
     if (workspaceId === activeWorkspaceId) {
       // Already active, just go back to overview
-      router.push("/workspace")
+      window.location.href = "/workspace"
       return
     }
 
@@ -102,8 +100,7 @@ export function WorkspacesClient({
     startTransition(async () => {
       const res = await switchActiveWorkspaceAction(workspaceId)
       if (res.success) {
-        router.push("/workspace")
-        router.refresh()
+        window.location.href = "/workspace"
       } else {
         setErrorMsg(res.error || "Failed to switch active workspace.")
         setSwitchingId(null)
@@ -121,8 +118,7 @@ export function WorkspacesClient({
       const res = await createWorkspaceAction(newWorkspaceName.trim())
       if (res.success && res.workspaceId) {
         setNewWorkspaceName("")
-        router.push("/workspace")
-        router.refresh()
+        window.location.href = "/workspace"
       } else {
         setErrorMsg(res.error || "Failed to create workspace.")
       }

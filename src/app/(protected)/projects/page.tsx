@@ -13,7 +13,7 @@ export default async function ProjectsPage() {
   const { user } = await requireUser()
 
   const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
-  if (!workspace) redirect("/workspace")
+  if (!workspace) redirect("/workspaces")
 
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
   const members = await MemberService.getMembersByWorkspace(workspace.id)

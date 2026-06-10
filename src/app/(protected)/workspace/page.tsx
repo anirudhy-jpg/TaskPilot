@@ -23,7 +23,7 @@ export default async function WorkspaceOverviewPage() {
 
   // Get workspace
   const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
-  if (!workspace) redirect("/workspace")
+  if (!workspace) redirect("/workspaces")
 
   // Get projects and tasks for analytics
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
