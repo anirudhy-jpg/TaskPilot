@@ -1,6 +1,7 @@
 import React from "react"
 import { FolderKanban, User } from "lucide-react"
-import type { Project, WorkspaceMember } from "../types/workspace.types"
+import type { WorkspaceMember } from "../types/workspace.types"
+import type { Project } from "../../project/types/project.types"
 
 interface TeamsListProps {
   projects: Project[]

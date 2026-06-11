@@ -153,3 +153,14 @@ When a task is dropped and the new coordinates are verified:
    )
    ```
    This ensures any workspace member is fully authorized to update positions for any tasks belonging to projects inside their workspace, enabling members to reorder tasks identically to workspace owners.
+
+---
+
+## 5. Realtime Board Synchronization
+
+To keep multiple users working on the same board in sync, the drag-and-drop actions are paired with **Supabase Realtime** subscriptions.
+
+* **Optimistic Local Moves**: When a user drags a card, React 19's `useOptimistic` hook updates the board layout locally with zero lag.
+* **Server Action Commit**: The board triggers `batchUpdateTaskPositionsAction` which updates the records in the database.
+* **Realtime Broadcast**: Once Postgres commits the updates, the Supabase Realtime channel broadcasts the `UPDATE` events containing the updated task statuses and positions to all other active board viewers.
+* **State Reconciliation**: The `useProjectBoard` hook listens to the broadcast and updates the local state (`currentProjects`), aligning other browsers' layouts to match the new task positions automatically. For a deeper look, check out the detailed [Realtime-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Realtime-Implementation.md).

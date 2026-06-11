@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/supabase/server"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { ProjectService } from "@/features/project/services/project.service"
 import { TaskService } from "@/features/project/services/task.service"
-import { ProfileService } from "@/services/profile.service"
+import { ProfileService } from "@/features/auth/services/profile.service"
 import { OverviewCharts } from "@/features/workspace/components/overview-charts"
 import type { WorkspaceAnalytics } from "@/features/workspace/types/workspace.types"
 

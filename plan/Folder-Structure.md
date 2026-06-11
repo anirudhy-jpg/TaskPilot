@@ -10,6 +10,7 @@ taskpilot/
 │   ├── Folder-Structure.md           # This folder structure documentation
 │   ├── Folder-Creation-Rules.md      # Rules and standards for folder/file creation
 │   ├── Kanban-Implementation.md      # Kanban board drag-and-drop system documentation
+│   ├── Realtime-Implementation.md    # Real-time collaboration system documentation
 │   ├── TaskPilot-Documentation.md    # Core technical project documentation
 │   └── Workspace.md                 # Workspace planning details
 ├── public/                           # Static public assets (logos, SVGs, etc.)

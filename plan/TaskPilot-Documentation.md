@@ -34,6 +34,7 @@ The purpose of TaskPilot is to provide an adaptable workspace for managing tasks
 ### Database
 
 - Supabase PostgreSQL
+- Supabase Realtime (Active)
 
 ### Authentication
 
@@ -46,7 +47,6 @@ The purpose of TaskPilot is to provide an adaptable workspace for managing tasks
 
 ### Future Integrations
 
-- Supabase Realtime
 - Supabase Storage
 - OpenAI API
 
@@ -234,35 +234,35 @@ This phase improves task granularity and scheduling, enabling teams to categoriz
 
 ---
 
-### Phase 4: Realtime Collaboration
+### Phase 4: Realtime Collaboration (Partially Implemented)
 
 **Features:**
 
-- Live Board Updates
-- Realtime Comments
-- Notifications
-- Kanban Board
-- Presence Tracking
+- **Live Board Updates (Implemented)**: Changes to tasks (status, order, assignees, creation, deletion) sync instantly across collaborators' browsers without reload. See [Realtime-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Realtime-Implementation.md) for technical details.
+- **Kanban Board Sync (Implemented)**: Dual integration with React 19 optimistic updates and DND.
+- Realtime Comments (Future)
+- Notifications (Future)
+- Presence Tracking (Future)
 
-Use Supabase Realtime.
+Powered by Supabase Realtime.
 
 ```
 User
 │
 ▼
-Frontend
+Frontend (optimistic rendering)
 │
 ▼
-Supabase Realtime
+Supabase Realtime (WebSockets)
 │
 ▼
-Shared Board
+Shared Board (synchronized state)
 │
 ▼
-Live Updates
+Live Updates (reconciled in background)
 ```
 
-Realtime collaboration enables multiple users to interact with the same board simultaneously, receive live status changes, and stay aware of collaborators through presence indicators.
+Realtime collaboration enables multiple users to interact with the same board simultaneously, receive live status changes, and stay aware of collaborators.
 
 ---
 

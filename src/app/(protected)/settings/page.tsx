@@ -1,6 +1,6 @@
 import React from "react"
 import { requireUser } from "@/lib/supabase/server"
-import { ProfileService } from "@/services/profile.service"
+import { ProfileService } from "@/features/auth/services/profile.service"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { SettingsPanel } from "@/features/workspace/components/settings-panel"
 

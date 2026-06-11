@@ -12,7 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react"
-import type { Project, Task } from "../types/workspace.types"
+import type { Project, Task } from "../../project/types/project.types"
 
 const navItems = [
   {
