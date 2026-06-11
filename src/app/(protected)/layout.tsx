@@ -1,12 +1,12 @@
 import React from "react"
 import { requireUser } from "@/lib/supabase/server"
 import { ProfileService } from "@/services/profile.service"
-import { WorkspaceService } from "@/services/workspace.service"
-import { ProjectService } from "@/services/project.service"
-import { TaskService } from "@/services/task.service"
-import { Sidebar } from "@/components/workspace/Sidebar"
-import { Header } from "@/components/workspace/Header"
-import { WorkspaceHubService } from "@/services/workspace-hub.service"
+import { WorkspaceService } from "@/features/workspace/services/workspace.service"
+import { ProjectService } from "@/features/project/services/project.service"
+import { TaskService } from "@/features/project/services/task.service"
+import { Sidebar } from "@/features/workspace/components/sidebar"
+import { Header } from "@/features/workspace/components/header"
+import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 
 export const dynamic = "force-dynamic"
 

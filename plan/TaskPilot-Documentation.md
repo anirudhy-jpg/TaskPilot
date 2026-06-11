@@ -172,10 +172,10 @@ Task
 **Deliverables:**
 
 - Authentication
-- Workspace Management
+- Workspace Onboarding & Management
 - Project Management
 - Task Management
-- Drag and Drop Board
+- **Drag and Drop Board**: Powered by `@dnd-kit`, featuring optimistic updates, pointer-first collision detection for empty columns, and server revalidation. See the detailed [Kanban-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Kanban-Implementation.md) for architecture.
 
 ### Phase 2: Team Collaboration
 

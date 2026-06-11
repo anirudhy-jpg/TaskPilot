@@ -1,8 +1,8 @@
 import React, { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getSession } from "@/lib/supabase/server"
-import { AuthLayout } from "@/components/auth/AuthLayout"
-import { LoginForm } from "@/components/auth/LoginForm"
+import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { LoginForm } from "@/features/auth/components/login-form"
 
 interface LoginPageProps {
   searchParams: Promise<{ next?: string }>

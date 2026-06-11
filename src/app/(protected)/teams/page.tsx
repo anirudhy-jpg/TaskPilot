@@ -1,11 +1,11 @@
 import React from "react"
 import { redirect } from "next/navigation"
 import { requireUser } from "@/lib/supabase/server"
-import { WorkspaceService } from "@/services/workspace.service"
-import { ProjectService } from "@/services/project.service"
-import { MemberService } from "@/services/member.service"
-import { TeamsList } from "@/components/workspace/TeamsList"
-import type { WorkspaceMember } from "@/types/workspace.types"
+import { WorkspaceService } from "@/features/workspace/services/workspace.service"
+import { ProjectService } from "@/features/project/services/project.service"
+import { MemberService } from "@/features/workspace/services/member.service"
+import { TeamsList } from "@/features/workspace/components/teams-list"
+import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 
 export default async function TeamsPage() {
   const { user } = await requireUser()

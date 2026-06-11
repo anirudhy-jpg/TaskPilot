@@ -1,11 +1,11 @@
 import React from "react"
 import { redirect } from "next/navigation"
 import { requireUser } from "@/lib/supabase/server"
-import { WorkspaceService } from "@/services/workspace.service"
-import { MemberService } from "@/services/member.service"
-import { InviteService } from "@/services/invite.service"
-import { ProjectService } from "@/services/project.service"
-import { MembersList } from "@/components/workspace/MembersList"
+import { WorkspaceService } from "@/features/workspace/services/workspace.service"
+import { MemberService } from "@/features/workspace/services/member.service"
+import { InviteService } from "@/features/workspace/services/invite.service"
+import { ProjectService } from "@/features/project/services/project.service"
+import { MembersList } from "@/features/workspace/components/members-list"
 
 export const dynamic = "force-dynamic"
 

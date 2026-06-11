@@ -1,7 +1,7 @@
 import React from "react"
 import { requireUser } from "@/lib/supabase/server"
-import { WorkspaceHubService } from "@/services/workspace-hub.service"
-import { WorkspacesClient } from "@/components/workspace/WorkspacesClient"
+import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
+import { WorkspacesClient } from "@/features/workspace/components/workspaces-client"
 
 export const dynamic = "force-dynamic"
 
