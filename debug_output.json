@@ -1,9 +1,9 @@
 {
   "env": {
     "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
-    "PORT": "3000",
     "NEXT_PUBLIC_SUPABASE_URL": "https://zhvblqkewzvfvuwslwkw.supabase.co",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_aJz_gp_RBhAz1Wi39IIWdw_vUbVIpHm",
-    "NEXT_PUBLIC_APP_URL": "https://task-pilot-opal.vercel.app"
+    "NEXT_PUBLIC_APP_URL": "https://task-pilot-opal.vercel.app",
+    "NEXT_IS_EXPORT_WORKER": "true"
   }
 }
