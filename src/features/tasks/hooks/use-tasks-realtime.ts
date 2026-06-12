@@ -1,5 +1,5 @@
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
-import type { Task, TaskStatus, TaskPriority } from "../types/project.types"
+import type { Task, TaskStatus, TaskPriority } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 
 /**

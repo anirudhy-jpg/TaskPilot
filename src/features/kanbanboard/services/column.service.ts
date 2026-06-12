@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { Column } from "../types/project.types"
+import type { Column } from "@/features/project/types/project.types"
 
 export class ColumnService {
   /**

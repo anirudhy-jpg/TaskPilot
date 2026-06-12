@@ -1,7 +1,7 @@
 import type {
   Task,
   TaskStatus,
-} from "../../types/project.types";
+} from "@/features/project/types/project.types";
 import type {
   WorkspaceMember,
 } from "@/features/workspace/types/workspace.types";
@@ -70,4 +70,3 @@ export interface KanbanColumnProps {
   onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   allColumns: KanbanColumnDef[];
 }
-

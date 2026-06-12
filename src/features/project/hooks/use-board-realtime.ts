@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Task, Column } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
-import { mapRealtimeTask } from "./use-tasks-realtime";
+import { mapRealtimeTask } from "@/features/tasks/hooks/use-tasks-realtime";
 
 interface UseBoardRealtimeProps {
   projectId: string | null;

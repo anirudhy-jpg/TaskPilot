@@ -2,9 +2,9 @@
 
 import React, { useEffect, useRef } from "react";
 import { X, Circle, Clock, CheckCircle2, Calendar, AlertCircle, AlertTriangle, Info } from "lucide-react";
-import type { Task, Column } from "../../types/project.types";
+import type { Task, Column } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
-import { getVisualPriority } from "../../utils/avatar";
+import { getVisualPriority } from "@/features/project/utils/avatar";
 import { AssigneeSelector } from "../assignee-selector";
 import { Select } from "@/components/ui/select";
 
@@ -25,7 +25,7 @@ interface TaskDetailsModalProps {
 const statusConfig = {
   todo: { label: "To Do", color: "text-blue-700 bg-blue-50 border-blue-100/60", icon: Circle },
   in_progress: { label: "In Progress", color: "text-amber-700 bg-amber-50 border-amber-250/50", icon: Clock },
-  done: { label: "Done", color: "text-rose-700 bg-rose-50 border-rose-250/50", icon: CheckCircle2 },
+  done: { label: "Done", color: "text-rose-700 bg-rose-50 border-rose-255/50", icon: CheckCircle2 },
 };
 
 export function TaskDetailsModal({
@@ -203,7 +203,7 @@ export function TaskDetailsModal({
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Description</span>
             <div className="bg-slate-50/50 border border-slate-200/50 rounded-xl p-3 min-h-[85px] shadow-3xs">
               {task.description ? (
-                <p className="text-[11.5px] text-slate-600 leading-relaxed whitespace-pre-wrap">
+                <p className="text-[11.5px] text-slate-650 leading-relaxed whitespace-pre-wrap">
                   {task.description}
                 </p>
               ) : (

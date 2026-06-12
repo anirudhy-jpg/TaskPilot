@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus, Edit2, Trash2, Check, GripVertical, Circle, MoreHorizontal } from "lucide-react";
+import { Plus, Edit2, Trash2, Check, GripVertical, MoreHorizontal } from "lucide-react";
 import { SortableTaskCard } from "./sortable-task-card";
 import type { KanbanColumnProps } from "./types";
 
@@ -48,7 +48,7 @@ export const KanbanColumn = React.memo(
       opacity: isDragging ? 0.35 : undefined,
     };
 
-     const [isEditing, setIsEditing] = React.useState(false);
+    const [isEditing, setIsEditing] = React.useState(false);
     const [editedName, setEditedName] = React.useState(column.title);
     const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -129,7 +129,7 @@ export const KanbanColumn = React.memo(
                 <div
                   {...attributes}
                   {...listeners}
-                  className="cursor-grab active:cursor-grabbing text-slate-350 hover:text-slate-500 p-0.5 rounded transition-colors"
+                  className="cursor-grab active:cursor-grabbing text-slate-350 hover:text-slate-550 p-0.5 rounded transition-colors"
                 >
                   <GripVertical size={14} />
                 </div>
@@ -229,7 +229,7 @@ export const KanbanColumn = React.memo(
         {/* Add Task Button at Bottom */}
         <button
           onClick={() => onAddTask(column.id)}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-slate-650 hover:text-amber-700 bg-white/60 hover:bg-white border border-amber-900/5 hover:border-amber-500/20 rounded-2xl text-xs font-extrabold shadow-3xs hover:shadow-2xs transition-all duration-250 cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-slate-655 hover:text-amber-700 bg-white/60 hover:bg-white border border-amber-900/5 hover:border-amber-500/20 rounded-2xl text-xs font-extrabold shadow-3xs hover:shadow-2xs transition-all duration-250 cursor-pointer"
         >
           <Plus size={13} className="text-amber-600 stroke-[2.5]" />
           <span>Add Task</span>

@@ -10,13 +10,13 @@ import type {
 } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { createProjectAction } from "../actions/create-project.action";
-import { createTaskAction } from "../actions/create-task.action";
-import { updateTaskAssigneeAction } from "../actions/update-task-assignee.action";
-import { deleteTaskAction } from "../actions/delete-task.action";
+import { createTaskAction } from "@/features/tasks/actions/create-task.action";
+import { updateTaskAssigneeAction } from "@/features/tasks/actions/update-task-assignee.action";
+import { deleteTaskAction } from "@/features/tasks/actions/delete-task.action";
 import { deleteProjectAction } from "../actions/delete-project.action";
 import { addProjectMemberAction } from "../actions/add-project-member.action";
 import { removeProjectMemberAction } from "../actions/remove-project-member.action";
-import { moveTaskAction } from "../actions/move-task.action";
+import { moveTaskAction } from "@/features/tasks/actions/move-task.action";
 
 export interface UseProjectBoardProps {
   projects: (Project & { tasks: Task[]; columns: Column[] })[];
@@ -592,7 +592,7 @@ export function useProjectBoard({
         column: tempColumn,
       });
       const { createColumnAction } =
-        await import("../actions/create-column.action");
+        await import("@/features/kanbanboard/actions/create-column.action");
       const res = await createColumnAction(activeProjectId, name);
       if (res.success) {
         router.refresh();
@@ -607,7 +607,7 @@ export function useProjectBoard({
     startTransition(async () => {
       setOptimisticProjects({ type: "rename_column", columnId, name });
       const { updateColumnNameAction } =
-        await import("../actions/update-column-name.action");
+        await import("@/features/kanbanboard/actions/update-column-name.action");
       const res = await updateColumnNameAction(columnId, name);
       if (res.success) {
         router.refresh();
@@ -622,7 +622,7 @@ export function useProjectBoard({
     startTransition(async () => {
       setOptimisticProjects({ type: "move_column", columnId, position });
       const { moveColumnAction } =
-        await import("../actions/move-column.action");
+        await import("@/features/kanbanboard/actions/move-column.action");
       const res = await moveColumnAction(columnId, position);
       if (res.success) {
         router.refresh();
@@ -646,7 +646,7 @@ export function useProjectBoard({
         targetColumnId,
       });
       const { deleteColumnAction } =
-        await import("../actions/delete-column.action");
+        await import("@/features/kanbanboard/actions/delete-column.action");
       const res = await deleteColumnAction(columnId, action, targetColumnId);
       if (res.success) {
         setCurrentProjects((prev) =>

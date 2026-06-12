@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { Task, TaskStatus, TaskPriority } from "../types/project.types"
+import type { Task, TaskStatus, TaskPriority } from "@/features/project/types/project.types"
 
 export class TaskService {
   /**
@@ -43,7 +43,7 @@ export class TaskService {
     const supabase = await createClient()
 
     // Get the projects the user actually has access to
-    const { ProjectService } = await import("./project.service")
+    const { ProjectService } = await import("@/features/project/services/project.service")
     const projects = await ProjectService.getProjectsByWorkspace(workspaceId)
 
     if (!projects || projects.length === 0) return []
@@ -252,4 +252,3 @@ function mapTask(row: any, assigneeData: any): Task {
       : undefined,
   }
 }
-
