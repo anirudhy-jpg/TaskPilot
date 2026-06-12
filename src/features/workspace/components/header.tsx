@@ -150,7 +150,7 @@ export function Header({
 
         <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Notification Inbox Bell */}
-          <HeaderInbox email={profile?.email || user.email} />
+          <HeaderInbox email={profile?.email || user.email} workspaceId={workspaceId} />
 
           {/* User chip */}
           <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50/60 to-yellow-50/60 hover:from-amber-100/60 hover:to-yellow-100/60 px-3.5 py-1.5 rounded-full border border-amber-900/10 shadow-3xs transition-all duration-300">

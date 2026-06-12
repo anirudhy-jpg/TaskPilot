@@ -24,6 +24,7 @@ export function InviteMemberModal({
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<"admin" | "member">("member")
   const [selectedProjectId, setSelectedProjectId] = useState("")
+  const [showErrors, setShowErrors] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,6 +36,10 @@ export function InviteMemberModal({
 
   const handleSubmit = async () => {
     if (!email.trim()) return
+    if (projects.length > 0 && !selectedProjectId) {
+      setShowErrors(true)
+      return
+    }
     setError(null)
     try {
       const url = await onInvite(email.trim(), role, selectedProjectId || null)
@@ -53,6 +58,7 @@ export function InviteMemberModal({
     setEmail("")
     setRole("member")
     setSelectedProjectId("")
+    setShowErrors(false)
     setIsSuccess(false)
     setError(null)
     onClose()
@@ -151,26 +157,43 @@ export function InviteMemberModal({
               </div>
             </div>
 
-            {/* Project Selection for Members */}
-            {projects.length > 0 && (
+            {/* Project Selection */}
+            {projects.length > 0 ? (
               <div>
                 <label className="text-xs font-semibold text-slate-500 block mb-1">
-                  Assign to Project (Optional)
+                  Assign to Project <span className="text-rose-500">*</span>
                 </label>
                 <Select
                   value={selectedProjectId}
-                  onChange={setSelectedProjectId}
+                  onChange={(val) => {
+                    setSelectedProjectId(val)
+                    if (val) setShowErrors(false)
+                  }}
                   options={[
-                    { value: "", label: "No initial project assignment" },
+                    { value: "", label: "Select a project..." },
                     ...projects.map((project) => ({
                       value: project.id,
                       label: project.name,
                     })),
                   ]}
+                  error={showErrors && !selectedProjectId}
                   disabled={isPending}
                 />
-                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
-                  Assigning a project restricts a regular workspace member to only see the selected project.
+                {(!selectedProjectId && email.trim() && email.includes("@")) || showErrors ? (
+                  <p className="text-[10px] text-rose-500 mt-1 font-bold animate-in fade-in duration-200">
+                    Please select a project. Project assignment is compulsory.
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                    Workspace members will be restricted to see only their assigned projects.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center space-y-1 select-none">
+                <p className="text-xs font-black text-amber-800">No Projects Available</p>
+                <p className="text-[10px] text-amber-700 leading-normal">
+                  You must create at least one project in this workspace before you can invite members.
                 </p>
               </div>
             )}
@@ -186,7 +209,7 @@ export function InviteMemberModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isPending || !email.trim() || !email.includes("@")}
+                disabled={isPending || !email.trim() || !email.includes("@") || (projects.length > 0 && !selectedProjectId)}
                 className={`text-xs font-bold px-4 h-9 rounded-xl transition-all duration-200 cursor-pointer border-0 ${
                   isPending
                     ? "bg-amber-500 text-slate-950 opacity-90 cursor-wait"

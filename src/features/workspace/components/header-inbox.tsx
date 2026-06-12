@@ -21,9 +21,10 @@ interface InvitationNotification {
 
 interface HeaderInboxProps {
   email?: string | null
+  workspaceId?: string | null
 }
 
-export function HeaderInbox({ email }: HeaderInboxProps) {
+export function HeaderInbox({ email, workspaceId }: HeaderInboxProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [invitations, setInvitations] = useState<InvitationNotification[]>([])
@@ -32,10 +33,10 @@ export function HeaderInbox({ email }: HeaderInboxProps) {
   const [isSwitching, setIsSwitching] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Reset switching loading screen on route changes
+  // Reset switching loading screen on route or workspace changes
   useEffect(() => {
     setIsSwitching(false)
-  }, [pathname])
+  }, [pathname, workspaceId])
 
   // Fetch initial invitations client-side
   useEffect(() => {
@@ -188,9 +189,14 @@ export function HeaderInbox({ email }: HeaderInboxProps) {
         setInvitations((prev) => prev.filter((inv) => inv.id !== id))
         setIsOpen(false)
         if (result.data) {
-          setIsSwitching(true)
-          router.push("/workspace")
-          router.refresh()
+          if (result.data !== workspaceId) {
+            setIsSwitching(true)
+            router.push("/workspace")
+            router.refresh()
+          } else {
+            router.refresh()
+            setProcessingId(null)
+          }
         } else {
           router.refresh()
           setProcessingId(null)
