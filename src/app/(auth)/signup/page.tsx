@@ -1,8 +1,8 @@
 import React from "react"
 import { redirect } from "next/navigation"
 import { getSession } from "@/lib/supabase/server"
-import { AuthLayout } from "@/components/auth/AuthLayout"
-import { SignupForm } from "@/components/auth/SignupForm"
+import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { SignupForm } from "@/features/auth/components/signup-form"
 
 interface SignupPageProps {
   searchParams: Promise<{ next?: string }>

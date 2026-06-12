@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr"
+import { createProxyClient } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 import type { User } from "@supabase/supabase-js"
 
@@ -6,30 +6,7 @@ export async function getSessionAndResponse(request: NextRequest): Promise<{
   user: User | null
   supabaseResponse: NextResponse
 }> {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+  const { client: supabase, supabaseResponse } = createProxyClient(request)
 
   const {
     data: { user },

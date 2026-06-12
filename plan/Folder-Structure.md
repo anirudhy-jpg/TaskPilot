@@ -1,152 +1,131 @@
 # TaskPilot — Directory Structure
 
-This document details the project folder structure of the TaskPilot codebase. It serves as a guide for developers to locate files, understand conventions, and maintain clean separation of concerns.
+This document details the project folder structure of the TaskPilot codebase. It serves as a guide for developers to locate files, understand conventions, and maintain clean separation of concerns under our **Feature-Based Architecture**.
 
 ## Directory Tree
 
 ```text
 taskpilot/
-├── plan/                         # Project design documentation and planning
-│   ├── Directory-Structure.md    # This folder structure documentation
-│   ├── TaskPilot-Documentation.md# Core technical project documentation
-│   └── Workspace .md            # Workspace planning details
-├── public/                       # Static public assets (logos, SVGs, etc.)
+├── plan/                             # Project design documentation and planning
+│   ├── Folder-Structure.md           # This folder structure documentation
+│   ├── Folder-Creation-Rules.md      # Rules and standards for folder/file creation
+│   ├── Kanban-Implementation.md      # Kanban board drag-and-drop system documentation
+│   ├── Realtime-Implementation.md    # Real-time collaboration system documentation
+│   ├── TaskPilot-Documentation.md    # Core technical project documentation
+│   └── Workspace.md                 # Workspace planning details
+├── public/                           # Static public assets (logos, SVGs, etc.)
 │   ├── file.svg
 │   ├── globe.svg
 │   ├── next.svg
 │   ├── vercel.svg
 │   └── window.svg
-├── src/                          # Application source code
-│   ├── actions/                  # Next.js Server Actions grouped by feature
-│   │   ├── auth/                 # Authentication actions (login, signup, logout)
-│   │   │   └── auth.actions.ts
-│   │   ├── invite.actions.ts      # Invitation sending server actions
-│   │   └── workspace/            # Workspace management actions (CRUD actions)
-│   │       ├── workspace.actions.ts
-│   │       └── workspace-hub.actions.ts # Isolated active workspace switching & leaving actions
-│   ├── app/                      # Next.js App Router root layout & routing
-│   │   ├── (auth)/               # Public authentication pages route group
-│   │   │   ├── callback/         # OAuth callback route for Supabase Auth redirect
+├── src/                              # Application source code
+│   ├── app/                          # Next.js App Router (URL Routing & Layouts ONLY)
+│   │   ├── (auth)/                   # Public authentication pages route group
+│   │   │   ├── callback/             # OAuth callback route for Supabase Auth redirect
 │   │   │   │   └── route.ts
-│   │   │   ├── login/            # Login page route
+│   │   │   ├── login/                # Login page route
 │   │   │   │   └── page.tsx
-│   │   │   └── signup/           # Signup page route
+│   │   │   └── signup/               # Signup page route
 │   │   │       └── page.tsx
-│   │   ├── (protected)/          # Protected dashboard pages requiring active session
-│   │   │   ├── layout.tsx        # Common workspace dashboard layout shell (Sidebar, top nav)
-│   │   │   ├── members/          # Team members overview page
+│   │   ├── (protected)/              # Protected dashboard pages requiring active session
+│   │   │   ├── layout.tsx            # Protected pages shell (Header, Sidebar wrapper)
+│   │   │   ├── members/              # Team members overview page
 │   │   │   │   └── page.tsx
-│   │   │   ├── projects/         # Projects listing and dynamic kanban routes
+│   │   │   ├── projects/             # Projects listing and dynamic kanban routes
 │   │   │   │   ├── page.tsx
-│   │   │   │   └── [projectId]/  # Dynamic route for a specific project's board
+│   │   │   │   └── [projectId]/      # Dynamic route for a specific project's board
 │   │   │   │       └── page.tsx
-│   │   │   ├── settings/         # Project & account settings page
+│   │   │   ├── settings/             # Project & account settings page
 │   │   │   │   └── page.tsx
-│   │   │   ├── teams/            # Teams overview page
+│   │   │   ├── teams/                # Teams overview page
 │   │   │   │   └── page.tsx
-│   │   │   ├── workspace/        # Workspace overview page
+│   │   │   ├── workspace/            # Workspace overview analytics page
 │   │   │   │   └── page.tsx
-│   │   │   └── workspaces/       # Workspace switcher hub page (owned & membered workspaces)
-│   │   │       ├── loading.tsx   # Loading skeletal framework
+│   │   │   └── workspaces/           # Workspace switcher hub page
+│   │   │       ├── loading.tsx
 │   │   │       └── page.tsx
-│   │   ├── api/                  # API endpoints
-│   │   │   ├── invitations/      # Invitation endpoints
+│   │   ├── api/                      # REST API endpoints
+│   │   │   ├── invitations/          # Invitation endpoints
 │   │   │   │   ├── accept/
-│   │   │   │   │   └── route.ts  # Accepts invite, cookies set, auto-joins project
+│   │   │   │   │   └── route.ts
 │   │   │   │   └── reject/
-│   │   │   │       └── route.ts  # Rejects invite
+│   │   │   │       └── route.ts
 │   │   │   └── sse/
-│   │   │       └── route.ts      # SSE Real-time invitations event stream listener
-│   │   ├── favicon.ico           # Application favicon
-│   │   ├── globals.css           # Global Tailwind and app-wide CSS styles
-│   │   ├── layout.tsx            # Main HTML layout wrapper
-│   │   └── page.tsx              # Public landing page route
-│   ├── components/               # Reusable React components
-│   │   ├── auth/                 # Authentication components
-│   │   │   ├── AuthLayout.tsx    # Auth page layout wrapper
-│   │   │   ├── LoginForm.tsx     # Sign-in form component
-│   │   │   └── SignupForm.tsx    # Sign-up form component
-│   │   ├── landing/              # Marketing landing page components
-│   │   │   ├── Features.tsx
-│   │   │   ├── Footer.tsx
-│   │   │   ├── Header.tsx
-│   │   │   ├── Hero.tsx
-│   │   │   ├── InteractiveDemo.tsx
-│   │   │   └── TechStack.tsx
-│   │   ├── ui/                   # Shared UI primitives (buttons, inputs, cards)
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── label.tsx
-│   │   │   └── logo.tsx
-│   │   └── workspace/            # Workspace/Dashboard layout and features
-│   │       ├── modals/           # Modal dialogues (create/delete confirmation)
-│   │       │   ├── CreateProjectModal.tsx
-│   │       │   ├── CreateTaskModal.tsx
-│   │       │   └── DeleteConfirmModal.tsx
-│   │       ├── Header.tsx        # Top navbar containing profile chip and switcher/leave button
-│   │       ├── HeaderInbox.tsx   # SSE Real-time bell notification inbox dropdown component
-│   │       ├── KanbanBoard.tsx   # Project task board with drag & drop support
-│   │       ├── MembersList.tsx   # Workspace members rendering
-│   │       ├── OverviewCharts.tsx# Analytics/charts dashboard
-│   │       ├── ProjectsList.tsx  # Project list and grid cards rendering
-│   │       ├── SettingsPanel.tsx # Workspace settings manager
-│   │       ├── Sidebar.tsx       # Sidebar navigation menu
-│   │       ├── TeamsList.tsx     # Team listing component
-│   │       └── WorkspacesClient.tsx # Client dashboard for switcher page
-│   ├── lib/                      # Shared utility functions and third-party SDK clients
-│   │   ├── proxy/                # Proxy authentication middleware logic
-│   │   │   ├── auth.ts
-│   │   │   └── redirects.ts
-│   │   ├── supabase/             # Supabase clients for server and client side
-│   │   │   ├── client.ts
-│   │   │   └── server.ts
-│   │   └── utils.ts              # Tailwind CSS class merging helpers
-│   ├── proxy.ts                  # Middleware proxy server logic
-│   ├── services/                 # API client services communicating with Supabase
-│   │   ├── auth.service.ts       # Auth methods wrapper
-│   │   ├── member.service.ts     # Workspace members DB queries
-│   │   ├── profile.service.ts    # Profile table queries
-│   │   ├── project.service.ts    # Projects CRUD DB queries
-│   │   ├── task.service.ts       # Tasks CRUD and status update queries
-│   │   ├── workspace.service.ts  # Workspaces CRUD queries
-│   │   └── workspace-hub.service.ts # Isolated workspace switcher & leaving queries
-│   ├── types/                    # Shared TypeScript interfaces & types
-│   │   ├── auth.types.ts
-│   │   └── workspace.types.ts
-│   └── validation/               # Zod schemas for input validation
-│       └── auth.validation.ts
-│ ├── supabase_rls_policies.sql     # Database setup schema, tables, and RLS policies
-│ ├── components.json               # Shadcn UI configuration file
-│ ├── eslint.config.mjs             # ESLint rules configuration
-│ ├── next.config.ts                # Next.js compiler and runtime configuration
-│ ├── package.json                  # Dependencies and scripts definitions
-│ ├── postcss.config.mjs            # PostCSS plugin settings
-│ └── tsconfig.json                 # TypeScript compiler configuration
+│   │   │       └── route.ts          # SSE Real-time invitations event stream
+│   │   ├── favicon.ico
+│   │   ├── globals.css               # Global Tailwind CSS and app-wide styles
+│   │   ├── layout.tsx                # Main HTML layout wrapper
+│   │   └── page.tsx                  # Public landing page route
+│   ├── components/                   # Shared components
+│   │   └── ui/                       # Shared UI primitives (buttons, inputs, cards) - Shadcn/Radix
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       └── logo.tsx
+│   ├── features/                     # Feature-Based Modules (Business logic & UI live here)
+│   │   ├── auth/                     # Authentication feature
+│   │   │   ├── actions/              # Auth server actions (login, signup, logout)
+│   │   │   │   ├── login.action.ts
+│   │   │   │   ├── logout.action.ts
+│   │   │   │   └── signup.action.ts
+│   │   │   ├── components/           # Auth form views and layouts
+│   │   │   │   ├── auth-layout.tsx
+│   │   │   │   ├── login-form.tsx
+│   │   │   │   └── signup-form.tsx
+│   │   │   └── schemas/              # Input validation schemas (Zod)
+│   │   ├── landing/                  # Public landing page feature
+│   │   │   └── components/           # Sections (Hero, Features, TechStack)
+│   │   ├── project/                  # Project & task board feature
+│   │   │   ├── actions/              # Project & task server actions (CRUD)
+│   │   │   ├── components/           # Kanban, lists, and project-specific views
+│   │   │   │   ├── kanban/           # Kanban column & card components
+│   │   │   │   ├── modals/           # Project/task creation and details modals
+│   │   │   │   └── projects-list.tsx
+│   │   │   ├── services/             # Project and task Supabase DB queries
+│   │   │   │   ├── project.service.ts
+│   │   │   │   └── task.service.ts
+│   │   │   ├── types/                # Project & task type definitions
+│   │   │   │   └── project.types.ts
+│   │   │   └── utils/                # Utilities (avatars, initials generators)
+│   │   └── workspace/                # Workspace & membership feature
+│   │       ├── actions/              # Workspace management server actions
+│   │       ├── components/           # Sidebar, header, members-list, workspaces-client
+│   │       │   ├── modals/           # Workspace-specific modals (Invite, Switch)
+│   │       ├── services/             # Workspace, members, and invite DB queries
+│   │       │   ├── workspace.service.ts
+│   │       │   ├── workspace-hub.service.ts
+│   │       │   ├── member.service.ts
+│   │       │   └── invite.service.ts
+│   │       └── types/                # Workspace & member type definitions
+│   │           └── workspace.types.ts
+│   ├── lib/                          # Shared utilities and SDK client instances
+│   │   ├── proxy/                    # Middleware proxy helper logic
+│   │   ├── supabase/                 # Supabase client instantiation (@supabase/ssr)
+│   │   └── utils.ts                  # Tailwind class merging helper
+│   ├── proxy.ts                      # Local proxy server configuration
+│   └── services/                     # Legacy global services (to be fully phased out)
+│       ├── auth.service.ts           # Profile & auth support
+│       └── profile.service.ts
 ```
 
-## Core Modules & Folders Breakdown
+## Core Abstraction Layers
 
-### 1. `src/app` (Next.js App Router)
-Handles routing and pages structure.
-- **`(auth)`**: Route group containing the authentication pages (`/login`, `/signup`, `/callback`).
-- **`(protected)`**: Route group containing routes that require the user to be logged in. It uses a common nested `layout.tsx` which includes the persistent navigation `Sidebar`.
-- **`globals.css`**: Application-wide style sheet managing Tailwind variables and theme colors.
+### 1. Routing (`src/app/`)
+Strictly reserved for Next.js file-system routing. Routes should contain almost no business logic. They call features, fetch layout-level data, and pass them as properties to feature page components.
 
-### 2. `src/components`
-Re-usable visual components.
-- **`auth`**: Authentication-related layouts and forms.
-- **`landing`**: Main marketing landing page components (Hero, Features, TechStack, etc.).
-- **`ui`**: Raw building block elements (buttons, inputs, cards, etc.).
-- **`workspace`**: Core board features (Kanban, Lists, Modals, Sidebar).
+### 2. Feature Modules (`src/features/[feature_name]/`)
+The core of our business logic. Rather than spreading files across global `components`, `actions`, and `services` folders, all code related to a single domain (e.g., `project`, `workspace`) is colocated inside its feature directory.
 
-### 3. `src/lib`
-Configuration and wrappers for external services.
-- **`supabase`**: Standard instantiation of browser and server clients, implementing standard `@supabase/ssr` cookies management.
-- **`proxy`**: Custom middleware redirect proxy rules.
+*   **`actions/`**: Server actions (`"use server"`) handling mutations, data submission, and validation.
+*   **`components/`**: UI components specific to the feature. Subdivided into folders like `modals/` or domain-specific modules.
+*   **`services/`**: Directly queries the Supabase client. Responsible for data fetching, inserts, updates, and deletes.
+*   **`types/`**: Domain specific TypeScript interfaces and type guards.
+*   **`utils/`**: Feature-specific utility helpers.
 
-### 4. `src/services`
-Abstraction layer for Supabase queries. These files house all DB fetch/mutation queries for Projects, Tasks, Members, Workspaces, and Profiles, allowing components and actions to remain clean.
+### 3. Shared Presentation Layer (`src/components/ui/`)
+Holds globally reusable design system elements (e.g., buttons, input fields, labels). These have no dependency on business logic or Supabase.
 
-### 5. `src/actions`
-Next.js Server Actions used to handle mutations and form submissions securely on the server-side.
+### 4. Shared Utilities & Configuration (`src/lib/`)
+Shared utilities like class-merging helper functions or third-party client initializations (e.g., Supabase browser and server wrappers).

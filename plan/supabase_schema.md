@@ -297,3 +297,17 @@ Handles email invitations for workspace membership.
     )
   );
   ```
+
+---
+
+## ─── Supabase Realtime Publications ───
+
+To support live updates on the Kanban board, PostgreSQL Write-Ahead Logging (WAL) replica events are enabled on specific tables via the `supabase_realtime` publication.
+
+### Enable Realtime for Tables:
+```sql
+-- Add the tasks table to the Supabase Realtime publication
+alter publication supabase_realtime add table tasks;
+```
+
+This configuration enables clients to establish WebSocket channels subscribing to PostgreSQL `INSERT`, `UPDATE`, and `DELETE` event broadcasts on `tasks` table rows filtered by specific `project_id` matching criteria. See [Realtime-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Realtime-Implementation.md) for frontend handler details.
