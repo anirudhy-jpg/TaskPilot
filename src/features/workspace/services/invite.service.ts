@@ -91,6 +91,22 @@ export class InviteService {
       }
     }
 
+    // 2.5 Prevent duplicate pending invitations
+    const { data: existingInvite, error: inviteExistErr } = await supabase
+      .from("workspace_invitations")
+      .select("id, expires_at")
+      .eq("workspace_id", workspaceId)
+      .eq("email", email)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (!inviteExistErr && existingInvite) {
+      const isExpired = new Date(existingInvite.expires_at) < new Date();
+      if (!isExpired) {
+        throw new Error("This user already has a pending invitation to this workspace.");
+      }
+    }
+
     // 3. Generate token and create workspace_invitations row
     const token = crypto.randomUUID();
     const expiresAt = new Date();

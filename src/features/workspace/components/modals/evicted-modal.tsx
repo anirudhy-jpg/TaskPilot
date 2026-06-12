@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
-import { X } from "lucide-react"
+import { X, Loader2 } from "lucide-react"
 
 interface EvictedModalProps {
   isOpen: boolean
@@ -10,6 +10,7 @@ interface EvictedModalProps {
 export function EvictedModal({ isOpen }: EvictedModalProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     setMounted(true)
@@ -39,13 +40,23 @@ export function EvictedModal({ isOpen }: EvictedModalProps) {
         </div>
 
         <button
+          disabled={isPending}
           onClick={() => {
-            router.push("/workspaces")
-            router.refresh()
+            startTransition(() => {
+              router.push("/workspaces")
+              router.refresh()
+            })
           }}
-          className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black py-2.5 px-4 rounded-xl cursor-pointer shadow-3xs transition-all active:scale-[0.98] h-10 border-0 flex items-center justify-center"
+          className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-70 text-slate-950 text-xs font-black py-2.5 px-4 rounded-xl cursor-pointer shadow-3xs transition-all active:scale-[0.98] h-10 border-0 flex items-center justify-center gap-1.5"
         >
-          Back to My Workspaces
+          {isPending ? (
+            <>
+              <Loader2 size={14} className="animate-spin text-slate-950" />
+              <span>Redirecting...</span>
+            </>
+          ) : (
+            "Back to My Workspaces"
+          )}
         </button>
       </div>
     </div>,

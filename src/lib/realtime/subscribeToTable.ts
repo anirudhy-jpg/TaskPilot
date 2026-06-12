@@ -1,14 +1,20 @@
-import { useEffect } from "react"
-import { createRealtimeChannel } from "./createRealtimeChannel"
-import { RealtimeConfig, RealtimeCallbacks, RealtimeEvent } from "./realtimeTypes"
-import { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
+import { useEffect, useRef } from "react";
+import { createRealtimeChannel } from "./createRealtimeChannel";
+import {
+  RealtimeConfig,
+  RealtimeCallbacks,
+  RealtimeEvent,
+} from "./realtimeTypes";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 export interface UseRealtimeSubscriptionOptions {
-  table: string
-  filter?: string
-  schema?: string
-  event?: RealtimeEvent
-  onPayload: (payload: RealtimePostgresChangesPayload<Record<string, any>>) => void
+  table: string;
+  filter?: string;
+  schema?: string;
+  event?: RealtimeEvent;
+  onPayload: (
+    payload: RealtimePostgresChangesPayload<Record<string, any>>,
+  ) => void;
 }
 
 /**
@@ -21,29 +27,51 @@ export function useRealtimeSubscription({
   event = "*",
   onPayload,
 }: UseRealtimeSubscriptionOptions) {
+  const onPayloadRef = useRef(onPayload);
+  onPayloadRef.current = onPayload;
+
   useEffect(() => {
     const { unsubscribe } = createRealtimeChannel({
       table,
       filter,
       schema,
       event,
-      onPayload,
-    })
-    return unsubscribe
-  }, [table, filter, schema, event, onPayload])
+      onPayload: (payload) => onPayloadRef.current(payload),
+    });
+    return unsubscribe;
+  }, [table, filter, schema, event]);
 }
 
 /**
  * High-level React Hook that automatically subscribes to a Supabase table
  * and reconciles flat array states (INSERT, UPDATE, DELETE).
  */
-export function useRealtimeList<T>(
+export function useRealtimeList<T extends object>(
   state: T[],
   setState: React.Dispatch<React.SetStateAction<T[]>>,
   config: RealtimeConfig<T>,
-  callbacks?: RealtimeCallbacks<T>
+  callbacks?: RealtimeCallbacks<T>,
 ) {
-  const { table, filter, schema = "public", keyField = "id" as keyof T, mapRow } = config
+  const {
+    table,
+    filter,
+    schema = "public",
+    keyField = "id" as keyof T,
+    mapRow,
+  } = config;
+
+  // Use refs to avoid resubscribing when callbacks/mapRow/setState/keyField change references
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
+
+  const mapRowRef = useRef(mapRow);
+  mapRowRef.current = mapRow;
+
+  const setStateRef = useRef(setState);
+  setStateRef.current = setState;
+
+  const keyFieldRef = useRef(keyField);
+  keyFieldRef.current = keyField;
 
   useEffect(() => {
     const { unsubscribe } = createRealtimeChannel({
@@ -52,38 +80,72 @@ export function useRealtimeList<T>(
       schema,
       event: "*",
       onPayload: (payload) => {
-        const { eventType, new: newRow, old: oldRow } = payload
+        const { eventType, new: newRow, old: oldRow } = payload;
+        const currentMapRow = mapRowRef.current;
+        const currentKeyField = keyFieldRef.current;
+        const currentCallbacks = callbacksRef.current;
 
         if (eventType === "INSERT") {
-          const rawItem = newRow
-          const mappedItem = mapRow ? mapRow(rawItem) : (rawItem as unknown as T)
-          
-          setState((prev) => {
-            const exists = prev.some((item) => item[keyField] === mappedItem[keyField])
-            if (exists) return prev
-            return [...prev, mappedItem]
-          })
-          
-          callbacks?.onInsert?.(mappedItem, payload)
+          const rawItem = newRow;
+          const mappedItem = currentMapRow
+            ? currentMapRow(rawItem)
+            : (rawItem as unknown as T);
+
+          setStateRef.current((prev) => {
+            const exists = prev.some(
+              (item) => item[currentKeyField] === mappedItem[currentKeyField],
+            );
+            if (exists) return prev;
+            return [...prev, mappedItem];
+          });
+
+          currentCallbacks?.onInsert?.(mappedItem, payload);
         } else if (eventType === "UPDATE") {
-          const rawItem = newRow
-          const mappedItem = mapRow ? mapRow(rawItem) : (rawItem as unknown as T)
+          const rawItem = newRow;
+          const mappedItem = currentMapRow
+            ? currentMapRow(rawItem)
+            : (rawItem as unknown as T);
 
-          setState((prev) =>
-            prev.map((item) => (item[keyField] === mappedItem[keyField] ? mappedItem : item))
-          )
+          setStateRef.current((prev) =>
+            prev.map((item) => {
+              if (item[currentKeyField] === mappedItem[currentKeyField]) {
+                const merged = { ...item, ...mappedItem };
+                // Keep existing tasks if the update payload didn't explicitly include tasks
+                if (
+                  !("tasks" in rawItem) &&
+                  "tasks" in item &&
+                  Array.isArray((item as any).tasks) &&
+                  (item as any).tasks.length > 0
+                ) {
+                  (merged as any).tasks = (item as any).tasks;
+                }
+                // Keep existing memberUserIds if the update payload didn't explicitly include member_user_ids or memberUserIds
+                if (
+                  !("member_user_ids" in rawItem) &&
+                  !("memberUserIds" in rawItem) &&
+                  "memberUserIds" in item &&
+                  Array.isArray((item as any).memberUserIds) &&
+                  (item as any).memberUserIds.length > 0
+                ) {
+                  (merged as any).memberUserIds = (item as any).memberUserIds;
+                }
+                return merged;
+              }
+              return item;
+            }),
+          );
 
-          callbacks?.onUpdate?.(mappedItem, payload)
+          currentCallbacks?.onUpdate?.(mappedItem, payload);
         } else if (eventType === "DELETE") {
-          const id = oldRow[keyField as string] as string
-          
-          setState((prev) => prev.filter((item) => item[keyField] !== id))
+          const id = oldRow[currentKeyField as string] as string;
 
-          callbacks?.onDelete?.(id, payload)
+          setStateRef.current((prev) => prev.filter((item) => item[currentKeyField] !== id));
+
+          currentCallbacks?.onDelete?.(id, payload);
         }
       },
-    })
+    });
 
-    return unsubscribe
-  }, [table, filter, schema, keyField, mapRow, setState, callbacks])
+    return unsubscribe;
+  }, [table, filter, schema]);
 }

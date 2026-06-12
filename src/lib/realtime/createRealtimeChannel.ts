@@ -1,13 +1,18 @@
-import { createClient } from "@/lib/supabase/client"
-import { RealtimePostgresChangesPayload, RealtimeChannel } from "@supabase/supabase-js"
-import { RealtimeEvent } from "./realtimeTypes"
+import { createClient } from "@/lib/supabase/client";
+import {
+  RealtimePostgresChangesPayload,
+  RealtimeChannel,
+} from "@supabase/supabase-js";
+import { RealtimeEvent } from "./realtimeTypes";
 
 interface CreateChannelOptions {
-  table: string
-  filter?: string
-  schema?: string
-  event?: RealtimeEvent
-  onPayload: (payload: RealtimePostgresChangesPayload<Record<string, any>>) => void
+  table: string;
+  filter?: string;
+  schema?: string;
+  event?: RealtimeEvent;
+  onPayload: (
+    payload: RealtimePostgresChangesPayload<Record<string, any>>,
+  ) => void;
 }
 
 /**
@@ -20,13 +25,16 @@ export function createRealtimeChannel({
   schema = "public",
   event = "*",
   onPayload,
-}: CreateChannelOptions): { channel: RealtimeChannel; unsubscribe: () => void } {
-  const supabase = createClient()
-  
+}: CreateChannelOptions): {
+  channel: RealtimeChannel;
+  unsubscribe: () => void;
+} {
+  const supabase = createClient();
+
   // Create a unique channel name based on table, filter, and a unique instance key to avoid channel sharing errors
-  const uniqueId = Math.random().toString(36).substring(2, 9)
-  const channelName = `db-changes:${schema}:${table}:${filter || "all"}:${uniqueId}`
-  const channel = supabase.channel(channelName)
+  const uniqueId = Math.random().toString(36).substring(2, 9);
+  const channelName = `db-changes:${schema}:${table}:${filter || "all"}:${uniqueId}`;
+  const channel = supabase.channel(channelName);
 
   channel.on(
     "postgres_changes",
@@ -37,16 +45,16 @@ export function createRealtimeChannel({
       filter,
     },
     (payload) => {
-      onPayload(payload)
-    }
-  )
+      onPayload(payload);
+    },
+  );
 
-  channel.subscribe()
+  channel.subscribe();
 
   return {
     channel,
     unsubscribe: () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(channel);
     },
-  }
+  };
 }

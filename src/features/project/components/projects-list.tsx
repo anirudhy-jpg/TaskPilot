@@ -27,18 +27,24 @@ const KanbanBoard = dynamic(
     loading: () => (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full animate-pulse">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-3xl bg-white/40 border border-amber-900/5 p-5 min-h-[600px] w-full">
+          <div
+            key={i}
+            className="rounded-3xl bg-white/40 border border-amber-900/5 p-5 min-h-[600px] w-full"
+          >
             <div className="h-6 w-24 bg-slate-200/60 rounded-lg mb-4" />
             <div className="space-y-3.5">
               {[0, 1].map((j) => (
-                <div key={j} className="h-32 bg-white/60 rounded-2xl border border-amber-900/5" />
+                <div
+                  key={j}
+                  className="h-32 bg-white/60 rounded-2xl border border-amber-900/5"
+                />
               ))}
             </div>
           </div>
         ))}
       </div>
     ),
-  }
+  },
 );
 
 interface ProjectsListProps {
@@ -108,12 +114,14 @@ function BoardContent(props: ProjectsListProps) {
   return (
     <div className="space-y-6 flex flex-col h-full w-full select-none relative">
       {/* Premium top linear loading bar showing sync state */}
-      {isPending && typeof window !== "undefined" && createPortal(
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
-          <div className="h-full bg-amber-450 animate-pulse w-full" />
-        </div>,
-        document.body
-      )}
+      {isPending &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
+            <div className="h-full bg-amber-450 animate-pulse w-full" />
+          </div>,
+          document.body,
+        )}
 
       {/* ─── Header ─────────────────────────────────────────── */}
       <ProjectBoardHeader
@@ -146,7 +154,7 @@ function BoardContent(props: ProjectsListProps) {
           /* ─── VIEW 1: KANBAN BOARD ─── */
           <KanbanBoard
             project={activeProject}
-            members={props.members}
+            members={currentProjectMembers}
             currentUserId={props.currentUserId}
             onAddTask={(columnId) => {
               setNewTaskStatus(columnId);
@@ -200,15 +208,23 @@ function BoardContent(props: ProjectsListProps) {
       />
 
       <CreateTaskModal
-        key={createTaskProjectId ? `${createTaskProjectId}-${newTaskStatus}` : "closed"}
+        key={
+          createTaskProjectId
+            ? `${createTaskProjectId}-${newTaskStatus}`
+            : "closed"
+        }
         isOpen={!!createTaskProjectId}
         onClose={() => setCreateTaskProjectId(null)}
         projectName={
-          optimisticProjects.find((p) => p.id === createTaskProjectId)?.name || ""
+          optimisticProjects.find((p) => p.id === createTaskProjectId)?.name ||
+          ""
         }
         isPending={isPending}
         initialStatus={newTaskStatus}
-        columns={optimisticProjects.find((p) => p.id === createTaskProjectId)?.columns || []}
+        columns={
+          optimisticProjects.find((p) => p.id === createTaskProjectId)
+            ?.columns || []
+        }
         onCreate={handleCreateTask}
       />
 

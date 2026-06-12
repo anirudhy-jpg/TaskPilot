@@ -14,7 +14,7 @@ export class MemberService {
       .from("workspace_members")
       .select(`
         *,
-        profile:profiles!workspace_members_user_id_fkey(email, full_name, avatar_url)
+        profile:profiles(email, full_name, avatar_url)
       `)
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true })
@@ -32,7 +32,7 @@ export class MemberService {
         throw new Error(fallbackErr.message)
       }
 
-      return (fallbackData || []).map((row) => mapMember(row, null))
+      return fetchProfilesForMembers(supabase, fallbackData || [])
     }
 
     return (data || []).map((row) => mapMember(row, row.profile))
@@ -89,7 +89,7 @@ export class MemberService {
       .from("workspace_members")
       .select(`
         *,
-        profile:profiles!workspace_members_user_id_fkey(email, full_name, avatar_url)
+        profile:profiles(email, full_name, avatar_url)
       `)
       .in("user_id", uniqueUserIds)
       .neq("role", "owner")
@@ -119,9 +119,8 @@ export class MemberService {
         return []
       }
 
-      return (fallbackData || [])
-        .map((row) => mapMember(row, null))
-        .filter((m) => m.role !== "owner")
+      const members = await fetchProfilesForMembers(supabase, fallbackData || [])
+      return members.filter((m) => m.role !== "owner")
     }
 
     return (data || [])
@@ -165,4 +164,23 @@ function mapMember(row: any, profileData: any): WorkspaceMember {
         }
       : undefined,
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchProfilesForMembers(supabase: any, memberRows: any[]): Promise<WorkspaceMember[]> {
+  if (memberRows.length === 0) return []
+
+  const userIds = memberRows.map((r) => r.user_id)
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, avatar_url")
+    .in("id", userIds)
+
+  if (error) {
+    console.error("Error fetching fallback profiles:", error)
+    return memberRows.map((row) => mapMember(row, null))
+  }
+
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+  return memberRows.map((row) => mapMember(row, profileMap.get(row.user_id)))
 }

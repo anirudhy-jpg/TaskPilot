@@ -1,40 +1,42 @@
-import { createClient } from "@/lib/supabase/server"
-import type { Project } from "../types/project.types"
+import { createClient } from "@/lib/supabase/server";
+import type { Project } from "../types/project.types";
 
 export class ProjectService {
   /**
    * Get all projects in a workspace.
    */
-  static async getProjectsByWorkspace(
-    workspaceId: string
-  ): Promise<Project[]> {
-    const supabase = await createClient()
+  static async getProjectsByWorkspace(workspaceId: string): Promise<Project[]> {
+    const supabase = await createClient();
 
     const { data: projectsData, error } = await supabase
       .from("projects")
-      .select("id, workspace_id, name, description, created_by, created_at, profiles:created_by(email, full_name)")
+      .select(
+        "id, workspace_id, name, description, created_by, created_at, profiles:created_by(email, full_name)",
+      )
       .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching projects:", error)
-      throw new Error(error.message)
+      console.error("Error fetching projects:", error);
+      throw new Error(error.message);
     }
 
     if (!projectsData || projectsData.length === 0) {
-      return []
+      return [];
     }
 
     // Filter projects based on user permissions
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         // Fetch workspace owner
         const { data: ws } = await supabase
           .from("workspaces")
           .select("owner_id")
           .eq("id", workspaceId)
-          .maybeSingle()
+          .maybeSingle();
 
         // Fetch workspace member role
         const { data: memberInfo } = await supabase
@@ -42,29 +44,35 @@ export class ProjectService {
           .select("role")
           .eq("workspace_id", workspaceId)
           .eq("user_id", user.id)
-          .maybeSingle()
+          .maybeSingle();
 
-        const isOwner = ws?.owner_id === user.id
-        const isAdmin = memberInfo?.role === "admin"
+        const isOwner = ws?.owner_id === user.id;
+        const isAdmin = memberInfo?.role === "admin";
 
         // If they are a regular member, filter projects to only those they are assigned to or created
         if (!isOwner && !isAdmin) {
           const { data: projectMembers } = await supabase
             .from("project_members")
             .select("project_id")
-            .eq("user_id", user.id)
+            .eq("user_id", user.id);
 
-          const assignedProjectIds = new Set((projectMembers || []).map((pm) => pm.project_id))
+          const assignedProjectIds = new Set(
+            (projectMembers || []).map((pm) => pm.project_id),
+          );
           return projectsData
-            .filter((project) => assignedProjectIds.has(project.id) || project.created_by === user.id)
-            .map(mapProject)
+            .filter(
+              (project) =>
+                assignedProjectIds.has(project.id) ||
+                project.created_by === user.id,
+            )
+            .map(mapProject);
         }
       }
     } catch (filterErr) {
-      console.error("Error filtering projects for user:", filterErr)
+      console.error("Error filtering projects for user:", filterErr);
     }
 
-    return projectsData.map(mapProject)
+    return projectsData.map(mapProject);
   }
 
   /**
@@ -73,13 +81,15 @@ export class ProjectService {
   static async createProject(
     workspaceId: string,
     name: string,
-    description?: string
+    description?: string,
   ): Promise<Project> {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      throw new Error("Unauthorized")
+      throw new Error("Unauthorized");
     }
 
     // Check permissions: Only workspace owners and admins can create projects
@@ -87,56 +97,61 @@ export class ProjectService {
       .from("workspaces")
       .select("owner_id")
       .eq("id", workspaceId)
-      .maybeSingle()
+      .maybeSingle();
 
     const { data: memberInfo } = await supabase
       .from("workspace_members")
       .select("role")
       .eq("workspace_id", workspaceId)
       .eq("user_id", user.id)
-      .maybeSingle()
+      .maybeSingle();
 
-    const isOwner = ws?.owner_id === user.id
-    const userRole = memberInfo?.role || (isOwner ? "owner" : null)
+    const isOwner = ws?.owner_id === user.id;
+    const userRole = memberInfo?.role || (isOwner ? "owner" : null);
 
     if (userRole === "member" || !userRole) {
-      throw new Error("Unauthorized: Workspace members are not allowed to create projects.")
+      throw new Error(
+        "Unauthorized: Workspace members are not allowed to create projects.",
+      );
     }
 
     // Only include columns that are guaranteed to exist
     const insertData: Record<string, unknown> = {
       workspace_id: workspaceId,
       name,
-      created_by: user.id
-    }
-    if (description) insertData.description = description
+      created_by: user.id,
+    };
+    if (description) insertData.description = description;
 
     const { data, error } = await supabase
       .from("projects")
       .insert(insertData)
       .select("id, workspace_id, name, description, created_by, created_at")
-      .single()
+      .single();
 
     if (error) {
-      console.error("Error creating project:", error)
-      throw new Error(error.message)
+      console.error("Error creating project:", error);
+      throw new Error(error.message);
     }
 
     // Auto-assign project creator to project_members table
     try {
-      const { error: pmError } = await supabase
-        .from("project_members")
-        .insert({
-          project_id: data.id,
-          user_id: user.id,
-          role: "member"
-        })
+      const { error: pmError } = await supabase.from("project_members").insert({
+        project_id: data.id,
+        user_id: user.id,
+      });
 
       if (pmError) {
-        console.error("Failed to auto-assign creator to project members:", pmError.message)
+        console.error(
+          "Failed to auto-assign creator to project members:",
+          pmError.message,
+        );
       }
     } catch (pmErr) {
-      console.error("Exception during creator project member auto-assignment:", pmErr)
+      console.error(
+        "Exception during creator project member auto-assignment:",
+        pmErr,
+      );
     }
 
     // Seed default columns for the new project
@@ -144,60 +159,67 @@ export class ProjectService {
       const defaultCols = [
         { board_id: data.id, name: "To Do", position: 1000.0 },
         { board_id: data.id, name: "In Progress", position: 2000.0 },
-        { board_id: data.id, name: "Done", position: 3000.0 }
-      ]
+        { board_id: data.id, name: "Done", position: 3000.0 },
+      ];
       const { error: colError } = await supabase
         .from("columns")
-        .insert(defaultCols)
+        .insert(defaultCols);
 
       if (colError) {
-        console.error("Failed to seed default columns for new project:", colError.message)
+        console.error(
+          "Failed to seed default columns for new project:",
+          colError.message,
+        );
       }
     } catch (colErr) {
-      console.error("Exception during project column seeding:", colErr)
+      console.error("Exception during project column seeding:", colErr);
     }
 
-    return mapProject(data)
+    return mapProject(data);
   }
 
   /**
    * Get a single project by ID.
    */
   static async getProjectById(id: string): Promise<Project | null> {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from("projects")
-      .select("id, workspace_id, name, description, created_by, created_at, profiles:created_by(email, full_name)")
+      .select(
+        "id, workspace_id, name, description, created_by, created_at, profiles:created_by(email, full_name)",
+      )
       .eq("id", id)
-      .maybeSingle()
+      .maybeSingle();
 
     if (error) {
-      console.error("Error fetching project:", error)
-      throw new Error(error.message)
+      console.error("Error fetching project:", error);
+      throw new Error(error.message);
     }
 
-    if (!data) return null
+    if (!data) return null;
 
     // Filter project access if user is regular member
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: ws } = await supabase
           .from("workspaces")
           .select("owner_id")
           .eq("id", data.workspace_id)
-          .maybeSingle()
+          .maybeSingle();
 
         const { data: memberInfo } = await supabase
           .from("workspace_members")
           .select("role")
           .eq("workspace_id", data.workspace_id)
           .eq("user_id", user.id)
-          .maybeSingle()
+          .maybeSingle();
 
-        const isOwner = ws?.owner_id === user.id
-        const isAdmin = memberInfo?.role === "admin"
+        const isOwner = ws?.owner_id === user.id;
+        const isAdmin = memberInfo?.role === "admin";
 
         if (!isOwner && !isAdmin) {
           const { data: isProjMem } = await supabase
@@ -205,18 +227,18 @@ export class ProjectService {
             .select("id")
             .eq("project_id", data.id)
             .eq("user_id", user.id)
-            .maybeSingle()
+            .maybeSingle();
 
           if (!isProjMem && data.created_by !== user.id) {
-            return null // Not allowed to access this project
+            return null; // Not allowed to access this project
           }
         }
       }
     } catch (filterErr) {
-      console.error("Error validating project access for user:", filterErr)
+      console.error("Error validating project access for user:", filterErr);
     }
 
-    return mapProject(data)
+    return mapProject(data);
   }
 
   /**
@@ -225,44 +247,48 @@ export class ProjectService {
   static async updateProject(
     id: string,
     name: string,
-    description?: string
+    description?: string,
   ): Promise<Project> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      throw new Error("Unauthorized")
+      throw new Error("Unauthorized");
     }
 
     const updateData: Record<string, unknown> = {
       name,
       description: description || null,
-    }
+    };
 
     const { data, error } = await supabase
       .from("projects")
       .update(updateData)
       .eq("id", id)
       .select("id, workspace_id, name, description, created_by, created_at")
-      .single()
+      .single();
 
     if (error) {
-      console.error("Error updating project:", error)
-      throw new Error(error.message)
+      console.error("Error updating project:", error);
+      throw new Error(error.message);
     }
 
-    return mapProject(data)
+    return mapProject(data);
   }
 
   /**
    * Delete a project by ID.
    */
   static async deleteProject(id: string): Promise<void> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      throw new Error("Unauthorized")
+      throw new Error("Unauthorized");
     }
 
     // Fetch project to find its workspace and creator
@@ -270,10 +296,10 @@ export class ProjectService {
       .from("projects")
       .select("workspace_id, created_by")
       .eq("id", id)
-      .maybeSingle()
+      .maybeSingle();
 
     if (projErr || !project) {
-      throw new Error("Project not found")
+      throw new Error("Project not found");
     }
 
     // Check permissions: Only workspace owners and admins can delete projects
@@ -281,34 +307,39 @@ export class ProjectService {
       .from("workspaces")
       .select("owner_id")
       .eq("id", project.workspace_id)
-      .maybeSingle()
+      .maybeSingle();
 
     const { data: memberInfo } = await supabase
       .from("workspace_members")
       .select("role")
       .eq("workspace_id", project.workspace_id)
       .eq("user_id", user.id)
-      .maybeSingle()
+      .maybeSingle();
 
-    const isWorkspaceOwner = ws?.owner_id === user.id
-    const userRole = memberInfo?.role || (isWorkspaceOwner ? "owner" : "member")
+    const isWorkspaceOwner = ws?.owner_id === user.id;
+    const userRole =
+      memberInfo?.role || (isWorkspaceOwner ? "owner" : "member");
 
     if (userRole === "member") {
-      throw new Error("Unauthorized: Workspace members are not allowed to delete projects.")
+      throw new Error(
+        "Unauthorized: Workspace members are not allowed to delete projects.",
+      );
     }
 
-    const isWorkspaceAdmin = userRole === "admin" || userRole === "owner"
-    const isProjectCreator = project.created_by === user.id
+    const isWorkspaceAdmin = userRole === "admin" || userRole === "owner";
+    const isProjectCreator = project.created_by === user.id;
 
     if (!isWorkspaceOwner && !isWorkspaceAdmin && !isProjectCreator) {
-      throw new Error("Unauthorized: Only workspace admins or the project creator can delete this project.")
+      throw new Error(
+        "Unauthorized: Only workspace admins or the project creator can delete this project.",
+      );
     }
 
-    const { error } = await supabase.from("projects").delete().eq("id", id)
+    const { error } = await supabase.from("projects").delete().eq("id", id);
 
     if (error) {
-      console.error("Error deleting project:", error)
-      throw new Error(error.message)
+      console.error("Error deleting project:", error);
+      throw new Error(error.message);
     }
   }
 
@@ -316,24 +347,26 @@ export class ProjectService {
    * Get all user IDs of members assigned to a project.
    */
   static async getProjectMemberUserIds(projectId: string): Promise<string[]> {
-    const supabase = await createClient()
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("project_members")
       .select("user_id")
-      .eq("project_id", projectId)
+      .eq("project_id", projectId);
 
     if (error) {
-      console.error("Error fetching project member user IDs:", error)
-      return []
+      console.error("Error fetching project member user IDs:", error);
+      return [];
     }
-    return (data || []).map((row) => row.user_id)
+    return (data || []).map((row) => row.user_id);
   }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapProject(row: any): Project {
-  const creatorProfile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+  const creatorProfile = Array.isArray(row.profiles)
+    ? row.profiles[0]
+    : row.profiles;
   return {
     id: row.id,
     workspaceId: row.workspace_id,
@@ -344,5 +377,5 @@ function mapProject(row: any): Project {
     createdBy: row.created_by,
     creatorEmail: creatorProfile?.email || null,
     creatorName: creatorProfile?.full_name || null,
-  }
+  };
 }

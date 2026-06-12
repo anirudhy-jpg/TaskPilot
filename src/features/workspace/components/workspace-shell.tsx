@@ -1,28 +1,28 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from "react"
-import { Header } from "./header"
-import { Sidebar } from "./sidebar"
-import { createClient } from "@/lib/supabase/client"
-import { X } from "lucide-react"
-import { useProjectsRealtime } from "../../project/hooks/use-projects-realtime"
-import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime"
-import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
-import { useRouter } from "next/navigation"
-import type { Project, Task } from "../../project/types/project.types"
-import { EvictedModal } from "./modals/evicted-modal"
+import React, { useState, useEffect } from "react";
+import { Header } from "./header";
+import { Sidebar } from "./sidebar";
+import { createClient } from "@/lib/supabase/client";
+import { X } from "lucide-react";
+import { useProjectsRealtime } from "../../project/hooks/use-projects-realtime";
+import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime";
+import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable";
+import { useRouter } from "next/navigation";
+import type { Project, Task } from "../../project/types/project.types";
+import { EvictedModal } from "./modals/evicted-modal";
 
 interface WorkspaceShellProps {
-  children: React.ReactNode
-  profile: any
-  user: any
-  isWorkspaceOwner: boolean
-  workspaceId: string | null
-  workspaceName: string
-  workspaces: any[]
-  currentUserId: string
-  projectsWithTasks: any[]
-  ownerEmail: string
+  children: React.ReactNode;
+  profile: any;
+  user: any;
+  isWorkspaceOwner: boolean;
+  workspaceId: string | null;
+  workspaceName: string;
+  workspaces: any[];
+  currentUserId: string;
+  projectsWithTasks: any[];
+  ownerEmail: string;
 }
 
 export function WorkspaceShell({
@@ -37,48 +37,52 @@ export function WorkspaceShell({
   projectsWithTasks,
   ownerEmail,
 }: WorkspaceShellProps) {
-  const router = useRouter()
-  const [localWorkspaceName, setLocalWorkspaceName] = useState(workspaceName)
-  const [localProjects, setLocalProjects] = useState<(Project & { tasks: Task[] })[]>(projectsWithTasks)
-  const [localWorkspaces, setLocalWorkspaces] = useState(workspaces)
-  const [currentUserMemberId, setCurrentUserMemberId] = useState<string | null>(null)
-  const [isEvicted, setIsEvicted] = useState(false)
+  const router = useRouter();
+  const [localWorkspaceName, setLocalWorkspaceName] = useState(workspaceName);
+  const [localProjects, setLocalProjects] =
+    useState<(Project & { tasks: Task[] })[]>(projectsWithTasks);
+  const [localWorkspaces, setLocalWorkspaces] = useState(workspaces);
+  const [currentUserMemberId, setCurrentUserMemberId] = useState<string | null>(
+    null,
+  );
+  const [isEvicted, setIsEvicted] = useState(false);
 
   useEffect(() => {
-    setLocalWorkspaceName(workspaceName)
-  }, [workspaceName])
+    setLocalWorkspaceName(workspaceName);
+  }, [workspaceName]);
 
   useEffect(() => {
-    setLocalProjects(projectsWithTasks)
-  }, [projectsWithTasks])
+    setLocalProjects(projectsWithTasks);
+  }, [projectsWithTasks]);
 
   useEffect(() => {
-    setLocalWorkspaces(workspaces)
-  }, [workspaces])
+    setLocalWorkspaces(workspaces);
+  }, [workspaces]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      (window as any).isLeavingWorkspace = false
+      (window as any).isLeavingWorkspace = false;
     }
-  }, [workspaceId])
+    setIsEvicted(false);
+  }, [workspaceId]);
 
   // Get current user's membership row ID to detect eviction via DELETE payload IDs
   useEffect(() => {
-    if (!workspaceId || !currentUserId) return
+    if (!workspaceId || !currentUserId) return;
     const getMyMembership = async () => {
-      const supabase = createClient()
+      const supabase = createClient();
       const { data } = await supabase
         .from("workspace_members")
         .select("id")
         .eq("workspace_id", workspaceId)
         .eq("user_id", currentUserId)
-        .maybeSingle()
+        .maybeSingle();
       if (data) {
-        setCurrentUserMemberId(data.id)
+        setCurrentUserMemberId(data.id);
       }
-    }
-    getMyMembership()
-  }, [workspaceId, currentUserId])
+    };
+    getMyMembership();
+  }, [workspaceId, currentUserId]);
 
   // Subscriptions
   useWorkspacesRealtime({
@@ -86,94 +90,102 @@ export function WorkspaceShell({
     setWorkspaces: setLocalWorkspaces,
     onWorkspaceUpdate: (updated) => {
       if (updated.id === workspaceId) {
-        setLocalWorkspaceName(updated.name)
+        setLocalWorkspaceName(updated.name);
       }
     },
     onWorkspaceDelete: (deletedId) => {
       if (deletedId === workspaceId) {
-        router.push("/workspaces")
-        router.refresh()
+        router.push("/workspaces");
+        router.refresh();
       }
     },
-  })
+  });
 
   useProjectsRealtime({
     workspaceId,
     projects: localProjects,
-    setProjects: setLocalProjects as React.Dispatch<React.SetStateAction<(Project & { tasks: Task[] })[]>>,
-  })
+    setProjects: setLocalProjects as React.Dispatch<
+      React.SetStateAction<(Project & { tasks: Task[] })[]>
+    >,
+  });
 
   // Eviction listener via database change event
   useRealtimeSubscription({
     table: "workspace_members",
     filter: undefined,
     onPayload: (payload) => {
-      const { eventType, old: oldRow } = payload
+      const { eventType, old: oldRow } = payload;
       if (eventType === "DELETE" && oldRow) {
-        const deletedId = (oldRow as any).id
+        const deletedId = (oldRow as any).id;
         if (currentUserMemberId && deletedId === currentUserMemberId) {
-          if (typeof window !== "undefined" && (window as any).isLeavingWorkspace) {
+          if (
+            typeof window !== "undefined" &&
+            (window as any).isLeavingWorkspace
+          ) {
             // Voluntary leave, ignore eviction modal
-            return
+            return;
           }
-          setIsEvicted(true)
+          setIsEvicted(true);
         }
       }
     },
-  })
+  });
 
   // Eviction listener via Broadcast (backup/instant for RLS bypass)
   useEffect(() => {
-    if (!workspaceId) return
-    const supabase = createClient()
-    const channel = supabase.channel(`room:${workspaceId}`)
+    if (!workspaceId) return;
+    const supabase = createClient();
+    const channel = supabase.channel(`room:${workspaceId}`);
 
     channel
       .on("broadcast", { event: "evict" }, (response) => {
-        const { userId, memberId } = response.payload || {}
+        const { userId, memberId } = response.payload || {};
         if (
           (userId && userId === currentUserId) ||
           (memberId && memberId === currentUserMemberId)
         ) {
-          if (typeof window !== "undefined" && (window as any).isLeavingWorkspace) {
+          if (
+            typeof window !== "undefined" &&
+            (window as any).isLeavingWorkspace
+          ) {
             // Voluntary leave, ignore eviction modal
-            return
+            return;
           }
-          setIsEvicted(true)
+          setIsEvicted(true);
         }
       })
-      .subscribe()
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [workspaceId, currentUserId, currentUserMemberId])
+      supabase.removeChannel(channel);
+    };
+  }, [workspaceId, currentUserId, currentUserMemberId]);
 
   useRealtimeSubscription({
     table: "tasks",
     onPayload: (payload) => {
-      const { eventType, new: newRow, old: oldRow } = payload
+      const { eventType, new: newRow, old: oldRow } = payload;
 
       if (eventType === "DELETE" && oldRow) {
-        const deletedTaskId = (oldRow as any).id
+        const deletedTaskId = (oldRow as any).id;
         setLocalProjects((prev) =>
           prev.map((proj) => ({
             ...proj,
             tasks: proj.tasks.filter((t) => t.id !== deletedTaskId),
-          }))
-        )
-        return
+          })),
+        );
+        return;
       }
 
-      const projectId = (newRow as any)?.project_id
-      if (!projectId) return
+      const projectId = (newRow as any)?.project_id;
+      if (!projectId) return;
 
       setLocalProjects((prev) =>
         prev.map((proj) => {
-          if (proj.id !== projectId) return proj
+          if (proj.id !== projectId) return proj;
 
           if (eventType === "INSERT" && newRow) {
-            const r = newRow as any
+            const r = newRow as any;
             const newTask: Task = {
               id: r.id,
               projectId: r.project_id,
@@ -185,15 +197,15 @@ export function WorkspaceShell({
               position: typeof r.position === "number" ? r.position : 0,
               assigneeId: r.assigned_to || null,
               createdAt: r.created_at || new Date().toISOString(),
-            }
-            const exists = proj.tasks.some((t) => t.id === newTask.id)
-            if (exists) return proj
+            };
+            const exists = proj.tasks.some((t) => t.id === newTask.id);
+            if (exists) return proj;
             return {
               ...proj,
               tasks: [...proj.tasks, newTask],
-            }
+            };
           } else if (eventType === "UPDATE" && newRow) {
-            const r = newRow as any
+            const r = newRow as any;
             return {
               ...proj,
               tasks: proj.tasks.map((t) =>
@@ -207,24 +219,27 @@ export function WorkspaceShell({
                       assigneeId: r.assigned_to || t.assigneeId,
                       dueDate: r.due_date || (t as any).dueDate,
                       description: r.description || t.description,
-                      position: typeof r.position === "number" ? r.position : t.position,
+                      position:
+                        typeof r.position === "number"
+                          ? r.position
+                          : t.position,
                     }
-                  : t
+                  : t,
               ),
-            }
+            };
           }
-          return proj
-        })
-      )
+          return proj;
+        }),
+      );
     },
-  })
+  });
 
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Automatically close sidebar when navigation/content changes
   useEffect(() => {
-    setIsMobileSidebarOpen(false)
-  }, [children])
+    setIsMobileSidebarOpen(false);
+  }, [children]);
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#fffdf9] via-[#fbfaf8] to-[#f6f5f0] dark:from-[#0f0e0c] dark:via-[#131211] dark:to-[#181613] text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full relative overflow-hidden">
@@ -290,9 +305,7 @@ export function WorkspaceShell({
         </main>
       </div>
 
-      <EvictedModal
-        isOpen={isEvicted}
-      />
+      <EvictedModal isOpen={isEvicted} />
     </div>
-  )
+  );
 }
