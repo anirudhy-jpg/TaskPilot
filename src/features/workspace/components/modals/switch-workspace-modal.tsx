@@ -71,7 +71,7 @@ export function SwitchWorkspaceModal({
               <Briefcase size={18} className="text-amber-500" />
               <span>Switch Workspace</span>
             </h3>
-            <p className="text-xs text-slate-505 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Select an active workspace to view its projects and tasks.
             </p>
           </div>

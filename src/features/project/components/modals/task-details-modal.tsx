@@ -2,10 +2,11 @@
 
 import React, { useEffect, useRef } from "react";
 import { X, Circle, Clock, CheckCircle2, Calendar, AlertCircle, AlertTriangle, Info } from "lucide-react";
-import type { Task } from "../../types/project.types";
+import type { Task, TaskStatus } from "../../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getVisualPriority } from "../../utils/avatar";
 import { AssigneeSelector } from "../assignee-selector";
+import { Select } from "@/components/ui/select";
 
 interface TaskDetailsModalProps {
   task: Task | null;
@@ -16,6 +17,8 @@ interface TaskDetailsModalProps {
   taskNumber?: number;
   currentUserId?: string;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
+  onDeleteTask?: (taskId: string, title: string) => void;
 }
 
 const statusConfig = {
@@ -33,6 +36,8 @@ export function TaskDetailsModal({
   taskNumber,
   currentUserId,
   onAssigneeChange,
+  onStatusChange,
+  onDeleteTask,
 }: TaskDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -110,7 +115,7 @@ export function TaskDetailsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200/60 transition-all cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-50 border border-transparent hover:border-slate-200/60 transition-all cursor-pointer shrink-0"
             title="Close modal"
           >
             <X size={15} />
@@ -125,10 +130,24 @@ export function TaskDetailsModal({
           {/* Status Field */}
           <div className="flex items-center gap-6">
             <span className="text-[11px] font-extrabold text-slate-400 w-20 shrink-0 uppercase tracking-wider">Status</span>
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider shadow-2xs ${statusColor}`}>
-              <StatusIcon size={11} />
-              <span>{statusLabel}</span>
-            </div>
+            {onStatusChange ? (
+              <div className="w-36">
+                <Select
+                  value={status}
+                  onChange={(val) => onStatusChange(task.id, val as TaskStatus)}
+                  options={[
+                    { value: "todo", label: "To Do" },
+                    { value: "in_progress", label: "In Progress" },
+                    { value: "done", label: "Done" },
+                  ]}
+                />
+              </div>
+            ) : (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider shadow-2xs ${statusColor}`}>
+                <StatusIcon size={11} />
+                <span>{statusLabel}</span>
+              </div>
+            )}
           </div>
 
           {/* Assignee Field */}
@@ -189,10 +208,23 @@ export function TaskDetailsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end mt-2">
+        <div className="flex justify-between items-center mt-2">
+          {onDeleteTask ? (
+            <button
+              onClick={() => {
+                onDeleteTask(task.id, task.title);
+                onClose();
+              }}
+              className="px-4 py-2 bg-rose-50/80 hover:bg-rose-100/80 text-rose-600 border border-rose-255/50 rounded-xl text-xs font-black transition-all cursor-pointer shadow-3xs hover:shadow-2xs active:scale-[0.98]"
+            >
+              Delete Task
+            </button>
+          ) : (
+            <div />
+          )}
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/10"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/10 active:scale-[0.98]"
           >
             Close
           </button>

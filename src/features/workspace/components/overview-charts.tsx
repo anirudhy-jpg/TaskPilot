@@ -217,7 +217,7 @@ function EmptyState({ message }: { message: string }) {
     <div className="h-64 flex items-center justify-center">
       <div className="text-center">
         <div className="text-3xl mb-3">📊</div>
-        <p className="text-xs text-slate-505 max-w-[200px]">{message}</p>
+        <p className="text-xs text-slate-500 max-w-[200px]">{message}</p>
       </div>
     </div>
   )

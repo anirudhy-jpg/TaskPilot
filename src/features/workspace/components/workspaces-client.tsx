@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useTransition } from "react"
+import React, { useState, useTransition, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { Briefcase, Plus, Loader2, ArrowRight, ShieldCheck, User } from "lucide-react"
@@ -13,6 +13,7 @@ import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
 import { deleteWorkspaceAction } from "../actions/delete-workspace.action"
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
+import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime"
 
 interface WorkspacesClientProps {
   workspaces: Workspace[]
@@ -26,6 +27,17 @@ export function WorkspacesClient({
   currentUserId,
 }: WorkspacesClientProps) {
   const router = useRouter()
+  const [localWorkspaces, setLocalWorkspaces] = useState(workspaces)
+
+  useEffect(() => {
+    setLocalWorkspaces(workspaces)
+  }, [workspaces])
+
+  useWorkspacesRealtime({
+    workspaces: localWorkspaces,
+    setWorkspaces: setLocalWorkspaces,
+  })
+
   const [isPending, startTransition] = useTransition()
   const [newWorkspaceName, setNewWorkspaceName] = useState("")
   const [switchingId, setSwitchingId] = useState<string | null>(null)
@@ -40,8 +52,8 @@ export function WorkspacesClient({
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Separate owned and member workspaces
-  const ownedWorkspaces = workspaces.filter((w) => w.ownerId === currentUserId)
-  const memberWorkspaces = workspaces.filter((w) => w.ownerId !== currentUserId)
+  const ownedWorkspaces = localWorkspaces.filter((w) => w.ownerId === currentUserId)
+  const memberWorkspaces = localWorkspaces.filter((w) => w.ownerId !== currentUserId)
 
   // Handle Workspace Leave
   const handleLeave = (e: React.MouseEvent, workspaceId: string, name: string) => {
@@ -293,7 +305,7 @@ export function WorkspacesClient({
           <h3 className="text-sm font-extrabold text-slate-800 mb-1">
             Create a New Workspace
           </h3>
-          <p className="text-xs text-slate-505 mb-4 font-medium">
+          <p className="text-xs text-slate-500 mb-4 font-medium">
             Start a new dashboard for project tracking, board management, and team collaboration.
           </p>
 

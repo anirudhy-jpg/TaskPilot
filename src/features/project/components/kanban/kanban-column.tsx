@@ -39,7 +39,7 @@ export const KanbanColumn = React.memo(
 
     return (
       <div
-        className={`rounded-3xl bg-white/40 backdrop-blur-md border p-5 flex flex-col gap-4 min-h-[600px] w-full relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:${column.accentClass} shadow-xs transition-all duration-200 ${
+        className={`rounded-3xl bg-white/40 backdrop-blur-md border p-5 flex flex-col gap-4 min-h-[600px] w-[88vw] sm:w-[320px] lg:w-full shrink-0 snap-center relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:${column.accentClass} shadow-xs transition-all duration-200 ${
           isOver
             ? "border-amber-500/40 bg-amber-50/30 ring-2 ring-amber-500/20"
             : "border-amber-900/5"

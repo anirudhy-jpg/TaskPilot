@@ -98,7 +98,7 @@ export function ProjectsDashboardGrid({
                         name: project.name,
                       });
                     }}
-                    className="p-1 rounded-lg text-slate-355 hover:text-red-505 hover:bg-red-55/10 border border-transparent hover:border-red-100 transition-all cursor-pointer"
+                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50/10 border border-transparent hover:border-red-100 transition-all cursor-pointer"
                     title="Delete project"
                   >
                     <Trash2 size={13} />
@@ -174,7 +174,7 @@ export function ProjectsDashboardGrid({
                                 name: task.title,
                               });
                             }}
-                            className="text-slate-350 hover:text-red-505 opacity-0 group-hover/task:opacity-100 transition-opacity p-0.5 rounded cursor-pointer"
+                            className="text-slate-400 hover:text-red-600 opacity-0 group-hover/task:opacity-100 transition-opacity p-0.5 rounded cursor-pointer"
                             title="Delete task"
                           >
                             <Trash2 size={11} />

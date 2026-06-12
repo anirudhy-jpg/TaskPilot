@@ -12,6 +12,9 @@ import { revokeInvitationAction } from "../actions/revoke-invitation.action"
 import { removeWorkspaceMemberAction } from "../actions/remove-workspace-member.action"
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
 import { Button } from "@/components/ui/button"
+import { useMembersRealtime } from "../hooks/use-members-realtime"
+import { useInvitationsRealtime } from "../hooks/use-invitations-realtime"
+import { createClient } from "@/lib/supabase/client"
 
 function ClientDate({ dateString }: { dateString: string }) {
   const [mounted, setMounted] = useState(false)
@@ -71,11 +74,36 @@ export function MembersList({
   currentUserId,
   projects = [],
 }: MembersListProps) {
+  const [localMembers, setLocalMembers] = useState(members)
+  const [localInvitations, setLocalInvitations] = useState(pendingInvitations)
+
+  useEffect(() => {
+    setLocalMembers(members)
+  }, [members])
+
+  useEffect(() => {
+    setLocalInvitations(pendingInvitations)
+  }, [pendingInvitations])
+
+  // Realtime subscriptions
+  useMembersRealtime({
+    workspaceId,
+    members: localMembers,
+    setMembers: setLocalMembers,
+    currentUserId,
+  })
+
+  useInvitationsRealtime({
+    workspaceId,
+    invitations: localInvitations,
+    setInvitations: setLocalInvitations,
+  })
+
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
-  const [removingMember, setRemovingMember] = useState<{ id: string; name: string } | null>(null)
+  const [removingMember, setRemovingMember] = useState<{ id: string; userId: string; name: string } | null>(null)
 
   // Click outside to close options dropdown
   useEffect(() => {
@@ -90,7 +118,7 @@ export function MembersList({
     }
   }, [activeMenuId])
 
-  const sortedMembers = [...members].sort((a, b) => {
+  const sortedMembers = [...localMembers].sort((a, b) => {
     const roleOrder = { owner: 0, admin: 1, member: 2 }
     return (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2)
   })
@@ -129,9 +157,9 @@ export function MembersList({
     })
   }
 
-  const handleRemoveMember = (memberId: string, name: string) => {
+  const handleRemoveMember = (memberId: string, userId: string, name: string) => {
     setActiveMenuId(null)
-    setRemovingMember({ id: memberId, name })
+    setRemovingMember({ id: memberId, userId, name })
   }
 
   const confirmRemoveMember = () => {
@@ -139,7 +167,25 @@ export function MembersList({
     startTransition(async () => {
       try {
         const res = await removeWorkspaceMemberAction(workspaceId, removingMember.id)
-        if (!res.success) {
+        if (res.success) {
+          // Broadcast the eviction event so the member is kicked out instantly
+          const supabase = createClient()
+          const channel = supabase.channel(`room:${workspaceId}`)
+          channel.subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              channel.send({
+                type: "broadcast",
+                event: "evict",
+                payload: {
+                  userId: removingMember.userId,
+                  memberId: removingMember.id,
+                },
+              }).then(() => {
+                supabase.removeChannel(channel)
+              })
+            }
+          })
+        } else {
           alert(res.error || "Failed to remove member.")
         }
       } catch (err) {
@@ -184,7 +230,7 @@ export function MembersList({
       <div className="space-y-4">
         <div>
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
-            Active Members ({members.length})
+            Active Members ({localMembers.length})
           </h3>
         </div>
 
@@ -232,7 +278,7 @@ export function MembersList({
                         {activeMenuId === member.id && (
                           <div className="absolute right-0 mt-1 w-40 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
                             <button
-                              onClick={() => handleRemoveMember(member.id, member.profile?.fullName || member.profile?.email || "this member")}
+                              onClick={() => handleRemoveMember(member.id, member.userId, member.profile?.fullName || member.profile?.email || "this member")}
                               className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-650 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
                             >
                               <Trash2 size={13} />
@@ -269,17 +315,17 @@ export function MembersList({
       </div>
 
       {/* Pending Invitations Section */}
-      {pendingInvitations.length > 0 && (
+      {localInvitations.length > 0 && (
         <div className="space-y-4 pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div>
             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
-              Pending Invitations ({pendingInvitations.length})
+              Pending Invitations ({localInvitations.length})
             </h3>
           </div>
 
           <div className="bg-white/70 backdrop-blur-md border border-amber-900/5 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="divide-y divide-amber-955/10">
-              {pendingInvitations.map((invite) => (
+              {localInvitations.map((invite) => (
                 <div
                   key={invite.id}
                   className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-white/50 transition-colors"

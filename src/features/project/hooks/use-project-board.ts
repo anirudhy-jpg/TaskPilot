@@ -1,6 +1,6 @@
 import { useState, useEffect, useTransition, useOptimistic } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { useTasksRealtime } from "./use-tasks-realtime"
 import type { Project, Task, TaskStatus, TaskPriority } from "../types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { createProjectAction } from "../actions/create-project.action"
@@ -13,28 +13,6 @@ import { addProjectMemberAction } from "../actions/add-project-member.action"
 import { removeProjectMemberAction } from "../actions/remove-project-member.action"
 import { batchUpdateTaskPositionsAction } from "../actions/batch-update-task-positions.action"
 
-function mapRealtimeTask(row: Record<string, unknown>, members: WorkspaceMember[]): Task {
-  const assigneeId = (row.assigned_to as string | null | undefined) || (row.assignee_id as string | null | undefined) || null
-  const member = assigneeId ? members.find((m) => m.userId === assigneeId) : null
-  return {
-    id: row.id as string,
-    projectId: row.project_id as string,
-    title: row.title as string,
-    description: (row.description as string | null | undefined) || null,
-    status: (row.status as TaskStatus | undefined) || "todo",
-    priority: (row.priority as TaskPriority | undefined) || "medium",
-    position: (row.position as number | undefined) ?? 0,
-    assigneeId,
-    createdAt: (row.created_at as string | undefined) || new Date().toISOString(),
-    assignee: member
-      ? {
-          email: member.profile?.email || "",
-          fullName: member.profile?.fullName || null,
-          avatarUrl: member.profile?.avatarUrl || null,
-        }
-      : undefined,
-  }
-}
 
 export interface UseProjectBoardProps {
   projects: (Project & { tasks: Task[] })[]
@@ -157,74 +135,52 @@ export function useProjectBoard({
     }
   )
 
-  // Realtime subscription
-  useEffect(() => {
-    if (!activeProjectId) return
-
-    const supabase = createClient()
-    const channelName = `project-tasks:${activeProjectId}`
-    const channel = supabase.channel(channelName)
-
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "tasks",
-          filter: `project_id=eq.${activeProjectId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newTask = mapRealtimeTask(payload.new, members)
-            setCurrentProjects((prev) =>
-              prev.map((p) => {
-                if (p.id === activeProjectId) {
-                  const exists = p.tasks.some((t) => t.id === newTask.id)
-                  if (exists) return p
-                  return {
-                    ...p,
-                    tasks: [...p.tasks, newTask],
-                  }
-                }
-                return p
-              })
-            )
-          } else if (payload.eventType === "UPDATE") {
-            const updatedTask = mapRealtimeTask(payload.new, members)
-            setCurrentProjects((prev) =>
-              prev.map((p) => {
-                if (p.id === activeProjectId) {
-                  return {
-                    ...p,
-                    tasks: p.tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
-                  }
-                }
-                return p
-              })
-            )
-          } else if (payload.eventType === "DELETE") {
-            const deletedTaskId = payload.old.id
-            setCurrentProjects((prev) =>
-              prev.map((p) => {
-                if (p.id === activeProjectId) {
-                  return {
-                    ...p,
-                    tasks: p.tasks.filter((t) => t.id !== deletedTaskId),
-                  }
-                }
-                return p
-              })
-            )
+  // Realtime subscription using the refactored useTasksRealtime hook
+  useTasksRealtime({
+    projectId: activeProjectId,
+    members,
+    onInsert: (newTask) => {
+      setCurrentProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === activeProjectId) {
+            const exists = p.tasks.some((t) => t.id === newTask.id)
+            if (exists) return p
+            return {
+              ...p,
+              tasks: [...p.tasks, newTask],
+            }
           }
-        }
+          return p
+        })
       )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [activeProjectId, members])
+    },
+    onUpdate: (updatedTask) => {
+      setCurrentProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === activeProjectId) {
+            return {
+              ...p,
+              tasks: p.tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
+            }
+          }
+          return p
+        })
+      )
+    },
+    onDelete: (deletedTaskId) => {
+      setCurrentProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === activeProjectId) {
+            return {
+              ...p,
+              tasks: p.tasks.filter((t) => t.id !== deletedTaskId),
+            }
+          }
+          return p
+        })
+      )
+    },
+  })
 
   const activeProject = optimisticProjects.find((p) => p.id === activeProjectId)
 

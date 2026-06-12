@@ -96,6 +96,8 @@ export function KanbanBoard({
   onAddTask,
   onAssigneeChange,
   onTasksReorder,
+  onStatusChange,
+  onDeleteTask,
 }: KanbanBoardProps) {
   
   const lastOverRef = useRef<Over | null>(null);
@@ -537,7 +539,7 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full">
+      <div className="flex flex-row lg:grid lg:grid-cols-3 gap-6 items-start w-full overflow-x-auto snap-x snap-mandatory lg:overflow-x-visible pb-4 lg:pb-0 scrollbar-none sm:scrollbar-thin">
         {COLUMN_DEFS.map((column) => (
           <KanbanColumn
             key={column.id}
@@ -583,6 +585,8 @@ export function KanbanBoard({
         taskNumber={selectedTaskId ? taskNumberMap.get(selectedTaskId) : undefined}
         currentUserId={currentUserId}
         onAssigneeChange={onAssigneeChange}
+        onStatusChange={onStatusChange}
+        onDeleteTask={onDeleteTask}
       />
     </DndContext>
   );

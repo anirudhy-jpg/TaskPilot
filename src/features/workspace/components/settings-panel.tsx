@@ -75,7 +75,7 @@ export function SettingsPanel({
       {/* Header */}
       <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
         <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Settings</h2>
-        <p className="text-xs text-slate-505 mt-1">
+        <p className="text-xs text-slate-500 mt-1">
           Manage your profile and account settings.
         </p>
       </div>
@@ -158,7 +158,7 @@ export function SettingsPanel({
                 <LogOut size={18} />
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Account Actions</h3>
               </div>
-              <p className="text-xs text-slate-505 mb-5">
+              <p className="text-xs text-slate-500 mb-5">
                 Sign out of your account. You will be redirected to the login page.
               </p>
               <form action={logoutAction}>
@@ -180,7 +180,7 @@ export function SettingsPanel({
                   <DoorOpen size={18} />
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
                 </div>
-                <p className="text-xs text-slate-505 mb-5">
+                <p className="text-xs text-slate-500 mb-5">
                   Leave the current workspace "{workspaceName}". You will lose access to all its projects.
                 </p>
                 {errorMsg && <p className="text-xs text-red-605 mb-3">{errorMsg}</p>}
@@ -212,7 +212,7 @@ export function SettingsPanel({
                   <Trash2 size={18} />
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
                 </div>
-                <p className="text-xs text-slate-505 mb-5">
+                <p className="text-xs text-slate-500 mb-5">
                   Permanently delete this workspace "{workspaceName}". All projects, tasks, and data will be destroyed.
                 </p>
                 {errorMsg && <p className="text-xs text-red-605 mb-3">{errorMsg}</p>}
@@ -285,7 +285,7 @@ export function SettingsPanel({
               <Lock size={16} />
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Security & Access</h3>
             </div>
-            <p className="text-[11.5px] text-slate-505 leading-relaxed mb-4">
+            <p className="text-[11.5px] text-slate-500 leading-relaxed mb-4">
               Your account is protected with enterprise-grade encryption. Here's a brief overview of your current access state:
             </p>
             <div className="space-y-2.5">

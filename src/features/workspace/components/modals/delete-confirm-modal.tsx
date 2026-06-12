@@ -57,10 +57,10 @@ export function DeleteConfirmModal({
                     ? "Delete Workspace"
                     : `Delete ${type === "project" ? "Project" : "Task"}`}
             </h3>
-            <p className="text-xs text-slate-505 mt-0.5">Are you sure you want to proceed?</p>
+            <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to proceed?</p>
           </div>
         </div>
-        <p className="text-xs text-slate-505 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+        <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
           {type === "member" ? (
             <>You are about to remove <strong>&ldquo;{name}&rdquo;</strong> from this workspace. They will lose access to all projects and tasks.</>
           ) : type === "leave_workspace" || type === "workspace" ? (

@@ -1,100 +1,112 @@
-# TaskPilot — Supabase Realtime Collaboration Implementation
+# TaskPilot — Supabase Realtime Collaboration Architecture
 
-This document provides a detailed technical guide to the Realtime Collaboration feature in TaskPilot. It explains the architectural design, client subscription model, state synchronization, and how realtime events work side-by-side with React 19 optimistic updates.
+This document provides a detailed technical guide to the Realtime Collaboration architecture in TaskPilot. It explains the design of the reusable generic realtime sync library, specific domain hooks, state synchronization, and how they integrate seamlessly across the workspace.
 
 ---
 
-## 1. Architectural Overview
+## 1. Reusable Abstraction Layer (`src/lib/realtime/`)
 
-TaskPilot uses **Supabase Realtime** to enable instant, cross-user collaboration on the Kanban board. When any user updates, creates, or deletes a task, the change is broadcasted via PostgreSQL Write-Ahead Logs (WAL) to all subscribed clients viewing the same project board.
+To prevent code duplication and establish a clean, consistent pattern, TaskPilot features a core realtime engine that handles channel subscription and state reconciliation.
 
-### Workflow & Lifecycle Diagram
+```
+src/lib/realtime/
+ ├── realtimeTypes.ts          # Core type definitions for events and configuration
+ ├── createRealtimeChannel.ts  # Low-level helper to instantiate Supabase channels
+ └── subscribeToTable.ts       # React hooks: useRealtimeSubscription & useRealtimeList
+```
+
+### 1.1 `createRealtimeChannel.ts`
+Instantiates a client-side Supabase client, registers a uniquely named channel (`db-changes:<schema>:<table-name>:<filter>:<unique-id>`), binds the `postgres_changes` listener for the specified event (defaulting to `*`), and returns:
+- The `channel` instance
+- An `unsubscribe` function that cleanly removes the channel on component unmount.
+- **Instance Isolation**: Appends a random suffix (`Math.random()`) to the channel name to prevent "cannot add postgres_changes callbacks after subscribe()" errors when multiple hooks or components subscribe to the same table simultaneously.
+
+### 1.2 `subscribeToTable.ts`
+Provides two standard React hooks:
+1. **`useRealtimeSubscription`**: A low-level hook that accepts an `onPayload` callback for custom event parsing (useful for nested state structures like updating tasks nested within project boards).
+2. **`useRealtimeList`**: A high-level hook that automates list sync for flat arrays:
+   - **`INSERT`**: Appends the mapped item to state, guarding against duplicates (crucial when optimistic UI updates are active).
+   - **`UPDATE`**: Replaces the matching item in state using a key field (e.g., `id`).
+   - **`DELETE`**: Filters out the deleted item from state.
+
+---
+
+## 2. Domain-Specific Hooks & Where They Work
+
+Feature-specific hooks wrap the core realtime layer to encapsulate business logic and row mapping:
+
+### 2.1 `useTasksRealtime`
+* **Path**: `src/features/project/hooks/use-tasks-realtime.ts`
+* **Where It Works**: Active Kanban Board (`use-project-board.ts` hook used in `kanban-board.tsx`).
+* **How It Works**: Listens for any task mutations. Since `DELETE` events do not stream `project_id` under default PostgreSQL replica identity (only primary keys are broadcasted), this hook subscribes without a filter. It performs `project_id` matching client-side for `INSERT` and `UPDATE` events, and deletes the task from the active board directly on `DELETE` events.
+
+### 2.2 `useProjectsRealtime`
+* **Path**: `src/features/project/hooks/use-projects-realtime.ts`
+* **Where It Works**: Workspace layout sidebar (`workspace-shell.tsx`) and Project Dashboard.
+* **How It Works**: Subscribes to projects filtered by the active `workspace_id`. Syncs additions, name updates, status changes, and deletions instantly in the left sidebar and main dashboard lists.
+
+### 2.3 `useMembersRealtime`
+* **Path**: `src/features/workspace/hooks/use-members-realtime.ts`
+* **Where It Works**: Active Workspace Members tab (`members-list.tsx`).
+* **How It Works**: Listens to membership updates. On `INSERT` events, it pulls the new member's profile info (name, email, avatar) client-side. On `DELETE` events, it updates the member grid and handles user redirects.
+
+### 2.4 `useInvitationsRealtime`
+* **Path**: `src/features/workspace/hooks/use-invitations-realtime.ts`
+* **Where It Works**: Pending invitations grid on the Members tab (`members-list.tsx`).
+* **How It Works**: Listens for new, accepted, or revoked invitations. On updates where `status !== 'pending'`, it automatically filters them out from the pending UI table.
+
+### 2.5 `useWorkspacesRealtime`
+* **Path**: `src/features/workspace/hooks/use-workspaces-realtime.ts`
+* **Where It Works**: Workspace Switcher (`workspace-shell.tsx`), Header bar, and Workspaces list hub (`workspaces-client.tsx`).
+* **How It Works**: Syncs workspace lists. Updates the active workspace's name instantly if edited by an owner and triggers redirects if a workspace is deleted.
+
+---
+
+## 3. Global Integration Map
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor UserA as Collaborator (User A)
-    actor UserB as Viewer (User B)
-    participant ClientB as Browser B (useProjectBoard)
-    participant Realtime as Supabase Realtime Server
-    participant DB as PostgreSQL Database
+graph TD
+    %% Core Library
+    Core[lib/realtime] -->|useRealtimeList| Hooks[Feature Hooks]
+    Core -->|useRealtimeSubscription| Hooks
 
-    Note over ClientB, Realtime: User B enters project board page
-    ClientB->>Realtime: Subscribe to channel "project-tasks:{projectId}"
-    Realtime-->>ClientB: Subscription Ack (Listening for public.tasks)
+    %% Hooks
+    Hooks -->|useTasksRealtime| Board[useProjectBoard]
+    Hooks -->|useProjectsRealtime| Shell[WorkspaceShell]
+    Hooks -->|useMembersRealtime| Members[MembersList]
+    Hooks -->|useInvitationsRealtime| Members
+    Hooks -->|useWorkspacesRealtime| Hub[WorkspacesClient]
+    Hooks -->|useWorkspacesRealtime| Shell
+    Core -->|useRealtimeSubscription| Shell
+    Core -->|useRealtimeSubscription| Inbox[HeaderInbox]
 
-    Note over UserA: User A moves task to "In Progress"
-    UserA->>DB: Trigger Server Action (updateTaskStatusAction)
-    DB->>DB: Write update to public.tasks table
-    DB-->>UserA: Success (Client A updates optimistically)
-    
-    Note over DB: Postgres WAL triggers Replication
-    DB->>Realtime: Broadcast Postgres Change (UPDATE payload)
-    Realtime->>ClientB: Send postgres_changes payload
-    ClientB->>ClientB: Trigger postgres_changes callback
-    ClientB->>ClientB: mapRealtimeTask() map row back to Task structure
-    ClientB->>ClientB: setCurrentProjects() state updater
-    Note over UserB: Task shifts columns instantly without page reload
+    %% UI Components
+    Shell -->|localProjects| Sidebar[Sidebar Component]
+    Shell -->|localWorkspaceName| Sidebar
+    Shell -->|localWorkspaceName| Header[Header Component]
+    Header --> Inbox
 ```
 
 ---
 
-## 2. Interactive Flow & Subscriptions
+## 4. Key Engineering Implementations
 
-### Establishing the Connection
-In `src/features/project/hooks/use-project-board.ts`, the subscription is initialized inside a `useEffect` hook keyed on the `activeProjectId` and `members` array.
+### 4.1 Safe Task Deletion Handling (Postgres WAL Replica Identity Gotcha)
+In default PostgreSQL configurations, `DELETE` WAL logs only contain the primary key of the deleted record. In TaskPilot, deleting a task streams `old.id` to the socket client, but does not contain `old.project_id`.
+* **Issue**: A client-side subscription with the filter `project_id=eq.${projectId}` will discard `DELETE` events because it cannot verify if the deleted task belongs to the filtered project.
+* **Resolution**:
+  * In `useTasksRealtime`, the subscription filter is set to `undefined`. `INSERT` and `UPDATE` events verify the `project_id` matching client-side. `DELETE` events trigger the removal function directly, using the local state to determine if the task exists in the active view.
+  * In `workspace-shell.tsx` (sidebar task lists), the task subscriber interceptor parses the `DELETE` event separately, removing the matching task from all local sidebar projects.
 
-1. **Client Instantiation**: Uses `createClient()` from `@/lib/supabase/client` to get a client-side client.
-2. **Channel Creation**: Subscribes to a channel named `project-tasks:${activeProjectId}`.
-3. **Filter Restriction**: Uses a Postgres changes filter `project_id=eq.${activeProjectId}` to receive events only for the active project, preventing overhead from changes in other projects.
-4. **Subscription Cleanup**: When the user switches projects or unmounts the board, `supabase.removeChannel(channel)` is invoked to cleanly tear down the websocket connection.
+### 4.2 Instant Member Eviction Flow
+* **Where It Works**: Global shell level (`workspace-shell.tsx`), ensuring it runs on **all** pages under a workspace.
+* **How It Works**:
+  1. On mount, `workspace-shell.tsx` fetches the current user's membership record ID (`currentUserMemberId`) for the active workspace.
+  2. A global subscription is established on the `workspace_members` table.
+  3. When an owner revokes membership, a `DELETE` event is broadcasted.
+  4. The shell compares the deleted member record ID with the current user's `currentUserMemberId`. If they match, the evicted user is redirected to `/workspaces` in under 200ms, immediately locking them out from further access.
 
----
-
-## 3. Realtime Callback & State Reconciliation
-
-When database mutations happen, Supabase returns raw database row structures (snake_case column names). The hook translates these rows into frontend-compatible structures and merges them into state.
-
-### Row Mapping (`mapRealtimeTask`)
-The helper function `mapRealtimeTask` maps snake_case properties to camelCase properties:
-- `assigned_to` or `assignee_id` $\rightarrow$ `assigneeId`
-- Maps the profile details (`email`, `fullName`, `avatarUrl`) by matching the `assigneeId` with the `WorkspaceMember[]` array passed to the hook.
-
-### Event Handling Logic
-
-*   **`INSERT`**:
-    *   Appends the new task to the local tasks array.
-    *   **Duplicate Guard**: Checks if the task already exists (`p.tasks.some(t => t.id === newTask.id)`) before adding. This is crucial since the user who created the task already added it optimistically, avoiding duplication.
-*   **`UPDATE`**:
-    *   Finds the task in the list matching `updatedTask.id`.
-    *   Replaces it with the new mapped task object, ensuring position, status, assignee, and description updates are applied.
-*   **`DELETE`**:
-    *   Removes the task by filtering it out from the project's task list (`p.tasks.filter(t => t.id !== deletedTaskId)`).
-
----
-
-## 4. Synergy with React 19 Optimistic Updates
-
-TaskPilot combines server actions, React 19 `useOptimistic` hook, and Supabase Realtime into a unified synchronization loop:
-
-1. **Local Action**: User performs an action (e.g., drags a task).
-2. **Optimistic Render**: The client-side hook immediately runs `setOptimisticProjects(...)` to reflect the layout change instantly (0ms latency).
-3. **Server Action & Database Mutation**: The background Next.js Server Action executes the database change.
-4. **Realtime Broadcast**: Once the DB write succeeds, the server notifies all subscribers.
-5. **State Re-Sync**:
-    - The initiating user receives the server action response and performs `router.refresh()`, syncing Server Components.
-    - Other collaborating users receive the event through the Realtime websocket, and their local state `currentProjects` updates, instantly updating their boards.
-
----
-
-## 5. File Changes Walkthrough
-
-### 1. `src/features/project/hooks/use-project-board.ts`
-*   **Imported**: `useEffect`, `useState`, and client-side `createClient`.
-*   **Added `mapRealtimeTask`**: Decodes database payloads and connects them with workspace member profiles for rich UI rendering (assignee avatars/names).
-*   **Added `useEffect` block**: Contains full Supabase Channel subscription logic, event dispatcher handlers (`INSERT`, `UPDATE`, `DELETE`), state updater callbacks, and tear-down logic.
-*   **Created `currentProjects` state**: Intercepts parent-passed props so realtime updates can be merged locally before being fed into the `useOptimistic` hook.
-
-### 2. `src/features/project/components/projects-list.tsx`
-*   Modified to consume the updated return values from `useProjectBoard`.
-*   No direct subscription code was added here, keeping the visual presentation layer separate from communication hooks.
+### 4.3 Deprecation of SSE (Server-Sent Events)
+To unify communication protocols and optimize client performance:
+* The legacy Server-Sent Events router (`/api/sse/route.ts`) was deprecated and replaced by a static `410 Gone` response.
+* The header notification badge (`header-inbox.tsx`) was completely migrated to the low-latency `useRealtimeSubscription` hook on `workspace_invitations` table with filter `email=eq.${email}`.

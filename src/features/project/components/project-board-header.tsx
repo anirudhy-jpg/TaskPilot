@@ -103,7 +103,7 @@ export function ProjectBoardHeader({
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
               Projects Dashboard
             </h1>
-            <p className="text-xs text-slate-505 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Overview of all active projects and task pipelines
             </p>
           </div>

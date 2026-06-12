@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Bell, MailOpen, Check, X, Loader2, UserPlus, Shield } from "lucide-react"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
+import { createClient } from "@/lib/supabase/client"
+import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
 
 interface InvitationNotification {
   id: string
@@ -14,7 +16,11 @@ interface InvitationNotification {
   role: "admin" | "member"
 }
 
-export function HeaderInbox() {
+interface HeaderInboxProps {
+  email?: string | null
+}
+
+export function HeaderInbox({ email }: HeaderInboxProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [invitations, setInvitations] = useState<InvitationNotification[]>([])
@@ -28,35 +34,130 @@ export function HeaderInbox() {
     setIsSwitching(false)
   }, [pathname])
 
-  // 1. Establish SSE Connection
+  // Fetch initial invitations client-side
   useEffect(() => {
-    const eventSource = new EventSource("/api/sse")
+    if (!email) return
+    const fetchInitialInvitations = async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("workspace_invitations")
+        .select(`
+          id,
+          workspace_id,
+          project_id,
+          email,
+          invited_by,
+          status,
+          created_at,
+          token,
+          role,
+          workspaces (name),
+          projects (name),
+          profiles:invited_by (full_name, email)
+        `)
+        .eq("email", email.toLowerCase())
+        .eq("status", "pending")
 
-    eventSource.onmessage = (event) => {
-      try {
-        // Ignore ping messages
-        if (event.data === "ping") return
+      if (error) {
+        console.error("Error fetching invitations:", error)
+        return
+      }
 
-        const data = JSON.parse(event.data)
-        if (data.type === "invitation") {
-          const newInvite: InvitationNotification = data.payload
-          setInvitations((prev) => {
-            // Avoid duplicates
-            if (prev.some((inv) => inv.id === newInvite.id)) {
-              return prev
-            }
-            return [newInvite, ...prev]
-          })
-        }
-      } catch (err) {
-        // Fail silently or log (pings may trigger empty parse errors if not filtered)
+      if (data) {
+        const mapped = data.map((invite: any) => {
+          const inviteProj = invite.projects
+          const inviteWs = invite.workspaces
+          const inviteProfile = invite.profiles
+
+          const projectName = (Array.isArray(inviteProj) ? inviteProj[0]?.name : inviteProj?.name) ||
+                              (Array.isArray(inviteWs) ? inviteWs[0]?.name : inviteWs?.name) ||
+                              "Workspace Board"
+
+          const invitedByName = Array.isArray(inviteProfile)
+            ? (inviteProfile[0]?.full_name || inviteProfile[0]?.email)
+            : (inviteProfile?.full_name || inviteProfile?.email)
+
+          return {
+            id: invite.id,
+            token: invite.token,
+            projectName,
+            workspaceId: invite.workspace_id,
+            invitedBy: invitedByName || "Admin",
+            role: invite.role,
+          }
+        })
+        setInvitations(mapped)
       }
     }
 
-    return () => {
-      eventSource.close()
-    }
-  }, [])
+    fetchInitialInvitations()
+  }, [email])
+
+  // Subscribe to workspace_invitations table for the current user's email
+  useRealtimeSubscription({
+    table: "workspace_invitations",
+    filter: email ? `email=eq.${email.toLowerCase()}` : undefined,
+    onPayload: async (payload) => {
+      const { eventType, new: newRow, old: oldRow } = payload
+      const supabase = createClient()
+
+      if (eventType === "INSERT") {
+        const { data: invite } = await supabase
+          .from("workspace_invitations")
+          .select(`
+            id,
+            workspace_id,
+            project_id,
+            email,
+            invited_by,
+            status,
+            created_at,
+            token,
+            role,
+            workspaces (name),
+            projects (name),
+            profiles:invited_by (full_name, email)
+          `)
+          .eq("id", newRow.id)
+          .maybeSingle()
+
+        if (invite) {
+          const rawInvite = invite as any
+          const inviteProj = rawInvite.projects
+          const inviteWs = rawInvite.workspaces
+          const inviteProfile = rawInvite.profiles
+
+          const projectName = (Array.isArray(inviteProj) ? inviteProj[0]?.name : inviteProj?.name) ||
+                              (Array.isArray(inviteWs) ? inviteWs[0]?.name : inviteWs?.name) ||
+                              "Workspace Board"
+
+          const invitedByName = Array.isArray(inviteProfile)
+            ? (inviteProfile[0]?.full_name || inviteProfile[0]?.email)
+            : (inviteProfile?.full_name || inviteProfile?.email)
+
+          const newInvite: InvitationNotification = {
+            id: rawInvite.id,
+            token: rawInvite.token,
+            projectName,
+            workspaceId: rawInvite.workspace_id,
+            invitedBy: invitedByName || "Admin",
+            role: rawInvite.role,
+          }
+
+          setInvitations((prev) => {
+            if (prev.some((inv) => inv.id === newInvite.id)) return prev
+            return [newInvite, ...prev]
+          })
+        }
+      } else if (eventType === "UPDATE") {
+        if (newRow.status !== "pending") {
+          setInvitations((prev) => prev.filter((inv) => inv.id !== newRow.id))
+        }
+      } else if (eventType === "DELETE") {
+        setInvitations((prev) => prev.filter((inv) => inv.id !== oldRow.id))
+      }
+    },
+  })
 
   // 2. Click Outside Handler
   useEffect(() => {
@@ -157,7 +258,7 @@ export function HeaderInbox() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2.5 w-80 bg-white/95 backdrop-blur-xl border border-amber-900/10 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-250 select-none">
+        <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2.5 w-auto sm:w-80 bg-white/95 backdrop-blur-xl border border-amber-900/10 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-250 select-none">
           {/* Header */}
           <div className="px-4 py-3 bg-gradient-to-r from-amber-50/50 to-yellow-50/50 border-b border-amber-900/5 flex items-center justify-between">
             <span className="text-xs font-black text-slate-800">Inbox Notifications</span>

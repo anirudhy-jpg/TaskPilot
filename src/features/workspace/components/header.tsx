@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { logoutAction } from "@/features/auth/actions/logout.action"
 import { switchActiveWorkspaceAction } from "../actions/switch-active-workspace.action"
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
-import { LogOut, DoorOpen, ChevronDown, Briefcase } from "lucide-react"
+import { LogOut, DoorOpen, ChevronDown, Briefcase, Menu } from "lucide-react"
 import type { UserProfile } from "@/features/auth/types/profile.types"
 import type { Workspace } from "../types/workspace.types"
 import { HeaderInbox } from "./header-inbox"
@@ -30,6 +30,7 @@ interface HeaderProps {
   workspaceName?: string
   workspaces?: Workspace[]
   currentUserId?: string
+  onToggleSidebar?: () => void
 }
 
 export function Header({
@@ -40,6 +41,7 @@ export function Header({
   workspaceName = "",
   workspaces = [],
   currentUserId = "",
+  onToggleSidebar,
 }: HeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -83,30 +85,40 @@ export function Header({
 
   return (
     <header className="border-b border-amber-900/10 bg-white/50 backdrop-blur-xl sticky top-0 z-50 w-full select-none">
-      <div className="w-full px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="w-full px-3 sm:px-6 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-1.5 md:hidden text-slate-505 hover:text-slate-800 hover:bg-slate-100/50 rounded-lg transition-colors cursor-pointer shrink-0"
+              aria-label="Toggle Sidebar"
+            >
+              <Menu size={18} className="stroke-[2.5]" />
+            </button>
+          )}
           <Link href="/" className="cursor-pointer shrink-0">
-            <Logo size="md" />
+            <Logo size="md" className="hidden sm:flex" />
+            <Logo size="md" iconOnly className="flex sm:hidden" />
           </Link>
           {workspaceId && workspaces && workspaces.length > 0 && (
             <>
               <div className="h-4 w-px bg-amber-900/15 shrink-0" />
               <button
                 onClick={() => setIsSwitchModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-slate-800 transition-all cursor-pointer font-bold text-xs shrink-0 select-none animate-in fade-in"
+                className="flex items-center gap-1 px-1.5 sm:px-3 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-slate-800 transition-all cursor-pointer font-bold text-xs shrink-0 select-none animate-in fade-in"
                 title="Switch Workspace"
               >
                 <Briefcase size={12} className="text-amber-600 shrink-0" />
-                <span className="truncate max-w-[120px]">{workspaceName}</span>
-                <ChevronDown size={12} className="text-slate-500 shrink-0" />
+                <span className="truncate max-w-[70px] sm:max-w-[120px]">{workspaceName}</span>
+                <ChevronDown size={10} className="text-slate-500 shrink-0" />
               </button>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Notification Inbox Bell */}
-          <HeaderInbox />
+          <HeaderInbox email={profile?.email || user.email} />
 
           {/* User chip */}
           <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50/60 to-yellow-50/60 hover:from-amber-100/60 hover:to-yellow-100/60 px-3.5 py-1.5 rounded-full border border-amber-900/10 shadow-3xs transition-all duration-300">
