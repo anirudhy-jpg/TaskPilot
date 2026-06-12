@@ -1,8 +1,8 @@
 import React from "react"
 import { getSession } from "@/lib/supabase/server"
-import { InviteService } from "@/services/invite.service"
-import { AcceptInviteClient } from "@/components/workspace/AcceptInviteClient"
-import { AuthLayout } from "@/components/auth/AuthLayout"
+import { InviteService } from "@/features/workspace/services/invite.service"
+import { AcceptInviteClient } from "@/features/workspace/components/accept-invite-client"
+import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { AlertTriangle, Clock } from "lucide-react"
 
 interface PageProps {
@@ -62,6 +62,7 @@ export default async function AcceptInvitePage({ searchParams }: PageProps) {
             role={details.invitation.role}
             email={details.invitation.email}
             currentUserEmail={user?.email || null}
+            projectName={details.projectName}
           />
         ) : null}
       </div>

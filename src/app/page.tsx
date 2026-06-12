@@ -1,10 +1,10 @@
 import React from "react"
 import { getSession } from "@/lib/supabase/server"
-import { Header } from "@/components/landing/Header"
-import { Hero } from "@/components/landing/Hero"
-import { Features } from "@/components/landing/Features"
-import { TechStack } from "@/components/landing/TechStack"
-import { Footer } from "@/components/landing/Footer"
+import { Header } from "@/features/landing/components/header"
+import { Hero } from "@/features/landing/components/hero"
+import { Features } from "@/features/landing/components/features"
+import { TechStack } from "@/features/landing/components/tech-stack"
+import { Footer } from "@/features/landing/components/footer"
 
 export const dynamic = "force-dynamic"
 
