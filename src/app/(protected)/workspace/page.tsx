@@ -1,6 +1,6 @@
 import React from "react"
 import { redirect } from "next/navigation"
-import { requireUser } from "@/lib/supabase/server"
+import { requireUser, createClient } from "@/lib/supabase/server"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { ProjectService } from "@/features/project/services/project.service"
 import { TaskService } from "@/features/project/services/task.service"
@@ -29,12 +29,45 @@ export default async function WorkspaceOverviewPage() {
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
   const allTasks = await TaskService.getTasksByWorkspace(workspace.id)
 
+  // Fetch all columns for these projects to map UUID columnIds to column names
+  const projectIds = projects.map((p) => p.id)
+  let allColumns: { id: string; board_id: string; name: string }[] = []
+  if (projectIds.length > 0) {
+    const supabase = await createClient()
+    const { data: cols } = await supabase
+      .from("columns")
+      .select("id, board_id, name")
+      .in("board_id", projectIds)
+    if (cols) {
+      allColumns = cols
+    }
+  }
+
+  // Map columnId to lowercased name
+  const columnMap = new Map<string, string>()
+  allColumns.forEach((col) => {
+    columnMap.set(col.id, col.name.toLowerCase().trim())
+  })
+
   // Build analytics data
-  const todoCount = allTasks.filter((t) => t.status === "todo").length
-  const inProgressCount = allTasks.filter(
-    (t) => t.status === "in_progress"
-  ).length
-  const doneCount = allTasks.filter((t) => t.status === "done").length
+  let todoCount = 0
+  let inProgressCount = 0
+  let doneCount = 0
+
+  allTasks.forEach((t) => {
+    const colName = columnMap.get(t.columnId) || t.status?.toLowerCase().trim() || ""
+    if (colName.includes("progress") || colName.includes("doing") || colName === "in_progress") {
+      inProgressCount++
+    } else if (
+      colName.includes("done") ||
+      colName.includes("complete") ||
+      colName.includes("finish")
+    ) {
+      doneCount++
+    } else {
+      todoCount++
+    }
+  })
 
   const analytics: WorkspaceAnalytics = {
     totalProjects: projects.length,
@@ -46,10 +79,19 @@ export default async function WorkspaceOverviewPage() {
     ],
     projectTaskCounts: projects.map((p) => {
       const projectTasks = allTasks.filter((t) => t.projectId === p.id)
+      const completedTasksCount = projectTasks.filter((t) => {
+        const colName = columnMap.get(t.columnId) || t.status?.toLowerCase().trim() || ""
+        return (
+          colName.includes("done") ||
+          colName.includes("complete") ||
+          colName.includes("finish")
+        )
+      }).length
+
       return {
         name: p.name.length > 12 ? p.name.slice(0, 12) + "…" : p.name,
         total: projectTasks.length,
-        completed: projectTasks.filter((t) => t.status === "done").length,
+        completed: completedTasksCount,
       }
     }),
   }
@@ -57,13 +99,15 @@ export default async function WorkspaceOverviewPage() {
   return (
     <>
       {/* Welcome Banner */}
-      <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 border-l-4 border-l-amber-500 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-        <h1 className="text-lg font-extrabold text-slate-800 mb-1 tracking-tight flex items-center gap-2">
-          <span>⚡</span> Welcome back, {profile?.fullName || user.email?.split("@")[0] || "Pilot"}!
-        </h1>
-        <p className="text-xs text-slate-500 font-medium">
-          Here&apos;s a live overview of your workspace activity and project progress.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
+        <div>
+          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl flex items-center gap-2">
+            Welcome back, {profile?.fullName || user.email?.split("@")[0] || "Pilot"}!
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Here&apos;s a live overview of your workspace activity and project progress.
+          </p>
+        </div>
       </div>
 
       {/* Charts */}

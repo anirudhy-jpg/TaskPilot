@@ -142,6 +142,20 @@ Task
 ---
 
 ## Development Roadmap
+  ├─ description
+  ├─ status
+  └─ created_at
+
+tasks
+  ├─ id
+  ├─ project_id
+  ├─ title
+  ├─ description
+  ├─ status
+  ├─ priority
+  └─ due_date
+```
+
 
 ### Phase 1: Core MVP
 
@@ -265,34 +279,6 @@ Live Updates (reconciled in background)
 Realtime collaboration enables multiple users to interact with the same board simultaneously, receive live status changes, and stay aware of collaborators.
 
 ---
-
-### Phase 5: File Management
-
-**Features:**
-
-- File Upload
-- Attachments
-- Document Management
-
-Use Supabase Storage.
-
-```
-Task
-│
-▼
-Attachment Metadata
-│
-▼
-Supabase Storage
-│
-▼
-File Assets
-```
-
-This phase adds support for storing documents and file attachments associated with tasks and projects, enabling richer task context and document-driven workflows.
-
----
-
 ### Phase 6: Search & Productivity
 
 **Features:**
@@ -368,4 +354,3 @@ The project is prepared for:
 - collaboration through workspace membership and task assignment,
 - realtime functionality via Supabase Realtime,
 - storage for attachments with Supabase Storage,
-- AI integrations through the OpenAI API. 

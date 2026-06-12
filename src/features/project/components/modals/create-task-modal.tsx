@@ -2,28 +2,23 @@ import React, { useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
-import type { TaskStatus, TaskPriority } from "../../types/project.types"
+import type { TaskStatus, TaskPriority, Column } from "../../types/project.types"
 
 interface CreateTaskModalProps {
   isOpen: boolean
   onClose: () => void
   projectName: string
   isPending: boolean
-  initialStatus: TaskStatus
+  initialStatus: string
+  columns: Column[]
   onCreate: (
     title: string,
     description?: string,
-    status?: TaskStatus,
+    status?: string,
     assigneeId?: string,
     priority?: TaskPriority
   ) => void
 }
-
-const statusOptions = [
-  { value: "todo", label: "To Do" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "done", label: "Done" },
-]
 
 const priorityOptions = [
   { value: "low", label: "Easy" },
@@ -37,12 +32,19 @@ export function CreateTaskModal({
   projectName,
   isPending,
   initialStatus,
+  columns,
   onCreate,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
-  const [status, setStatus] = useState<TaskStatus>(initialStatus)
+  const [status, setStatus] = useState<string>(initialStatus)
   const [priority, setPriority] = useState<TaskPriority>("medium")
+
+  const statusOptions = columns.map((col) => ({
+    value: col.id,
+    label: col.name,
+  }))
+
 
   if (!isOpen) return null
 
@@ -115,7 +117,7 @@ export function CreateTaskModal({
               </label>
               <Select
                 value={status}
-                onChange={(val) => setStatus(val as TaskStatus)}
+                onChange={(val) => setStatus(val)}
                 options={statusOptions}
               />
             </div>

@@ -86,10 +86,14 @@ export function useMembersRealtime({
 
     channel
       .on("broadcast", { event: "evict" }, (response) => {
-        const { memberId } = response.payload || {}
-        if (memberId) {
+        const { memberId, userId } = response.payload || {}
+        if (memberId || userId) {
           setMembers((prev) => {
-            return prev.filter((m) => m.id !== memberId)
+            return prev.filter((m) => {
+              if (memberId && m.id === memberId) return false
+              if (userId && m.userId === userId) return false
+              return true
+            })
           })
         }
       })

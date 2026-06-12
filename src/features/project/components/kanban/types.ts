@@ -8,7 +8,7 @@ import type {
 
 // ─── Column Definition ──────────────────────────────────────
 export interface KanbanColumnDef {
-  id: TaskStatus;
+  id: string; // Column UUID
   title: string;
   accentClass: string;
   headerIcon: React.ReactNode;
@@ -16,26 +16,36 @@ export interface KanbanColumnDef {
 }
 
 // ─── DnD item type discriminator ─────────────────────────────
-export type DragItemType = "task";
+export type DragItemType = "task" | "column";
 
 // ─── DnD data attached to draggable items ────────────────────
 export interface TaskDragData {
-  type: DragItemType;
+  type: "task";
   task: Task;
-  columnId: TaskStatus;
+  columnId: string;
+}
+
+export interface ColumnDragData {
+  type: "column";
+  columnId: string;
+  position: number;
 }
 
 // ─── Props shared across kanban components ───────────────────
 export interface KanbanCallbacks {
-  onAddTask: (status: TaskStatus) => void;
+  onAddTask: (columnId: string) => void;
   onDeleteTask: (id: string, title: string) => void;
-  onStatusChange: (taskId: string, status: TaskStatus) => void;
+  onMoveTask: (taskId: string, columnId: string, position: number) => void;
+  onCreateColumn: (name: string) => void;
+  onRenameColumn: (columnId: string, name: string) => void;
+  onMoveColumn: (columnId: string, position: number) => void;
+  onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
 }
 
 export interface TaskCardProps {
   task: Task;
-  status: TaskStatus;
+  status: string; // mapped columnId
   members: WorkspaceMember[];
   currentUserId?: string;
   projectPrefix: string;
@@ -53,7 +63,11 @@ export interface KanbanColumnProps {
   currentUserId?: string;
   projectPrefix: string;
   taskNumberMap: Map<string, number>;
-  onAddTask: (status: TaskStatus) => void;
+  onAddTask: (columnId: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
   onSelectTask: (taskId: string) => void;
+  onRenameColumn: (columnId: string, name: string) => void;
+  onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
+  allColumns: KanbanColumnDef[];
 }
+

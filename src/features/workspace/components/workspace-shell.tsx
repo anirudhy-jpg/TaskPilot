@@ -8,6 +8,7 @@ import { X } from "lucide-react"
 import { useProjectsRealtime } from "../../project/hooks/use-projects-realtime"
 import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime"
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
+import { useRouter } from "next/navigation"
 import type { Project, Task } from "../../project/types/project.types"
 import { EvictedModal } from "./modals/evicted-modal"
 
@@ -36,6 +37,7 @@ export function WorkspaceShell({
   projectsWithTasks,
   ownerEmail,
 }: WorkspaceShellProps) {
+  const router = useRouter()
   const [localWorkspaceName, setLocalWorkspaceName] = useState(workspaceName)
   const [localProjects, setLocalProjects] = useState<(Project & { tasks: Task[] })[]>(projectsWithTasks)
   const [localWorkspaces, setLocalWorkspaces] = useState(workspaces)
@@ -53,6 +55,12 @@ export function WorkspaceShell({
   useEffect(() => {
     setLocalWorkspaces(workspaces)
   }, [workspaces])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).isLeavingWorkspace = false
+    }
+  }, [workspaceId])
 
   // Get current user's membership row ID to detect eviction via DELETE payload IDs
   useEffect(() => {
@@ -83,7 +91,8 @@ export function WorkspaceShell({
     },
     onWorkspaceDelete: (deletedId) => {
       if (deletedId === workspaceId) {
-        window.location.href = "/workspaces"
+        router.push("/workspaces")
+        router.refresh()
       }
     },
   })
@@ -103,6 +112,10 @@ export function WorkspaceShell({
       if (eventType === "DELETE" && oldRow) {
         const deletedId = (oldRow as any).id
         if (currentUserMemberId && deletedId === currentUserMemberId) {
+          if (typeof window !== "undefined" && (window as any).isLeavingWorkspace) {
+            // Voluntary leave, ignore eviction modal
+            return
+          }
           setIsEvicted(true)
         }
       }
@@ -122,6 +135,10 @@ export function WorkspaceShell({
           (userId && userId === currentUserId) ||
           (memberId && memberId === currentUserMemberId)
         ) {
+          if (typeof window !== "undefined" && (window as any).isLeavingWorkspace) {
+            // Voluntary leave, ignore eviction modal
+            return
+          }
           setIsEvicted(true)
         }
       })
@@ -163,6 +180,7 @@ export function WorkspaceShell({
               title: r.title,
               description: r.description || null,
               status: r.status || "todo",
+              columnId: r.column_id || r.status || "",
               priority: r.priority || "medium",
               position: typeof r.position === "number" ? r.position : 0,
               assigneeId: r.assigned_to || null,
@@ -184,6 +202,7 @@ export function WorkspaceShell({
                       ...t,
                       title: r.title,
                       status: r.status,
+                      columnId: r.column_id || r.status || t.columnId,
                       priority: r.priority || t.priority,
                       assigneeId: r.assigned_to || t.assigneeId,
                       dueDate: r.due_date || (t as any).dueDate,
@@ -208,7 +227,7 @@ export function WorkspaceShell({
   }, [children])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fffdf9] via-[#fbfaf8] to-[#f6f5f0] dark:from-[#0f0e0c] dark:via-[#131211] dark:to-[#181613] text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-[#fffdf9] via-[#fbfaf8] to-[#f6f5f0] dark:from-[#0f0e0c] dark:via-[#131211] dark:to-[#181613] text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full relative overflow-hidden">
       {/* Ambient glows (High-vibrancy gold, smoky dark, and warm rose-red highlights) */}
       <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[55%] rounded-full bg-amber-400/20 dark:bg-amber-500/12 blur-[140px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[45%] rounded-full bg-rose-500/15 dark:bg-rose-600/8 blur-[130px] pointer-events-none" />

@@ -13,7 +13,7 @@ export async function createTaskAction(input: {
   projectId: string
   title: string
   description?: string
-  status?: TaskStatus
+  columnId: string
   priority?: TaskPriority
   assigneeId?: string
 }): Promise<ActionResponse> {

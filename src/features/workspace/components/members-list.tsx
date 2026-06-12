@@ -208,21 +208,25 @@ export function MembersList({
       )}
 
       {/* Header Panel */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Workspace Members</h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
+            Workspace Members
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             Manage your workspace members, roles, and pending invitations.
           </p>
         </div>
         {canInvite && (
-          <Button
-            onClick={() => setIsInviteOpen(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black py-2 px-4 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-3xs transition-all active:scale-[0.98] h-10 border-0"
-          >
-            <UserPlus size={15} />
-            Invite Member
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              onClick={() => setIsInviteOpen(true)}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-955 text-xs font-black py-2 px-4 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-3xs transition-all active:scale-[0.98] h-10 border-0"
+            >
+              <UserPlus size={15} />
+              Invite Member
+            </Button>
+          </div>
         )}
       </div>
 

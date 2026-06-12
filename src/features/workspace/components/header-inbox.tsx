@@ -190,8 +190,8 @@ export function HeaderInbox({ email }: HeaderInboxProps) {
         setIsOpen(false)
         if (result.workspaceId) {
           setIsSwitching(true)
-          // Use hard reload to switch active workspace session cleanly
-          window.location.href = "/workspace"
+          router.push("/workspace")
+          router.refresh()
         } else {
           router.refresh()
           setProcessingId(null)

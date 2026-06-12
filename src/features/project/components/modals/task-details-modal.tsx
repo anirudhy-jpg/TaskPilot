@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { X, Circle, Clock, CheckCircle2, Calendar, AlertCircle, AlertTriangle, Info } from "lucide-react";
-import type { Task, TaskStatus } from "../../types/project.types";
+import type { Task, Column } from "../../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getVisualPriority } from "../../utils/avatar";
 import { AssigneeSelector } from "../assignee-selector";
@@ -17,8 +17,9 @@ interface TaskDetailsModalProps {
   taskNumber?: number;
   currentUserId?: string;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
-  onStatusChange?: (taskId: string, status: TaskStatus) => void;
+  onStatusChange?: (taskId: string, status: string) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
+  columns?: Column[];
 }
 
 const statusConfig = {
@@ -38,6 +39,7 @@ export function TaskDetailsModal({
   onAssigneeChange,
   onStatusChange,
   onDeleteTask,
+  columns = [],
 }: TaskDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -58,8 +60,11 @@ export function TaskDetailsModal({
 
   if (!isOpen || !task) return null;
 
-  const status = task.status || "todo";
-  const { label: statusLabel, color: statusColor, icon: StatusIcon } = statusConfig[status];
+  const status = task.columnId || task.status || "todo";
+  const activeCol = columns.find((c) => c.id === status);
+  const statusLabel = activeCol ? activeCol.name : (statusConfig[status as keyof typeof statusConfig]?.label || "Unknown");
+  const statusColor = statusConfig[status as keyof typeof statusConfig]?.color || "text-slate-700 bg-slate-50 border-slate-200";
+  const StatusIcon = statusConfig[status as keyof typeof statusConfig]?.icon || Circle;
   const taskKey = `${projectPrefix}-${taskNumber || 1}`;
 
   const visualPriority = getVisualPriority(task);
@@ -134,8 +139,11 @@ export function TaskDetailsModal({
               <div className="w-36">
                 <Select
                   value={status}
-                  onChange={(val) => onStatusChange(task.id, val as TaskStatus)}
-                  options={[
+                  onChange={(val) => onStatusChange(task.id, val)}
+                  options={columns.length > 0 ? columns.map((col) => ({
+                    value: col.id,
+                    label: col.name
+                  })) : [
                     { value: "todo", label: "To Do" },
                     { value: "in_progress", label: "In Progress" },
                     { value: "done", label: "Done" },

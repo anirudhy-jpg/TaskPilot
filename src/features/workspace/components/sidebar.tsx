@@ -85,8 +85,8 @@ function SidebarContent({
 
   const asideClasses =
     variant === "mobile"
-      ? "w-full h-full bg-white dark:bg-[#131211] p-5 flex flex-col gap-1 select-none overflow-y-auto"
-      : "w-64 border-r border-amber-900/10 bg-white/50 backdrop-blur-xl p-5 flex flex-col gap-1 shrink-0 select-none hidden md:flex"
+      ? "w-full h-full bg-white dark:bg-[#131211] p-5 flex flex-col gap-1 select-none overflow-y-auto scrollbar-thin"
+      : "w-64 border-r border-amber-900/10 bg-white/50 backdrop-blur-xl p-5 flex flex-col gap-1 shrink-0 select-none hidden md:flex overflow-y-auto h-full scrollbar-thin"
 
   return (
     <aside className={asideClasses}>

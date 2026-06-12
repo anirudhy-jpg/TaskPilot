@@ -1,36 +1,38 @@
 import type { Task, TaskStatus } from "../../types/project.types";
 import type { Active, Over } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
-import type { TaskDragData } from "./types";
+import type { TaskDragData, KanbanColumnDef } from "./types";
 
 /**
- * Grouped tasks by column status with position-based ordering.
+ * Grouped tasks by column status/id with position-based ordering.
  */
-export type TasksByColumn = Record<TaskStatus, Task[]>;
+export type TasksByColumn = Record<string, Task[]>;
 
 /**
- * Groups tasks by status and sorts each group by position.
+ * Groups tasks by columnId/status and sorts each group by position.
  */
-export function groupTasksByColumn(tasks: Task[]): TasksByColumn {
-  const grouped: TasksByColumn = {
-    todo: [],
-    in_progress: [],
-    done: [],
-  };
+export function groupTasksByColumn(tasks: Task[], columnIds: string[]): TasksByColumn {
+  const grouped: TasksByColumn = {};
+  for (const id of columnIds) {
+    grouped[id] = [];
+  }
 
   for (const task of tasks) {
-    const column = grouped[task.status];
-    if (column) {
-      column.push(task);
+    // Fallback to task.status if columnId is missing/legacy
+    const colId = task.columnId || task.status;
+    if (grouped[colId]) {
+      grouped[colId].push(task);
+    } else if (columnIds.length > 0) {
+      // Fallback: put in the first column
+      grouped[columnIds[0]].push(task);
     }
   }
 
-  // Sort each column by position ascending, with createdAt as tiebreaker
-  for (const status of Object.keys(grouped) as TaskStatus[]) {
-    grouped[status].sort((a, b) => {
+  // Sort each column by position ascending
+  for (const id of columnIds) {
+    grouped[id].sort((a, b) => {
       const posDiff = a.position - b.position;
       if (posDiff !== 0) return posDiff;
-      // Fallback to creation time when positions tie (e.g. before migration backfill)
+      // Fallback to creation date
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
   }
@@ -40,20 +42,18 @@ export function groupTasksByColumn(tasks: Task[]): TasksByColumn {
 
 /**
  * Extracts the column ID from a droppable or sortable item.
- * - If the item is a column droppable, the id is olumlike "cn-todo"
- * - If the item is a sortable task, the data has a columnId
  */
 export function getColumnFromDropTarget(
   item: Active | Over | null,
   tasksByColumn: TasksByColumn
-): TaskStatus | null {
+): string | null {
   if (!item) return null;
 
   const id = String(item.id);
 
   // Check if it's a column droppable
   if (id.startsWith("column-")) {
-    return id.replace("column-", "") as TaskStatus;
+    return id.replace("column-", "");
   }
 
   // Check if it's a task — find which column it's in
@@ -63,9 +63,9 @@ export function getColumnFromDropTarget(
   }
 
   // Fallback: search all columns for this task ID
-  for (const status of Object.keys(tasksByColumn) as TaskStatus[]) {
-    if (tasksByColumn[status].some((t) => t.id === id)) {
-      return status;
+  for (const colId of Object.keys(tasksByColumn)) {
+    if (tasksByColumn[colId].some((t) => t.id === id)) {
+      return colId;
     }
   }
 
@@ -73,168 +73,49 @@ export function getColumnFromDropTarget(
 }
 
 /**
- * Result of computing the drag-and-drop outcome.
+ * Calculates a new fractional position for a task dropped in a column.
+ * Handles same-column reorder and cross-column moves.
  */
-export interface DragResult {
-  /** Updated full task list after the reorder */
-  updatedTasks: Task[];
-  /** Position updates that need to be persisted to the database */
-  positionUpdates: { id: string; status: TaskStatus; position: number }[];
-}
-
-/**
- * Computes the new task state after a drag operation.
- * Handles both same-column reorder and cross-column moves.
- */
-export function computeDragResult(
+export function computeFractionalPosition(
   activeId: string,
   overId: string,
-  tasksByColumn: TasksByColumn,
-  allTasks: Task[]
-): DragResult | null {
-  const activeColumnId = findTaskColumn(activeId, tasksByColumn);
-  let overColumnId = findTaskColumn(overId, tasksByColumn);
-
-  // If overId is a column droppable id
-  if (!overColumnId && overId.startsWith("column-")) {
-    overColumnId = overId.replace("column-", "") as TaskStatus;
-  }
-
-  if (!activeColumnId || !overColumnId) return null;
-
-  if (activeColumnId === overColumnId) {
-    // Same-column reorder
-    return computeSameColumnReorder(
-      activeId,
-      overId,
-      activeColumnId,
-      tasksByColumn,
-      allTasks
-    );
-  } else {
-    // Cross-column move
-    return computeCrossColumnMove(
-      activeId,
-      overId,
-      activeColumnId,
-      overColumnId,
-      tasksByColumn,
-      allTasks
-    );
-  }
-}
-
-function findTaskColumn(
-  taskId: string,
+  activeColumnId: string,
+  overColumnId: string,
   tasksByColumn: TasksByColumn
-): TaskStatus | null {
-  for (const status of Object.keys(tasksByColumn) as TaskStatus[]) {
-    if (tasksByColumn[status].some((t) => t.id === taskId)) {
-      return status;
-    }
-  }
-  return null;
-}
-
-/**
- * Same-column reorder using arrayMove.
- */
-function computeSameColumnReorder(
-  activeId: string,
-  overId: string,
-  columnId: TaskStatus,
-  tasksByColumn: TasksByColumn,
-  allTasks: Task[]
-): DragResult {
-  const column = [...tasksByColumn[columnId]];
-  const oldIndex = column.findIndex((t) => t.id === activeId);
-  const newIndex = column.findIndex((t) => t.id === overId);
-
-  if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
-    return { updatedTasks: allTasks, positionUpdates: [] };
+): number {
+  const targetColumn = [...(tasksByColumn[overColumnId] || [])];
+  
+  // If active task was in the same column, remove it from list to avoid incorrect index math
+  const activeIdx = targetColumn.findIndex((t) => t.id === activeId);
+  if (activeIdx !== -1) {
+    targetColumn.splice(activeIdx, 1);
   }
 
-  const reordered = arrayMove(column, oldIndex, newIndex);
-
-  // Reindex positions
-  const positionUpdates: DragResult["positionUpdates"] = [];
-  const updatedColumn = reordered.map((task, index) => {
-    const updated = { ...task, position: index };
-    positionUpdates.push({ id: task.id, status: columnId, position: index });
-    return updated;
-  });
-
-  // Rebuild full task array
-  const columnTaskIds = new Set(updatedColumn.map((t) => t.id));
-  const updatedTasks = allTasks.map((task) => {
-    if (columnTaskIds.has(task.id)) {
-      return updatedColumn.find((t) => t.id === task.id)!;
-    }
-    return task;
-  });
-
-  return { updatedTasks, positionUpdates };
-}
-
-/**
- * Cross-column move: removes from source, inserts into target.
- */
-function computeCrossColumnMove(
-  activeId: string,
-  overId: string,
-  sourceColumnId: TaskStatus,
-  targetColumnId: TaskStatus,
-  tasksByColumn: TasksByColumn,
-  allTasks: Task[]
-): DragResult {
-  const sourceColumn = [...tasksByColumn[sourceColumnId]];
-  const targetColumn = [...tasksByColumn[targetColumnId]];
-
-  const activeIndex = sourceColumn.findIndex((t) => t.id === activeId);
-  if (activeIndex === -1) {
-    return { updatedTasks: allTasks, positionUpdates: [] };
+  if (targetColumn.length === 0) {
+    return 1000.0;
   }
 
-  const activeTask = sourceColumn[activeIndex];
-
-  // Remove from source
-  sourceColumn.splice(activeIndex, 1);
-
-  // Find insertion index in target
-  let insertIndex = targetColumn.findIndex((t) => t.id === overId);
-  if (insertIndex === -1) {
-    // Drop on empty column or column droppable — place at end
-    insertIndex = targetColumn.length;
+  // If dropped directly on the column droppable target (empty area)
+  if (overId.startsWith("column-")) {
+    const lastTask = targetColumn[targetColumn.length - 1];
+    return lastTask.position + 1000.0;
   }
 
-  // Insert into target with updated status
-  const movedTask = { ...activeTask, status: targetColumnId };
-  targetColumn.splice(insertIndex, 0, movedTask);
+  // Find index of the task we are dropping over
+  const overIdx = targetColumn.findIndex((t) => t.id === overId);
+  if (overIdx === -1) {
+    const lastTask = targetColumn[targetColumn.length - 1];
+    return lastTask.position + 1000.0;
+  }
 
-  // Reindex positions for both columns
-  const positionUpdates: DragResult["positionUpdates"] = [];
+  // Check if dropping at the beginning, end, or middle
+  if (overIdx === 0) {
+    const firstTask = targetColumn[0];
+    return firstTask.position / 2.0;
+  }
 
-  const updatedSource = sourceColumn.map((task, index) => {
-    const updated = { ...task, position: index };
-    positionUpdates.push({ id: task.id, status: sourceColumnId, position: index });
-    return updated;
-  });
-
-  const updatedTarget = targetColumn.map((task, index) => {
-    const updated = { ...task, position: index };
-    positionUpdates.push({ id: task.id, status: targetColumnId, position: index });
-    return updated;
-  });
-
-  // Build a lookup of all updated tasks
-  const updatedMap = new Map<string, Task>();
-  for (const t of updatedSource) updatedMap.set(t.id, t);
-  for (const t of updatedTarget) updatedMap.set(t.id, t);
-
-  // Rebuild full task array preserving tasks from other columns
-  const updatedTasks = allTasks.map((task) => {
-    return updatedMap.get(task.id) || task;
-  });
-
-  return { updatedTasks, positionUpdates };
+  // Dropped in between overIdx - 1 and overIdx
+  const prevTask = targetColumn[overIdx - 1];
+  const nextTask = targetColumn[overIdx];
+  return (prevTask.position + nextTask.position) / 2.0;
 }

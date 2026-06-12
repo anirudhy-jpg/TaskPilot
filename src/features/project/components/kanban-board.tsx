@@ -19,75 +19,30 @@ import {
   type DragOverEvent,
   type CollisionDetection,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
-import {
-  ListTodo,
-  Clock,
-  CheckCircle2,
-} from "lucide-react";
-import type { Project, Task, TaskStatus, TaskPriority } from "../types/project.types";
+import { sortableKeyboardCoordinates, horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
+import { Circle, Clock, CheckCircle2 } from "lucide-react";
+import type { Project, Task, Column, TaskPriority } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { TaskDetailsModal } from "./modals/task-details-modal";
-import {
-  KanbanColumn,
-  TaskCard,
-  groupTasksByColumn,
-  computeDragResult,
-  getColumnFromDropTarget,
-} from "./kanban";
-import type { KanbanColumnDef, TaskDragData } from "./kanban";
-import { getProjectInitials, getVisualPriority } from "../utils/avatar";
+import { KanbanColumn } from "./kanban/kanban-column";
+import { TaskCard } from "./kanban/task-card";
+import { groupTasksByColumn, getColumnFromDropTarget, computeFractionalPosition } from "./kanban/utils";
+import type { KanbanColumnDef } from "./kanban/types";
+import { getProjectInitials } from "../utils/avatar";
 
 interface KanbanBoardProps {
-  project: Project & { tasks: Task[] };
+  project: Project & { tasks: Task[]; columns: Column[] };
   members: WorkspaceMember[];
   currentUserId?: string;
-  onAddTask: (status: TaskStatus) => void;
+  onAddTask: (columnId: string) => void;
   onDeleteTask: (id: string, title: string) => void;
-  onStatusChange: (taskId: string, status: TaskStatus) => void;
+  onMoveTask: (taskId: string, columnId: string, position: number) => void;
+  onCreateColumn: (name: string) => void;
+  onRenameColumn: (columnId: string, name: string) => void;
+  onMoveColumn: (columnId: string, position: number) => void;
+  onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
-  onTasksReorder?: (updates: { id: string; status: TaskStatus; position: number }[], draggedTaskId?: string) => void;
 }
-
-// ─── Column Definitions ─────────────────────────────────────
-
-const COLUMN_DEFS: KanbanColumnDef[] = [
-  {
-    id: "todo",
-    title: "To Do",
-    accentClass: "bg-gradient-to-r before:from-blue-400 before:to-indigo-500",
-    headerIcon: (
-      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 shadow-3xs shrink-0">
-        <ListTodo size={12} />
-      </span>
-    ),
-    badgeBg: "bg-blue-50 text-blue-700 border border-blue-100/60",
-  },
-  {
-    id: "in_progress",
-    title: "In Progress",
-    accentClass: "bg-gradient-to-r before:from-amber-400 before:to-orange-500",
-    headerIcon: (
-      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-50 border border-amber-250/50 text-amber-600 shadow-3xs shrink-0">
-        <Clock size={12} className="animate-spin-slow" />
-      </span>
-    ),
-    badgeBg: "bg-amber-50 text-amber-700 border border-amber-250/60",
-  },
-  {
-    id: "done",
-    title: "Done",
-    accentClass: "bg-gradient-to-r before:from-red-400 before:to-rose-500",
-    headerIcon: (
-      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-50 border border-rose-250/50 text-rose-600 shadow-3xs shrink-0">
-        <CheckCircle2 size={12} />
-      </span>
-    ),
-    badgeBg: "bg-rose-50 text-rose-700 border border-rose-250/60",
-  },
-];
-
-// ─── Main KanbanBoard Component ─────────────────────────────
 
 export function KanbanBoard({
   project,
@@ -95,14 +50,28 @@ export function KanbanBoard({
   currentUserId,
   onAddTask,
   onAssigneeChange,
-  onTasksReorder,
-  onStatusChange,
+  onMoveTask,
+  onCreateColumn,
+  onRenameColumn,
+  onMoveColumn,
+  onDeleteColumn,
   onDeleteTask,
 }: KanbanBoardProps) {
-  
   const lastOverRef = useRef<Over | null>(null);
+  
+  // Selected task detail modal
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  
+  // Active dragging items
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+
+
+
+  // Column deletion options state
+  const [columnToDelete, setColumnToDelete] = useState<KanbanColumnDef | null>(null);
+  const [deleteAction, setDeleteAction] = useState<"delete" | "move">("delete");
+  const [targetColumnId, setTargetColumnId] = useState<string>("");
 
   // Local task state for optimistic drag-and-drop updates
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
@@ -113,14 +82,54 @@ export function KanbanBoard({
   // Snapshot for rollback on error
   const preDropSnapshot = useRef<Task[] | null>(null);
 
+  // Map database columns to Kanban Column definitions
+  const columnDefs = useMemo<KanbanColumnDef[]>(() => {
+    const cols = project.columns || [];
+    const sortedCols = [...cols].sort((a, b) => a.position - b.position);
+    return sortedCols.map((c, index) => {
+      const accents = [
+        "before:from-blue-400 before:to-indigo-500",
+        "before:from-amber-400 before:to-orange-500",
+        "before:from-emerald-400 before:to-teal-500",
+        "before:from-purple-400 before:to-pink-500",
+        "before:from-rose-400 before:to-rose-600",
+      ];
+      const badgeBgs = [
+        "bg-blue-50 text-blue-700 border border-blue-100/60",
+        "bg-amber-50 text-amber-700 border border-amber-250/60",
+        "bg-emerald-50 text-emerald-700 border border-emerald-100/60",
+        "bg-purple-50 text-purple-700 border border-purple-100/60",
+        "bg-rose-50 text-rose-700 border border-rose-250/60",
+      ];
+      const icons = [
+        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 shadow-3xs shrink-0"><Circle size={11} /></span>,
+        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-50 border border-amber-200/50 text-amber-600 shadow-3xs shrink-0"><Clock size={11} /></span>,
+        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-3xs shrink-0"><CheckCircle2 size={11} /></span>,
+      ];
+      const accentIndex = index % accents.length;
+      const iconIndex = index % icons.length;
+
+      return {
+        id: c.id,
+        title: c.name,
+        accentClass: accents[accentIndex],
+        headerIcon: icons[iconIndex],
+        badgeBg: badgeBgs[accentIndex],
+      };
+    });
+  }, [project.columns]);
+
+  // Group tasks into columns
+  const tasksByColumn = useMemo(() => {
+    const colIds = columnDefs.map((c) => c.id);
+    return groupTasksByColumn(tasks, colIds);
+  }, [tasks, columnDefs]);
+
   const selectedTask = useMemo(() => {
     return tasks.find((t) => t.id === selectedTaskId) || null;
   }, [tasks, selectedTaskId]);
 
-  // Group tasks into columns
-  const tasksByColumn = useMemo(() => groupTasksByColumn(tasks), [tasks]);
-
-  // Task numbering (by creation order, preserved from original)
+  // Task numbering (by creation order)
   const sortedTasks = useMemo(() => {
     return [...tasks].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -139,39 +148,31 @@ export function KanbanBoard({
   React.useEffect(() => {
     if (!localTasks) return;
 
-    // If task count changed (add/delete), reset to server tasks
     if (project.tasks.length !== localTasks.length) {
-      // Avoid synchronous setState inside effect — schedule reset on next tick
       setTimeout(() => setLocalTasks(null), 0);
       return;
     }
 
     const serverTaskMap = new Map(project.tasks.map((t) => [t.id, t]));
-
-    // Check if the set of IDs matches
     const idMismatch = localTasks.some((t) => !serverTaskMap.has(t.id));
     if (idMismatch) {
       setTimeout(() => setLocalTasks(null), 0);
       return;
     }
 
-    // Update fields in localTasks from server data (excluding status/position during drag)
-    if (!localTasks) return;
     let changed = false;
     const updated = localTasks.map((localTask) => {
       const serverTask = serverTaskMap.get(localTask.id);
       if (!serverTask) return localTask;
 
-      // Check if any visible field changed
       const titleChanged = localTask.title !== serverTask.title;
       const descChanged = localTask.description !== serverTask.description;
       const assigneeChanged = localTask.assigneeId !== serverTask.assigneeId ||
                               localTask.assignee?.email !== serverTask.assignee?.email;
       const priorityChanged = localTask.priority !== serverTask.priority;
 
-      // Only sync status and position if not actively dragging
       const statusOrPosChanged = !activeTaskId && (
-        localTask.status !== serverTask.status ||
+        localTask.columnId !== serverTask.columnId ||
         localTask.position !== serverTask.position
       );
 
@@ -184,7 +185,8 @@ export function KanbanBoard({
           assigneeId: serverTask.assigneeId,
           assignee: serverTask.assignee,
           priority: serverTask.priority,
-          status: activeTaskId ? localTask.status : serverTask.status,
+          columnId: activeTaskId ? localTask.columnId : serverTask.columnId,
+          status: activeTaskId ? localTask.columnId : serverTask.columnId,
           position: activeTaskId ? localTask.position : serverTask.position,
         };
       }
@@ -192,23 +194,23 @@ export function KanbanBoard({
     });
 
     if (changed) {
-      // schedule the update to avoid synchronous setState within the effect
       setTimeout(() => setLocalTasks(updated), 0);
     }
   }, [project.tasks, localTasks, activeTaskId]);
 
-  // ─── DnD Collision Detection Strategy ───────────────────
-
+  // Collision detection strategy supporting custom columns
   const collisionDetectionStrategy: CollisionDetection = useCallback(
     (args) => {
-      // 1. Try finding collision by checking if pointer is physically within a container
+      // If we are dragging a column, only consider column targets
+      if (activeColumnId) {
+        const columnContainers = args.droppableContainers.filter(c => String(c.id).startsWith("column-"));
+        return closestCorners({ ...args, droppableContainers: columnContainers });
+      }
+
       const pointerCollisions = pointerWithin(args);
       let overId = getFirstCollision(pointerCollisions, "id");
 
       if (pointerCollisions.length > 0) {
-        // Prefer a column container collision if one exists in the pointer results.
-        // This avoids cases where a nested DOM node (RSC wrapper id, etc.) is
-        // returned first and masks the actual column droppable.
         const columnCollision = pointerCollisions.find((c) =>
           String(c.id).startsWith("column-")
         );
@@ -217,12 +219,10 @@ export function KanbanBoard({
         }
 
         if (overId != null) {
-          // If the pointer is over a column container
           if (String(overId).startsWith("column-")) {
-            const columnId = String(overId).replace("column-", "") as TaskStatus;
+            const columnId = String(overId).replace("column-", "");
             const containerItems = tasksByColumn[columnId] || [];
 
-            // If the column has items, find the closest task card in this column using closestCorners
             if (containerItems.length > 0) {
               const itemIds = new Set(containerItems.map((item) => item.id));
               const filteredContainers = args.droppableContainers.filter(
@@ -239,86 +239,17 @@ export function KanbanBoard({
               }
             }
           }
-
-          return pointerCollisions;
         }
+        return pointerCollisions;
       }
 
-      // 2. If no pointer collision is found, fallback to closestCorners
       const fallback = closestCorners(args);
-
-      // If the fallback collision doesn't point to a known task or column,
-      // try to resolve the pointer location to a column droppable by checking
-      // droppable container rects (helps with RSC wrapper ids or nested nodes).
-      const firstFallback = getFirstCollision(fallback, "id");
-      const isKnown = (() => {
-        if (!firstFallback) return false;
-        const idStr = String(firstFallback);
-        if (idStr.startsWith("column-")) return true;
-        // Check if id exists among task ids in any column
-        for (const status of Object.keys(tasksByColumn) as TaskStatus[]) {
-          if (tasksByColumn[status].some((t) => t.id === idStr)) return true;
-        }
-        return false;
-      })();
-
-      if (!isKnown && args.pointerCoordinates) {
-        const { x, y } = args.pointerCoordinates;
-        const columnContainer = args.droppableContainers.find((c) => {
-          const idStr = String(c.id);
-          if (!idStr.startsWith("column-")) return false;
-          // c.rect may be a MutableRefObject<ClientRect|null> — use .current when present
-          // or fall back to the value directly for compatibility.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const rect = (c.rect as any)?.current ?? (c.rect as any);
-          if (!rect) return false;
-          return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-        });
-
-        if (columnContainer) {
-          return [
-            {
-              id: columnContainer.id,
-            } as unknown as Collision,
-          ] as unknown as Collision[];
-        }
-        // Try to pick the nearest column droppable by pointer distance
-        if (args.pointerCoordinates) {
-          const { x, y } = args.pointerCoordinates;
-          const columnRects = args.droppableContainers
-            .filter((c) => String(c.id).startsWith("column-") && c.rect)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .map((c) => ({ id: String(c.id), rect: (c.rect as any)?.current ?? (c.rect as any) }));
-
-          if (columnRects.length > 0) {
-            const distances = columnRects.map((c) => {
-              const rx = Math.max(c.rect.left, Math.min(x, c.rect.right));
-              const ry = Math.max(c.rect.top, Math.min(y, c.rect.bottom));
-              const dx = x - rx;
-              const dy = y - ry;
-              return { id: c.id, d: Math.sqrt(dx * dx + dy * dy) };
-            });
-            distances.sort((a, b) => a.d - b.d);
-            const nearest = distances[0];
-            if (nearest) {
-              // Return nearest column container as a best-effort fallback
-              return [
-                {
-                  id: nearest.id,
-                } as unknown as Collision,
-              ] as unknown as Collision[];
-            }
-          }
-        }
-      }
-
       return fallback;
     },
-    [tasksByColumn]
+    [tasksByColumn, activeColumnId]
   );
 
-  // ─── DnD Sensors ─────────────────────────────────────────
-
+  // Drag Sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -336,15 +267,15 @@ export function KanbanBoard({
     })
   );
 
-  // ─── DnD Handlers ────────────────────────────────────────
-
+  // Drag Handlers
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const data = event.active.data.current as TaskDragData | undefined;
+      const data = event.active.data.current;
       if (data?.type === "task") {
         setActiveTaskId(data.task.id);
-        // Take a snapshot for possible rollback
         preDropSnapshot.current = [...tasks];
+      } else if (data?.type === "column") {
+        setActiveColumnId(data.columnId);
       }
     },
     [tasks]
@@ -356,30 +287,23 @@ export function KanbanBoard({
       if (!over) return;
       if (active.id === over.id) return;
 
-      const activeData = active.data.current as TaskDragData | undefined;
+      const activeData = active.data.current;
       if (!activeData || activeData.type !== "task") return;
 
-      // Find active task's current column status from local state (or initial data)
-      const activeTask = localTasks?.find((t) => t.id === String(active.id));
-      const activeColumnId = activeTask ? activeTask.status : activeData.columnId;
+      const activeTask = localTasks?.find((t) => t.id === String(active.id)) || tasks.find((t) => t.id === String(active.id));
+      if (!activeTask) return;
 
+      const activeColumnId = activeTask.columnId;
       const overColumnId = getColumnFromDropTarget(over, tasksByColumn);
-      // store last over so we can resolve at drag end if needed
       lastOverRef.current = over;
       if (!overColumnId) return;
 
-      // Only update local tasks state in handleDragOver if crossing columns
       if (activeColumnId !== overColumnId) {
         setLocalTasks((prev) => {
           const current = prev ?? [...tasks];
-          const currentGrouped = groupTasksByColumn(current);
-          const result = computeDragResult(
-            String(active.id),
-            String(over.id),
-            currentGrouped,
-            current
+          return current.map((t) =>
+            t.id === String(active.id) ? { ...t, columnId: overColumnId, status: overColumnId } : t
           );
-          return result ? result.updatedTasks : current;
         });
       }
     },
@@ -390,13 +314,45 @@ export function KanbanBoard({
     (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveTaskId(null);
+      setActiveColumnId(null);
 
-      // If the runtime `over` equals the active draggable (common when
-      // pointer is not over any other droppable at drop time), prefer the
-      // last recorded `over` from handleDragOver (if any) so we can
-      // determine the intended target column.
+      if (!over) {
+        if (preDropSnapshot.current) {
+          setLocalTasks(preDropSnapshot.current);
+          preDropSnapshot.current = null;
+        }
+        return;
+      }
+
+      const activeData = active.data.current;
+
+      // Column reorder logic
+      if (activeData?.type === "column") {
+        if (active.id !== over.id) {
+          const sortedCols = [...project.columns].sort((a, b) => a.position - b.position);
+          const activeIndex = sortedCols.findIndex((c) => c.id === activeData.columnId);
+          const overColumnId = String(over.id).replace("column-", "");
+          const overIndex = sortedCols.findIndex((c) => c.id === overColumnId);
+
+          if (activeIndex !== -1 && overIndex !== -1) {
+            let newPosition = 0.0;
+            if (overIndex === 0) {
+              newPosition = sortedCols[0].position / 2.0;
+            } else if (overIndex === sortedCols.length - 1) {
+              newPosition = sortedCols[sortedCols.length - 1].position + 1000.0;
+            } else {
+              const prevIdx = overIndex > activeIndex ? overIndex : overIndex - 1;
+              const nextIdx = overIndex > activeIndex ? overIndex + 1 : overIndex;
+              newPosition = (sortedCols[prevIdx].position + sortedCols[nextIdx].position) / 2.0;
+            }
+            onMoveColumn(activeData.columnId, newPosition);
+          }
+        }
+        return;
+      }
+
+      // Tasks reorder logic
       const effectiveOver = over && String(over.id) !== String(active.id) ? over : lastOverRef.current || over;
-
       const originalTasks = preDropSnapshot.current;
       preDropSnapshot.current = null;
 
@@ -406,116 +362,44 @@ export function KanbanBoard({
         return;
       }
 
-      const originalMap = new Map(originalTasks.map((t) => [t.id, t]));
-      const activeTaskOriginal = originalMap.get(String(active.id));
+      const activeTaskOriginal = originalTasks.find((t) => t.id === String(active.id));
       if (!activeTaskOriginal) {
         setLocalTasks(null);
         return;
       }
 
-      // Determine target column where drag ended
       const tempTasks = localTasks ?? originalTasks;
-      const effectiveOverId = String(effectiveOver.id);
-      const overColumnId = getColumnFromDropTarget(effectiveOver, groupTasksByColumn(tempTasks));
-      // Debug: computed drag end target and column (no logging in prod)
+      const overColumnId = getColumnFromDropTarget(effectiveOver, groupTasksByColumn(tempTasks, columnDefs.map(c => c.id)));
       if (!overColumnId) {
         setLocalTasks(null);
         lastOverRef.current = null;
         return;
       }
 
-      const sourceCol = activeTaskOriginal.status;
-      const targetCol = overColumnId;
+      // Compute fractional position
+      const newPos = computeFractionalPosition(
+        String(active.id),
+        String(effectiveOver.id),
+        activeTaskOriginal.columnId,
+        overColumnId,
+        groupTasksByColumn(tempTasks, columnDefs.map(c => c.id))
+      );
 
-      // If localTasks is null, we use originalTasks (no cross-column movement took place yet)
-      let currentTasks = localTasks ?? originalTasks;
-
-      // Defensive fallback: if drag over wasn't registered but drag end is in a different column
-      if (!localTasks && sourceCol !== targetCol) {
-        const currentGrouped = groupTasksByColumn(originalTasks);
-        const dragResult = computeDragResult(
-          String(active.id),
-          effectiveOverId,
-          currentGrouped,
-          originalTasks
-        );
-        if (dragResult) {
-          currentTasks = dragResult.updatedTasks;
-        }
-      }
-
-      let finalTasks = [...currentTasks];
-
-      if (sourceCol === targetCol) {
-        // Same-column reorder: calculate the new ordering using arrayMove
-        const grouped = groupTasksByColumn(currentTasks);
-        const columnTasks = [...grouped[sourceCol]];
-        const oldIndex = columnTasks.findIndex((t) => t.id === String(active.id));
-        let newIndex = columnTasks.findIndex((t) => t.id === effectiveOverId);
-        if (newIndex === -1) {
-          newIndex = columnTasks.length - 1;
-        }
-
-        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          const reordered = arrayMove(columnTasks, oldIndex, newIndex);
-          const columnTaskIds = new Set(reordered.map((t) => t.id));
-          finalTasks = currentTasks.map((task) => {
-            if (columnTaskIds.has(task.id)) {
-              const idx = reordered.findIndex((t) => t.id === task.id);
-              return { ...task, position: idx };
-            }
-            return task;
-          });
-        }
-      } else {
-        // Cross-column move: position mapping check
-        const grouped = groupTasksByColumn(currentTasks);
-        finalTasks = currentTasks.map((task) => {
-          const colTasks = grouped[task.status];
-          const idx = colTasks.findIndex((t) => t.id === task.id);
-          return { ...task, position: idx >= 0 ? idx : task.position };
-        });
-      }
-
-      // Reset local tasks state immediately
+      // Perform position and column assignment update
+      onMoveTask(String(active.id), overColumnId, newPos);
       setLocalTasks(null);
-
-      // Compare finalTasks with originalTasks to find all status/position changes
-      const finalGrouped = groupTasksByColumn(finalTasks);
-      const positionUpdates: { id: string; status: TaskStatus; position: number }[] = [];
-
-      // Re-index source column
-      finalGrouped[sourceCol].forEach((task, index) => {
-        const orig = originalMap.get(task.id);
-        if (!orig || orig.status !== task.status || orig.position !== index) {
-          positionUpdates.push({ id: task.id, status: sourceCol, position: index });
-        }
-      });
-
-      // Re-index target column (if cross-column)
-      if (sourceCol !== targetCol) {
-        finalGrouped[targetCol].forEach((task, index) => {
-          const orig = originalMap.get(task.id);
-          if (!orig || orig.status !== task.status || orig.position !== index) {
-            positionUpdates.push({ id: task.id, status: targetCol, position: index });
-          }
-        });
-      }
-
-      if (positionUpdates.length > 0 && onTasksReorder) {
-        onTasksReorder(positionUpdates, String(active.id));
-      }
+      lastOverRef.current = null;
     },
-    [localTasks, onTasksReorder]
+    [project.columns, localTasks, tasks, columnDefs, onMoveColumn, onMoveTask]
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveTaskId(null);
+    setActiveColumnId(null);
     setLocalTasks(preDropSnapshot.current);
     preDropSnapshot.current = null;
   }, []);
 
-  // Find the active task for drag overlay
   const activeTask = useMemo(() => {
     if (!activeTaskId) return null;
     return tasks.find((t) => t.id === activeTaskId) || null;
@@ -523,12 +407,10 @@ export function KanbanBoard({
 
   const activeTaskColumn = useMemo(() => {
     if (!activeTask) return null;
-    return COLUMN_DEFS.find((c) => c.id === activeTask.status) || null;
-  }, [activeTask]);
-
-  const handleSelectTask = useCallback((taskId: string) => {
-    setSelectedTaskId(taskId);
-  }, []);
+    return columnDefs.find((c) => c.id === activeTask.columnId) || null;
+  }, [activeTask, columnDefs]);
+  const columnTasks = columnToDelete ? (tasksByColumn[columnToDelete.id] || []) : [];
+  const hasTasks = columnTasks.length > 0;
 
   return (
     <DndContext
@@ -539,24 +421,38 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex flex-row lg:grid lg:grid-cols-3 gap-6 items-start w-full overflow-x-auto snap-x snap-mandatory lg:overflow-x-visible pb-4 lg:pb-0 scrollbar-none sm:scrollbar-thin">
-        {COLUMN_DEFS.map((column) => (
-          <KanbanColumn
-            key={column.id}
-            column={column}
-            tasks={tasksByColumn[column.id]}
-            members={members}
-            currentUserId={currentUserId}
-            projectPrefix={projectPrefix}
-            taskNumberMap={taskNumberMap}
-            onAddTask={onAddTask}
-            onAssigneeChange={onAssigneeChange}
-            onSelectTask={handleSelectTask}
-          />
-        ))}
+      <div className="flex flex-row gap-6 items-start w-full overflow-x-auto sm:overflow-x-visible pb-4 lg:pb-0 scrollbar-none sm:scrollbar-thin">
+        {/* Sortable column context */}
+        <SortableContext items={columnDefs.map(c => `column-${c.id}`)} strategy={horizontalListSortingStrategy}>
+          {columnDefs.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              column={column}
+              tasks={tasksByColumn[column.id] || []}
+              members={members}
+              currentUserId={currentUserId}
+              projectPrefix={projectPrefix}
+              taskNumberMap={taskNumberMap}
+              onAddTask={onAddTask}
+              onAssigneeChange={onAssigneeChange}
+              onSelectTask={setSelectedTaskId}
+              onRenameColumn={onRenameColumn}
+              onDeleteColumn={(columnId) => {
+                const col = columnDefs.find((c) => c.id === columnId);
+                if (col) {
+                  setColumnToDelete(col);
+                  setDeleteAction("delete");
+                  const firstTarget = columnDefs.find((c) => c.id !== columnId);
+                  setTargetColumnId(firstTarget?.id || "");
+                }
+              }}
+              allColumns={columnDefs}
+            />
+          ))}
+        </SortableContext>
       </div>
 
-      {/* Drag Overlay — floating card that follows the cursor */}
+      {/* Task Drag Overlay */}
       <DragOverlay dropAnimation={{
         duration: 200,
         easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
@@ -564,7 +460,7 @@ export function KanbanBoard({
         {activeTask && activeTaskColumn && (
           <TaskCard
             task={activeTask}
-            status={activeTask.status}
+            status={activeTask.columnId}
             members={members}
             currentUserId={currentUserId}
             projectPrefix={projectPrefix}
@@ -576,6 +472,7 @@ export function KanbanBoard({
         )}
       </DragOverlay>
 
+      {/* Task Details Modal */}
       <TaskDetailsModal
         task={selectedTask}
         members={members}
@@ -585,9 +482,114 @@ export function KanbanBoard({
         taskNumber={selectedTaskId ? taskNumberMap.get(selectedTaskId) : undefined}
         currentUserId={currentUserId}
         onAssigneeChange={onAssigneeChange}
-        onStatusChange={onStatusChange}
+        onStatusChange={(taskId, colId) => {
+          const targetTasks = tasksByColumn[colId] || [];
+          const nextPosition = (targetTasks[targetTasks.length - 1]?.position ?? 0) + 1000.0;
+          onMoveTask(taskId, colId, nextPosition);
+        }}
         onDeleteTask={onDeleteTask}
+        columns={project.columns}
       />
+
+      {columnToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 text-left">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Delete Column</h3>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                Column name: {columnToDelete.title}
+              </p>
+            </div>
+
+            {hasTasks ? (
+              <>
+                <p className="text-xs text-slate-550 leading-relaxed">
+                  What would you like to do with the tasks currently assigned to this column?
+                </p>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="deleteAction"
+                      checked={deleteAction === "delete"}
+                      onChange={() => setDeleteAction("delete")}
+                      className="text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-700">Delete all tasks</p>
+                      <p className="text-[10px] text-slate-450 mt-0.5">Permanently delete all tasks inside this column.</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <input
+                      type="radio"
+                      name="deleteAction"
+                      checked={deleteAction === "move"}
+                      onChange={() => {
+                        setDeleteAction("move");
+                        const firstTarget = columnDefs.find(c => c.id !== columnToDelete.id);
+                        if (firstTarget) setTargetColumnId(firstTarget.id);
+                      }}
+                      className="text-amber-500 focus:ring-amber-500"
+                    />
+                    <div className="w-full">
+                      <p className="text-xs font-bold text-slate-700">Move tasks to another column</p>
+                      <p className="text-[10px] text-slate-450 mt-0.5">Keep tasks and transfer them to a selected column.</p>
+                    </div>
+                  </label>
+                </div>
+
+                {deleteAction === "move" && (
+                  <div className="space-y-1.5 animate-in fade-in duration-200">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">Target Column</label>
+                    <select
+                      value={targetColumnId}
+                      onChange={(e) => setTargetColumnId(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/25 bg-white text-slate-700"
+                    >
+                      {columnDefs
+                        .filter((c) => c.id !== columnToDelete.id)
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.title}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-slate-550 leading-relaxed">
+                Are you sure you want to delete this column? This action cannot be undone.
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setColumnToDelete(null)}
+                className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 rounded-lg cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteColumn(
+                    columnToDelete.id,
+                    hasTasks ? deleteAction : "delete",
+                    hasTasks && deleteAction === "move" ? targetColumnId : undefined
+                  );
+                  setColumnToDelete(null);
+                }}
+                className="px-3 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg cursor-pointer"
+              >
+                Delete Column
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DndContext>
   );
 }

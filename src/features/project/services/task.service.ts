@@ -11,7 +11,7 @@ export class TaskService {
     const { data, error } = await supabase
       .from("tasks")
       .select(`
-        id, project_id, title, description, status, priority, position, assigned_to, created_at,
+        id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at,
         assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .eq("project_id", projectId)
@@ -21,7 +21,7 @@ export class TaskService {
       // Fallback: query without the join and select only guaranteed columns
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("tasks")
-        .select("id, project_id, title, description, status, priority, position, assigned_to, created_at")
+        .select("id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at")
         .eq("project_id", projectId)
         .order("position", { ascending: true })
 
@@ -52,7 +52,7 @@ export class TaskService {
 
     const { data, error } = await supabase
       .from("tasks")
-      .select("id, project_id, title, description, status, priority, position, assigned_to, created_at")
+      .select("id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at")
       .in("project_id", projectIds)
       .order("position", { ascending: true })
 
@@ -71,33 +71,33 @@ export class TaskService {
     projectId: string
     title: string
     description?: string
-    status?: TaskStatus
+    columnId: string
     priority?: TaskPriority
     assigneeId?: string
   }): Promise<Task> {
     const supabase = await createClient()
 
-    // Calculate next position for new task: place at end of column
-    const targetStatus = input.status || "todo"
+    // Calculate next position for new task: place at end of column (add 1000 to max position)
     const { data: maxPosRow } = await supabase
       .from("tasks")
       .select("position")
       .eq("project_id", input.projectId)
-      .eq("status", targetStatus)
+      .eq("column_id", input.columnId)
       .order("position", { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    const nextPosition = (maxPosRow?.position ?? -1) + 1
+    const nextPosition = (maxPosRow?.position ?? 0) + 1000.0
 
-    // Build insert data with only guaranteed existing columns
+    // Build insert data
     const insertData: Record<string, unknown> = {
       project_id: input.projectId,
       title: input.title,
+      column_id: input.columnId,
+      status: input.columnId, // legacy fallback uses column_id UUID
       position: nextPosition,
     }
     if (input.description) insertData.description = input.description
-    if (input.status) insertData.status = input.status
     if (input.priority) insertData.priority = input.priority
     if (input.assigneeId) insertData.assigned_to = input.assigneeId
 
@@ -105,7 +105,7 @@ export class TaskService {
       .from("tasks")
       .insert(insertData)
       .select(`
-        id, project_id, title, description, status, priority, position, created_at, assigned_to,
+        id, project_id, title, description, status, column_id, priority, position, created_at, assigned_to,
         assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .single()
@@ -119,17 +119,20 @@ export class TaskService {
   }
 
   /**
-   * Update a task's status.
+   * Update a task's column (status).
    */
   static async updateTaskStatus(
     taskId: string,
-    status: TaskStatus
+    columnId: string
   ): Promise<void> {
     const supabase = await createClient()
 
     const { error } = await supabase
       .from("tasks")
-      .update({ status })
+      .update({
+        column_id: columnId,
+        status: columnId, // legacy fallback
+      })
       .eq("id", taskId)
 
     if (error) {
@@ -173,19 +176,23 @@ export class TaskService {
   }
 
   /**
-   * Move a task to a new status and/or position.
+   * Move a task to a new column and/or position.
    * Used by drag-and-drop to persist column changes and reordering.
    */
   static async moveTask(
     taskId: string,
-    status: TaskStatus,
+    columnId: string,
     position: number
   ): Promise<void> {
     const supabase = await createClient()
 
     const { error } = await supabase
       .from("tasks")
-      .update({ status, position })
+      .update({
+        column_id: columnId,
+        status: columnId, // legacy fallback
+        position,
+      })
       .eq("id", taskId)
 
     if (error) {
@@ -195,20 +202,23 @@ export class TaskService {
   }
 
   /**
-   * Batch update positions for multiple tasks in a column.
-   * Used after drag-and-drop to reindex affected tasks.
+   * Batch update positions for multiple tasks.
+   * Deprecated but kept for type compatibility if referenced elsewhere.
    */
   static async batchUpdatePositions(
     updates: { id: string; status: TaskStatus; position: number }[]
   ): Promise<void> {
     const supabase = await createClient()
 
-    // Execute all updates concurrently for speed
     await Promise.all(
       updates.map(async ({ id, status, position }) => {
         const { error } = await supabase
           .from("tasks")
-          .update({ status, position })
+          .update({
+            column_id: status,
+            status,
+            position,
+          })
           .eq("id", id);
         if (error) {
           console.error(`Error updating position for task ${id}:`, error);
@@ -228,6 +238,7 @@ function mapTask(row: any, assigneeData: any): Task {
     title: row.title,
     description: row.description,
     status: row.status || "todo",
+    columnId: row.column_id,
     priority: row.priority || "medium",
     position: row.position ?? 0,
     assigneeId: row.assignee_id || row.assigned_to || null,
@@ -241,3 +252,4 @@ function mapTask(row: any, assigneeData: any): Task {
       : undefined,
   }
 }
+

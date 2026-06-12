@@ -1,21 +1,19 @@
 import { useState, useEffect, useTransition, useOptimistic } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useTasksRealtime } from "./use-tasks-realtime"
-import type { Project, Task, TaskStatus, TaskPriority } from "../types/project.types"
+import { useBoardRealtime } from "./use-board-realtime"
+import type { Project, Task, Column, TaskStatus, TaskPriority } from "../types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { createProjectAction } from "../actions/create-project.action"
 import { createTaskAction } from "../actions/create-task.action"
-import { updateTaskStatusAction } from "../actions/update-task-status.action"
 import { updateTaskAssigneeAction } from "../actions/update-task-assignee.action"
 import { deleteTaskAction } from "../actions/delete-task.action"
 import { deleteProjectAction } from "../actions/delete-project.action"
 import { addProjectMemberAction } from "../actions/add-project-member.action"
 import { removeProjectMemberAction } from "../actions/remove-project-member.action"
-import { batchUpdateTaskPositionsAction } from "../actions/batch-update-task-positions.action"
-
+import { moveTaskAction } from "../actions/move-task.action"
 
 export interface UseProjectBoardProps {
-  projects: (Project & { tasks: Task[] })[]
+  projects: (Project & { tasks: Task[]; columns: Column[] })[]
   workspaceId: string
   members: WorkspaceMember[]
   currentUserId?: string
@@ -45,24 +43,21 @@ export function useProjectBoard({
     (
       state,
       action:
-        | { type: "update_task_status"; taskId: string; status: TaskStatus }
         | { type: "update_task_assignee"; taskId: string; assigneeId: string | null }
         | { type: "delete_task"; taskId: string }
         | { type: "delete_project"; projectId: string }
         | { type: "add_project_member"; projectId: string; userId: string }
         | { type: "remove_project_member"; projectId: string; userId: string }
-        | { type: "create_project"; project: Project & { tasks: Task[] } }
+        | { type: "create_project"; project: Project & { tasks: Task[]; columns: Column[] } }
         | { type: "create_task"; projectId: string; task: Task }
-        | { type: "reorder_tasks"; projectId: string; updates: { id: string; status: TaskStatus; position: number }[] }
+        | { type: "move_task"; taskId: string; columnId: string; position: number }
+        | { type: "create_column"; projectId: string; column: Column }
+        | { type: "rename_column"; columnId: string; name: string }
+        | { type: "move_column"; columnId: string; position: number }
+        | { type: "delete_column"; columnId: string; action: "move" | "delete"; targetColumnId?: string }
+        | { type: "update_project"; projectId: string; name: string; description?: string }
     ) => {
       switch (action.type) {
-        case "update_task_status":
-          return state.map((p) => ({
-            ...p,
-            tasks: p.tasks.map((t) =>
-              t.id === action.taskId ? { ...t, status: action.status } : t
-            ),
-          }))
         case "update_task_assignee": {
           const member = members.find((m) => m.userId === action.assigneeId)
           const assignee = member
@@ -92,6 +87,12 @@ export function useProjectBoard({
           }))
         case "delete_project":
           return state.filter((p) => p.id !== action.projectId)
+        case "update_project":
+          return state.map((p) =>
+            p.id === action.projectId
+              ? { ...p, name: action.name, description: action.description || null }
+              : p
+          )
         case "add_project_member":
           return state.map((p) =>
             p.id === action.projectId
@@ -107,39 +108,117 @@ export function useProjectBoard({
         case "create_project":
           return [...state, action.project]
         case "create_task":
-          return state.map((p) =>
-            p.id === action.projectId
-              ? { ...p, tasks: [...p.tasks, action.task] }
-              : p
-          )
-        case "reorder_tasks": {
-          const updateMap = new Map(action.updates.map((u) => [u.id, u]))
-          return state.map((p) =>
-            p.id === action.projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.map((t) => {
-                    const update = updateMap.get(t.id)
-                    if (update) {
-                      return { ...t, status: update.status, position: update.position }
-                    }
-                    return t
-                  }),
-                }
-              : p
-          )
-        }
+          return state.map((p) => {
+            if (p.id !== action.projectId) return p;
+            const taskExists = p.tasks.some(
+              (t) => t.id === action.task.id || t.title.toLowerCase() === action.task.title.toLowerCase()
+            );
+            if (taskExists) return p;
+            return { ...p, tasks: [...p.tasks, action.task] };
+          });
+        case "move_task":
+          return state.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === action.taskId
+                ? { ...t, columnId: action.columnId, status: action.columnId, position: action.position }
+                : t
+            ),
+          }));
+        case "create_column":
+          return state.map((p) => {
+            if (p.id !== action.projectId) return p;
+            const columnExists = (p.columns || []).some(
+              (c) => c.id === action.column.id || c.name.toLowerCase() === action.column.name.toLowerCase()
+            );
+            if (columnExists) return p;
+            return { ...p, columns: [...(p.columns || []), action.column] };
+          });
+        case "rename_column":
+          return state.map((p) => ({
+            ...p,
+            columns: (p.columns || []).map((c) =>
+              c.id === action.columnId ? { ...c, name: action.name } : c
+            ),
+          }))
+        case "move_column":
+          return state.map((p) => ({
+            ...p,
+            columns: (p.columns || []).map((c) =>
+              c.id === action.columnId ? { ...c, position: action.position } : c
+            ),
+          }))
+        case "delete_column":
+          return state.map((p) => {
+            const newColumns = (p.columns || []).filter((c) => c.id !== action.columnId)
+            let newTasks = p.tasks
+            if (action.action === "delete") {
+              newTasks = p.tasks.filter((t) => t.columnId !== action.columnId)
+            } else if (action.action === "move" && action.targetColumnId) {
+              newTasks = p.tasks.map((t) =>
+                t.columnId === action.columnId
+                  ? { ...t, columnId: action.targetColumnId!, status: action.targetColumnId! }
+                  : t
+              )
+            }
+            return {
+              ...p,
+              columns: newColumns,
+              tasks: newTasks,
+            }
+          })
         default:
           return state
       }
     }
   )
 
-  // Realtime subscription using the refactored useTasksRealtime hook
-  useTasksRealtime({
+  // Realtime subscription using the single board realtime reconciler
+  useBoardRealtime({
     projectId: activeProjectId,
     members,
-    onInsert: (newTask) => {
+    onColumnInsert: (newCol) => {
+      setCurrentProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === activeProjectId) {
+            const exists = (p.columns || []).some((c) => c.id === newCol.id)
+            if (exists) return p
+            return {
+              ...p,
+              columns: [...(p.columns || []), newCol],
+            }
+          }
+          return p
+        })
+      )
+    },
+    onColumnUpdate: (updatedCol) => {
+      setCurrentProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === activeProjectId) {
+            return {
+              ...p,
+              columns: (p.columns || []).map((c) => (c.id === updatedCol.id ? updatedCol : c)),
+            }
+          }
+          return p
+        })
+      )
+    },
+    onColumnDelete: (deletedColId) => {
+      setCurrentProjects((prev) =>
+        prev.map((p) => {
+          if (p.id === activeProjectId) {
+            return {
+              ...p,
+              columns: (p.columns || []).filter((c) => c.id !== deletedColId),
+            }
+          }
+          return p
+        })
+      )
+    },
+    onTaskInsert: (newTask) => {
       setCurrentProjects((prev) =>
         prev.map((p) => {
           if (p.id === activeProjectId) {
@@ -154,7 +233,7 @@ export function useProjectBoard({
         })
       )
     },
-    onUpdate: (updatedTask) => {
+    onTaskUpdate: (updatedTask) => {
       setCurrentProjects((prev) =>
         prev.map((p) => {
           if (p.id === activeProjectId) {
@@ -167,7 +246,7 @@ export function useProjectBoard({
         })
       )
     },
-    onDelete: (deletedTaskId) => {
+    onTaskDelete: (deletedTaskId) => {
       setCurrentProjects((prev) =>
         prev.map((p) => {
           if (p.id === activeProjectId) {
@@ -198,6 +277,7 @@ export function useProjectBoard({
 
   // Modal State Variables
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false)
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null)
   const [isManageMembersOpen, setIsManageMembersOpen] = useState(false)
   const [createTaskProjectId, setCreateTaskProjectId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -206,7 +286,7 @@ export function useProjectBoard({
     name: string
   } | null>(null)
 
-  const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("todo")
+  const [newTaskStatus, setNewTaskStatus] = useState<string>("todo")
 
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -259,6 +339,7 @@ export function useProjectBoard({
         status: "active" as const,
         createdAt: new Date().toISOString(),
         tasks: [],
+        columns: [],
         memberUserIds: [currentUserId || ""],
       }
       setOptimisticProjects({ type: "create_project", project: tempProject })
@@ -288,16 +369,19 @@ export function useProjectBoard({
     startTransition(async () => {
       const selectedAssignee = members.find((m) => m.userId === assigneeId)?.profile || null
       const targetProject = optimisticProjects.find((p) => p.id === createTaskProjectId)
+      const columnId = status || (targetProject?.columns?.[0]?.id ?? "todo")
+
       const nextPosition = targetProject
-        ? targetProject.tasks.filter((t) => t.status === (status || "todo")).length
-        : 0
+        ? (targetProject.tasks.filter((t) => t.columnId === columnId).reduce((max, t) => Math.max(max, t.position), 0) + 1000.0)
+        : 1000.0
 
       const tempTask = {
         id: "temp-" + Date.now(),
         projectId: createTaskProjectId,
         title,
         description: description || null,
-        status: status || "todo",
+        status: columnId,
+        columnId,
         priority: priority || "medium",
         position: nextPosition,
         assigneeId: assigneeId || null,
@@ -321,7 +405,7 @@ export function useProjectBoard({
         projectId: tempTask.projectId,
         title,
         description,
-        status: tempTask.status,
+        columnId: tempTask.columnId,
         priority: tempTask.priority,
         assigneeId: assigneeId || undefined,
       })
@@ -333,20 +417,8 @@ export function useProjectBoard({
     })
   }
 
-  const handleStatusChange = (taskId: string, status: TaskStatus) => {
-    setErrorMsg(null)
-    startTransition(async () => {
-      setOptimisticProjects({ type: "update_task_status", taskId, status })
-      const res = await updateTaskStatusAction(taskId, status)
-      if (res.success) {
-        router.refresh()
-      } else {
-        setErrorMsg(res.error || "Failed to update task status.")
-      }
-    })
-  }
-
   const handleAssigneeChange = (taskId: string, assigneeId: string | null) => {
+    if (taskId.startsWith("temp-")) return
     setErrorMsg(null)
     startTransition(async () => {
       setOptimisticProjects({ type: "update_task_assignee", taskId, assigneeId })
@@ -359,36 +431,148 @@ export function useProjectBoard({
     })
   }
 
-  const cycleTaskStatus = (taskId: string, currentStatus: TaskStatus) => {
-    const nextStatus: TaskStatus =
-      currentStatus === "todo"
-        ? "in_progress"
-        : currentStatus === "in_progress"
-          ? "done"
-          : "todo"
-    handleStatusChange(taskId, nextStatus)
-  }
-
-  const handleTasksReorder = (
-    updates: { id: string; status: TaskStatus; position: number }[],
-    _draggedTaskId?: string
-  ) => {
-    if (!activeProject) return
+  const handleMoveTask = (taskId: string, columnId: string, position: number) => {
+    if (taskId.startsWith("temp-")) return
     setErrorMsg(null)
     startTransition(async () => {
-      setOptimisticProjects({
-        type: "reorder_tasks",
-        projectId: activeProject.id,
-        updates,
-      })
-
-      const res = await batchUpdateTaskPositionsAction(updates)
+      setOptimisticProjects({ type: "move_task", taskId, columnId, position })
+      const res = await moveTaskAction(taskId, columnId, position)
       if (res.success) {
         router.refresh()
       } else {
-        setErrorMsg(res.error || "Failed to save task positions.")
+        setErrorMsg(res.error || "Failed to move task.")
       }
     })
+  }
+
+  const handleCreateColumn = (name: string) => {
+    if (!activeProjectId) return
+    setErrorMsg(null)
+    const activeProj = currentProjects.find((p) => p.id === activeProjectId)
+    if (activeProj && (activeProj.columns || []).length >= 5) {
+      setErrorMsg("A project cannot have more than 5 columns.")
+      return
+    }
+    startTransition(async () => {
+      const nextPos = activeProj
+        ? (activeProj.columns || []).reduce((max, c) => Math.max(max, c.position), 0) + 1000.0
+        : 1000.0
+      const tempColumn: Column = {
+        id: "temp-" + Date.now(),
+        boardId: activeProjectId,
+        name,
+        position: nextPos,
+        createdAt: new Date().toISOString(),
+      }
+      setOptimisticProjects({ type: "create_column", projectId: activeProjectId, column: tempColumn })
+      const { createColumnAction } = await import("../actions/create-column.action")
+      const res = await createColumnAction(activeProjectId, name)
+      if (res.success) {
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to create column.")
+      }
+    })
+  }
+
+  const handleRenameColumn = (columnId: string, name: string) => {
+    setErrorMsg(null)
+    startTransition(async () => {
+      setOptimisticProjects({ type: "rename_column", columnId, name })
+      const { updateColumnNameAction } = await import("../actions/update-column-name.action")
+      const res = await updateColumnNameAction(columnId, name)
+      if (res.success) {
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to rename column.")
+      }
+    })
+  }
+
+  const handleMoveColumn = (columnId: string, position: number) => {
+    setErrorMsg(null)
+    startTransition(async () => {
+      setOptimisticProjects({ type: "move_column", columnId, position })
+      const { moveColumnAction } = await import("../actions/move-column.action")
+      const res = await moveColumnAction(columnId, position)
+      if (res.success) {
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to move column.")
+      }
+    })
+  }
+
+  const handleDeleteColumn = (columnId: string, action: "move" | "delete", targetColumnId?: string) => {
+    setErrorMsg(null)
+    startTransition(async () => {
+      setOptimisticProjects({ type: "delete_column", columnId, action, targetColumnId })
+      const { deleteColumnAction } = await import("../actions/delete-column.action")
+      const res = await deleteColumnAction(columnId, action, targetColumnId)
+      if (res.success) {
+        setCurrentProjects((prev) =>
+          prev.map((p) => {
+            if (p.id === activeProjectId) {
+              const newColumns = (p.columns || []).filter((c) => c.id !== columnId)
+              let newTasks = p.tasks
+              if (action === "delete") {
+                newTasks = p.tasks.filter((t) => t.columnId !== columnId)
+              } else if (action === "move" && targetColumnId) {
+                newTasks = p.tasks.map((t) =>
+                  t.columnId === columnId
+                    ? { ...t, columnId: targetColumnId, status: targetColumnId }
+                    : t
+                )
+              }
+              return {
+                ...p,
+                columns: newColumns,
+                tasks: newTasks,
+              }
+            }
+            return p
+          })
+        )
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to delete column.")
+      }
+    })
+  }
+
+  const handleUpdateProject = (projectId: string, name: string, description?: string) => {
+    setErrorMsg(null)
+    startTransition(async () => {
+      setOptimisticProjects({ type: "update_project", projectId, name, description })
+      setProjectToEdit(null)
+      const { updateProjectAction } = await import("../actions/update-project.action")
+      const res = await updateProjectAction(projectId, name, description)
+      if (res.success) {
+        setCurrentProjects((prev) =>
+          prev.map((p) =>
+            p.id === projectId
+              ? { ...p, name, description: description || null }
+              : p
+          )
+        )
+        router.refresh()
+      } else {
+        setErrorMsg(res.error || "Failed to update project.")
+      }
+    })
+  }
+
+  const cycleTaskStatus = (taskId: string, currentStatus: string) => {
+    const project = currentProjects.find((p) => p.tasks.some((t) => t.id === taskId))
+    if (!project) return
+    const cols = [...(project.columns || [])].sort((a, b) => a.position - b.position)
+    if (cols.length === 0) return
+    const currentIndex = cols.findIndex((c) => c.id === currentStatus)
+    const nextIndex = (currentIndex + 1) % cols.length
+    const nextColumn = cols[nextIndex]
+    const targetTasks = project.tasks.filter((t) => t.columnId === nextColumn.id)
+    const nextPosition = (targetTasks[targetTasks.length - 1]?.position ?? 0) + 1000.0
+    handleMoveTask(taskId, nextColumn.id, nextPosition)
   }
 
   const handleDeleteConfirmSubmit = () => {
@@ -427,6 +611,8 @@ export function useProjectBoard({
     isWorkspaceMember,
     isCreateProjectOpen,
     setIsCreateProjectOpen,
+    projectToEdit,
+    setProjectToEdit,
     isManageMembersOpen,
     setIsManageMembersOpen,
     createTaskProjectId,
@@ -442,10 +628,14 @@ export function useProjectBoard({
     handleRemoveProjectMember,
     handleCreateProject,
     handleCreateTask,
-    handleStatusChange,
     handleAssigneeChange,
+    handleMoveTask,
     cycleTaskStatus,
-    handleTasksReorder,
+    handleCreateColumn,
+    handleRenameColumn,
+    handleMoveColumn,
+    handleDeleteColumn,
+    handleUpdateProject,
     handleDeleteConfirmSubmit,
   }
 }

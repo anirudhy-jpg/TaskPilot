@@ -7,7 +7,10 @@ import { TaskService } from "@/features/project/services/task.service"
 import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 import { WorkspaceShell } from "@/features/workspace/components/workspace-shell"
 
+import { ColumnService } from "@/features/project/services/column.service"
+
 export const dynamic = "force-dynamic"
+
 
 export default async function WorkspaceLayout({
   children,
@@ -69,7 +72,8 @@ export default async function WorkspaceLayout({
       projectsWithTasks = await Promise.all(
         projects.map(async (project) => {
           const tasks = await TaskService.getTasksByProject(project.id)
-          return { ...project, tasks }
+          const columns = await ColumnService.getColumnsByProject(project.id)
+          return { ...project, tasks, columns }
         })
       )
     } catch (err) {

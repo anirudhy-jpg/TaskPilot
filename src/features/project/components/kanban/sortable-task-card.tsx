@@ -56,6 +56,7 @@ export const SortableTaskCard = React.memo(
     return (
       prevProps.task.id === nextProps.task.id &&
       prevProps.task.status === nextProps.task.status &&
+      prevProps.task.columnId === nextProps.task.columnId &&
       prevProps.task.position === nextProps.task.position &&
       prevProps.task.title === nextProps.task.title &&
       prevProps.task.description === nextProps.task.description &&

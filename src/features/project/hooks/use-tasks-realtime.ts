@@ -14,6 +14,7 @@ export function mapRealtimeTask(row: Record<string, any>, members: WorkspaceMemb
     title: row.title,
     description: row.description || null,
     status: (row.status as TaskStatus) || "todo",
+    columnId: row.column_id,
     priority: (row.priority as TaskPriority) || "medium",
     position: row.position ?? 0,
     assigneeId,

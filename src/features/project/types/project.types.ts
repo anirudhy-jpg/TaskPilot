@@ -1,5 +1,13 @@
 export type ProjectStatus = "active" | "archived" | "completed"
 
+export interface Column {
+  id: string
+  boardId: string
+  name: string
+  position: number
+  createdAt: string
+}
+
 export interface Project {
   id: string
   workspaceId: string
@@ -11,10 +19,11 @@ export interface Project {
   creatorEmail?: string | null
   creatorName?: string | null
   tasks?: Task[]
+  columns?: Column[]
   memberUserIds?: string[]
 }
 
-export type TaskStatus = "todo" | "in_progress" | "done"
+export type TaskStatus = string
 export type TaskPriority = "low" | "medium" | "high"
 
 export interface Task {
@@ -22,9 +31,10 @@ export interface Task {
   projectId: string
   title: string
   description: string | null
-  status: TaskStatus
+  status: TaskStatus // mapped client-side to columnId/status representation
+  columnId: string
   priority: TaskPriority
-  position: number
+  position: number // double precision fractional index
   assigneeId: string | null
   createdAt: string
   assignee?: {
@@ -40,3 +50,4 @@ export interface WorkspaceAnalytics {
   tasksByStatus: { name: string; value: number; color: string }[]
   projectTaskCounts: { name: string; total: number; completed: number }[]
 }
+

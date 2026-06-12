@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/supabase/server"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { ProjectService } from "@/features/project/services/project.service"
 import { TaskService } from "@/features/project/services/task.service"
+import { ColumnService } from "@/features/project/services/column.service"
 import { MemberService } from "@/features/workspace/services/member.service"
 import { ProjectsList } from "@/features/project/components/projects-list"
 
@@ -18,12 +19,13 @@ export default async function ProjectsPage() {
   const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
   const members = await MemberService.getMembersByWorkspace(workspace.id)
 
-  // Fetch tasks and memberUserIds for each project
+  // Fetch tasks, columns, and memberUserIds for each project
   const projectsWithTasks = await Promise.all(
     projects.map(async (project) => {
       const tasks = await TaskService.getTasksByProject(project.id)
+      const columns = await ColumnService.getColumnsByProject(project.id)
       const memberUserIds = await ProjectService.getProjectMemberUserIds(project.id)
-      return { ...project, tasks, memberUserIds }
+      return { ...project, tasks, columns, memberUserIds }
     })
   )
 
@@ -31,3 +33,4 @@ export default async function ProjectsPage() {
     <ProjectsList projects={projectsWithTasks} workspaceId={workspace.id} members={members} currentUserId={user.id} />
   )
 }
+

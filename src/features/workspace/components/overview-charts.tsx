@@ -24,6 +24,12 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
   const { tasksByStatus, projectTaskCounts, totalProjects, totalTasks } =
     analytics
 
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const hasTaskData = tasksByStatus.some((d) => d.value > 0)
   const hasProjectData = projectTaskCounts.length > 0
 
@@ -69,45 +75,51 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse" />
           Tasks by Status
         </h3>
-        {hasTaskData ? (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={tasksByStatus}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={90}
-                  paddingAngle={4}
-                  dataKey="value"
-                  strokeWidth={0}
-                >
-                  {tasksByStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "12px",
-                    border: "1px solid rgba(45, 74, 62, 0.1)",
-                    fontSize: "11px",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
-                    background: "rgba(255, 255, 255, 0.95)",
-                    backdropFilter: "blur(4px)",
-                  }}
-                />
-                <Legend
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+        {mounted ? (
+          hasTaskData ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={tasksByStatus}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
+                    {tasksByStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "12px",
+                      border: "1px solid rgba(45, 74, 62, 0.1)",
+                      fontSize: "11px",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+                      background: "rgba(255, 255, 255, 0.95)",
+                      backdropFilter: "blur(4px)",
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState message="No tasks yet. Create a project and add tasks to see analytics." />
+          )
         ) : (
-          <EmptyState message="No tasks yet. Create a project and add tasks to see analytics." />
+          <div className="h-64 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+          </div>
         )}
       </div>
 
@@ -117,65 +129,71 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse" />
           Tasks per Project
         </h3>
-        {hasProjectData ? (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={projectTaskCounts}
-                margin={{ top: 5, right: 10, left: -15, bottom: 5 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(148, 163, 184, 0.08)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={{ stroke: "rgba(148, 163, 184, 0.15)" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "12px",
-                    border: "1px solid rgba(45, 74, 62, 0.1)",
-                    fontSize: "11px",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
-                    background: "rgba(255, 255, 255, 0.95)",
-                    backdropFilter: "blur(4px)",
-                  }}
-                />
-                <Legend
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
-                />
-                <Bar
-                  dataKey="total"
-                  name="Total Tasks"
-                  fill="#cbd5e1"
-                  radius={[4, 4, 0, 0]}
-                  barSize={28}
-                />
-                <Bar
-                  dataKey="completed"
-                  name="Completed"
-                  fill="#f59e0b"
-                  radius={[4, 4, 0, 0]}
-                  barSize={28}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {mounted ? (
+          hasProjectData ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={projectTaskCounts}
+                  margin={{ top: 5, right: 10, left: -15, bottom: 5 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(148, 163, 184, 0.08)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={{ stroke: "rgba(148, 163, 184, 0.15)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "12px",
+                      border: "1px solid rgba(45, 74, 62, 0.1)",
+                      fontSize: "11px",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
+                      background: "rgba(255, 255, 255, 0.95)",
+                      backdropFilter: "blur(4px)",
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+                  />
+                  <Bar
+                    dataKey="total"
+                    name="Total Tasks"
+                    fill="#cbd5e1"
+                    radius={[4, 4, 0, 0]}
+                    barSize={28}
+                  />
+                  <Bar
+                    dataKey="completed"
+                    name="Completed"
+                    fill="#f59e0b"
+                    radius={[4, 4, 0, 0]}
+                    barSize={28}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState message="No projects yet. Create your first project to see task analytics." />
+          )
         ) : (
-          <EmptyState message="No projects yet. Create your first project to see task analytics." />
+          <div className="h-64 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+          </div>
         )}
       </div>
     </div>

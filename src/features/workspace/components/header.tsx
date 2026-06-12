@@ -16,6 +16,8 @@ import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
 import { SwitchWorkspaceModal } from "./modals/switch-workspace-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 
+import { createClient } from "@/lib/supabase/client"
+
 interface HeaderProps {
   profile: UserProfile | null
   user: {
@@ -57,15 +59,44 @@ export function Header({
   const handleLeaveConfirm = async () => {
     if (!workspaceId) return
     setIsLeaving(true)
+    if (typeof window !== "undefined") {
+      (window as any).isLeavingWorkspace = true
+    }
+
+    // Broadcast leave event to remove member instantly on owner/other clients
+    try {
+      const supabase = createClient()
+      const channel = supabase.channel(`room:${workspaceId}`)
+      await channel.subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.send({
+            type: "broadcast",
+            event: "evict",
+            payload: { userId: currentUserId },
+          })
+          await supabase.removeChannel(channel)
+        }
+      })
+    } catch (err) {
+      console.warn("Failed to broadcast leave event:", err)
+    }
+
     try {
       const res = await leaveWorkspaceAction(workspaceId)
       if (res.success) {
         setIsLeaveModalOpen(false)
-        window.location.href = "/workspace"
+        router.push("/workspace")
+        router.refresh()
       } else {
+        if (typeof window !== "undefined") {
+          (window as any).isLeavingWorkspace = false
+        }
         alert(res.error || "Failed to leave workspace.")
       }
     } catch {
+      if (typeof window !== "undefined") {
+        (window as any).isLeavingWorkspace = false
+      }
       alert("An unexpected error occurred.")
     } finally {
       setIsLeaving(false)
@@ -76,7 +107,8 @@ export function Header({
     setIsSwitchingWorkspace(true)
     const res = await switchActiveWorkspaceAction(targetId)
     if (res.success) {
-      window.location.href = "/workspace"
+      router.push("/workspace")
+      router.refresh()
     } else {
       setIsSwitchingWorkspace(false)
       throw new Error(res.error || "Failed to switch workspace.")

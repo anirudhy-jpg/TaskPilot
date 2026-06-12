@@ -1,6 +1,6 @@
 import React from "react"
 import Link from "next/link"
-import { UserPlus, Trash2, Plus } from "lucide-react"
+import { UserPlus, Trash2, Plus, MoreVertical, Edit2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Project } from "../types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
@@ -12,7 +12,9 @@ interface ProjectBoardHeaderProps {
   isWorkspaceMember: boolean
   onManageMembers: () => void
   onDeleteProject: (target: { type: "project" | "task"; id: string; name: string }) => void
+  onEditProject: () => void
   onNewProject: () => void
+  onAddColumn?: () => void
 }
 
 export function ProjectBoardHeader({
@@ -22,8 +24,25 @@ export function ProjectBoardHeader({
   isWorkspaceMember,
   onManageMembers,
   onDeleteProject,
+  onEditProject,
   onNewProject,
+  onAddColumn,
 }: ProjectBoardHeaderProps) {
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const menuRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (isMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isMenuOpen])
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
       <div>
@@ -71,19 +90,43 @@ export function ProjectBoardHeader({
                 </div>
 
                 {!isWorkspaceMember && (
-                  <button
-                    onClick={() =>
-                      onDeleteProject({
-                        type: "project",
-                        id: activeProject.id,
-                        name: activeProject.name,
-                      })
-                    }
-                    className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                    title="Delete project"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div ref={menuRef} className="relative shrink-0 flex items-center">
+                    <button
+                      onClick={() => setIsMenuOpen(!isMenuOpen)}
+                      className="text-slate-400 hover:text-slate-650 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
+                      title="Project Options"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                    {isMenuOpen && (
+                      <div className="absolute left-0 mt-1.5 top-8 w-36 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
+                        <button
+                          onClick={() => {
+                            onEditProject()
+                            setIsMenuOpen(false)
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Edit2 size={13} />
+                          Edit details
+                        </button>
+                        <button
+                          onClick={() => {
+                            onDeleteProject({
+                              type: "project",
+                              id: activeProject.id,
+                              name: activeProject.name,
+                            })
+                            setIsMenuOpen(false)
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-red-655 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Trash2 size={13} />
+                          Delete project
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -112,20 +155,41 @@ export function ProjectBoardHeader({
 
       <div className="flex items-center gap-2 shrink-0">
         {activeProject ? (
-          <Link href="/projects">
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-amber-500/20 hover:bg-amber-500/5 text-amber-600 cursor-pointer text-xs font-semibold rounded-xl"
-            >
-              <span>Back to Projects</span>
-            </Button>
-          </Link>
+          <>
+            {onAddColumn && (() => {
+              const isLimitReached = (activeProject?.columns || []).length >= 5;
+              return (
+                <Button
+                  size="sm"
+                  className={`shadow-3xs text-xs font-black rounded-xl px-4 py-2 ${
+                    isLimitReached
+                      ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed hover:bg-slate-100"
+                      : "bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer"
+                  }`}
+                  onClick={isLimitReached ? undefined : onAddColumn}
+                  disabled={isLimitReached}
+                  title={isLimitReached ? "A project cannot have more than 5 columns" : undefined}
+                >
+                  <Plus size={14} className="mr-1.5" />
+                  <span>Add Column</span>
+                </Button>
+              );
+            })()}
+            <Link href="/projects">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-500/20 hover:bg-amber-500/5 text-amber-600 cursor-pointer text-xs font-semibold rounded-xl"
+              >
+                <span>Back to Projects</span>
+              </Button>
+            </Link>
+          </>
         ) : (
           !isWorkspaceMember && (
             <Button
               size="sm"
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-3xs text-xs font-black rounded-xl px-4 py-2"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-955 cursor-pointer shadow-3xs text-xs font-black rounded-xl px-4 py-2"
               onClick={onNewProject}
             >
               <Plus size={14} className="mr-1.5" />

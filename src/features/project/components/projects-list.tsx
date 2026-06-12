@@ -4,7 +4,7 @@ import React, { Suspense } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { Circle, Clock, CheckCircle2, X } from "lucide-react";
-import type { Project, Task, TaskStatus } from "../types/project.types";
+import type { Project, Task, TaskStatus, Column } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 
 // Import custom hook
@@ -15,8 +15,10 @@ import { ProjectBoardHeader } from "./project-board-header";
 import { ProjectsDashboardGrid } from "./projects-dashboard-grid";
 import { CreateProjectModal } from "./modals/create-project-modal";
 import { CreateTaskModal } from "./modals/create-task-modal";
+import { CreateColumnModal } from "./modals/create-column-modal";
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal";
 import { ManageProjectMembersModal } from "./modals/manage-project-members-modal";
+import { EditProjectModal } from "./modals/edit-project-modal";
 
 const KanbanBoard = dynamic(
   () => import("./kanban-board").then((mod) => mod.KanbanBoard),
@@ -40,7 +42,7 @@ const KanbanBoard = dynamic(
 );
 
 interface ProjectsListProps {
-  projects: (Project & { tasks: Task[] })[];
+  projects: (Project & { tasks: Task[]; columns: Column[] })[];
   workspaceId: string;
   members: WorkspaceMember[];
   currentUserId?: string;
@@ -73,6 +75,8 @@ function BoardContent(props: ProjectsListProps) {
     isWorkspaceMember,
     isCreateProjectOpen,
     setIsCreateProjectOpen,
+    projectToEdit,
+    setProjectToEdit,
     isManageMembersOpen,
     setIsManageMembersOpen,
     createTaskProjectId,
@@ -88,12 +92,18 @@ function BoardContent(props: ProjectsListProps) {
     handleRemoveProjectMember,
     handleCreateProject,
     handleCreateTask,
-    handleStatusChange,
     handleAssigneeChange,
+    handleMoveTask,
     cycleTaskStatus,
-    handleTasksReorder,
+    handleCreateColumn,
+    handleRenameColumn,
+    handleMoveColumn,
+    handleDeleteColumn,
+    handleUpdateProject,
     handleDeleteConfirmSubmit,
   } = useProjectBoard(props);
+
+  const [isCreateColumnOpen, setIsCreateColumnOpen] = React.useState(false);
 
   return (
     <div className="space-y-6 flex flex-col h-full w-full select-none relative">
@@ -113,7 +123,9 @@ function BoardContent(props: ProjectsListProps) {
         isWorkspaceMember={isWorkspaceMember}
         onManageMembers={() => setIsManageMembersOpen(true)}
         onDeleteProject={(target) => setDeleteTarget(target)}
+        onEditProject={() => setProjectToEdit(activeProject || null)}
         onNewProject={() => setIsCreateProjectOpen(true)}
+        onAddColumn={() => setIsCreateColumnOpen(true)}
       />
 
       {errorMsg && (
@@ -136,16 +148,19 @@ function BoardContent(props: ProjectsListProps) {
             project={activeProject}
             members={props.members}
             currentUserId={props.currentUserId}
-            onAddTask={(status) => {
-              setNewTaskStatus(status);
+            onAddTask={(columnId) => {
+              setNewTaskStatus(columnId);
               setCreateTaskProjectId(activeProject.id);
             }}
             onDeleteTask={(id, title) =>
               setDeleteTarget({ type: "task", id, name: title })
             }
-            onStatusChange={handleStatusChange}
+            onMoveTask={handleMoveTask}
+            onCreateColumn={handleCreateColumn}
+            onRenameColumn={handleRenameColumn}
+            onMoveColumn={handleMoveColumn}
+            onDeleteColumn={handleDeleteColumn}
             onAssigneeChange={handleAssigneeChange}
-            onTasksReorder={handleTasksReorder}
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */
@@ -158,6 +173,7 @@ function BoardContent(props: ProjectsListProps) {
             setCreateTaskProjectId={setCreateTaskProjectId}
             setIsCreateProjectOpen={setIsCreateProjectOpen}
             isWorkspaceMember={isWorkspaceMember}
+            onEditProject={(project) => setProjectToEdit(project)}
           />
         )}
       </div>
@@ -171,6 +187,18 @@ function BoardContent(props: ProjectsListProps) {
         onCreate={handleCreateProject}
       />
 
+      <EditProjectModal
+        isOpen={!!projectToEdit}
+        onClose={() => setProjectToEdit(null)}
+        isPending={isPending}
+        project={projectToEdit}
+        onUpdate={(name, description) => {
+          if (projectToEdit) {
+            handleUpdateProject(projectToEdit.id, name, description);
+          }
+        }}
+      />
+
       <CreateTaskModal
         key={createTaskProjectId ? `${createTaskProjectId}-${newTaskStatus}` : "closed"}
         isOpen={!!createTaskProjectId}
@@ -180,6 +208,7 @@ function BoardContent(props: ProjectsListProps) {
         }
         isPending={isPending}
         initialStatus={newTaskStatus}
+        columns={optimisticProjects.find((p) => p.id === createTaskProjectId)?.columns || []}
         onCreate={handleCreateTask}
       />
 
@@ -201,6 +230,16 @@ function BoardContent(props: ProjectsListProps) {
         eligibleMembers={eligibleMembers}
         onAddMember={handleAddProjectMember}
         onRemoveMember={handleRemoveProjectMember}
+      />
+
+      <CreateColumnModal
+        isOpen={isCreateColumnOpen}
+        onClose={() => setIsCreateColumnOpen(false)}
+        isPending={isPending}
+        onCreate={(name) => {
+          handleCreateColumn(name);
+          setIsCreateColumnOpen(false);
+        }}
       />
     </div>
   );

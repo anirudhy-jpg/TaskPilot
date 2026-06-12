@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
+import { useRouter } from "next/navigation"
 import { X } from "lucide-react"
 
 interface EvictedModalProps {
@@ -7,6 +8,7 @@ interface EvictedModalProps {
 }
 
 export function EvictedModal({ isOpen }: EvictedModalProps) {
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -38,7 +40,8 @@ export function EvictedModal({ isOpen }: EvictedModalProps) {
 
         <button
           onClick={() => {
-            window.location.href = "/workspaces"
+            router.push("/workspaces")
+            router.refresh()
           }}
           className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black py-2.5 px-4 rounded-xl cursor-pointer shadow-3xs transition-all active:scale-[0.98] h-10 border-0 flex items-center justify-center"
         >

@@ -15,6 +15,8 @@ import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime"
 
+import { createClient } from "@/lib/supabase/client"
+
 interface WorkspacesClientProps {
   workspaces: Workspace[]
   activeWorkspaceId: string | null
@@ -68,11 +70,37 @@ export function WorkspacesClient({
     setLeavingId(workspaceId)
     setErrorMsg(null)
     setLeaveWorkspaceId(null)
+    if (typeof window !== "undefined") {
+      (window as any).isLeavingWorkspace = true
+    }
+
+    // Broadcast leave event to remove member instantly on owner/other clients
+    try {
+      const supabase = createClient()
+      const channel = supabase.channel(`room:${workspaceId}`)
+      channel.subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.send({
+            type: "broadcast",
+            event: "evict",
+            payload: { userId: currentUserId },
+          })
+          await supabase.removeChannel(channel)
+        }
+      })
+    } catch (err) {
+      console.warn("Failed to broadcast leave event:", err)
+    }
+
     startTransition(async () => {
       const res = await leaveWorkspaceAction(workspaceId)
       if (res.success) {
-        window.location.href = "/workspaces"
+        router.push("/workspaces")
+        router.refresh()
       } else {
+        if (typeof window !== "undefined") {
+          (window as any).isLeavingWorkspace = false
+        }
         setErrorMsg(res.error || "Failed to leave workspace.")
         setLeavingId(null)
       }
@@ -92,11 +120,18 @@ export function WorkspacesClient({
     setDeletingId(workspaceId)
     setErrorMsg(null)
     setDeleteWorkspaceId(null)
+    if (typeof window !== "undefined") {
+      (window as any).isLeavingWorkspace = true
+    }
     startTransition(async () => {
       const res = await deleteWorkspaceAction(workspaceId)
       if (res.success) {
-        window.location.href = "/workspaces"
+        router.push("/workspaces")
+        router.refresh()
       } else {
+        if (typeof window !== "undefined") {
+          (window as any).isLeavingWorkspace = false
+        }
         setErrorMsg(res.error || "Failed to delete workspace.")
         setDeletingId(null)
       }
@@ -107,7 +142,8 @@ export function WorkspacesClient({
   const handleSwitch = (workspaceId: string) => {
     if (workspaceId === activeWorkspaceId) {
       // Already active, just go back to overview
-      window.location.href = "/workspace"
+      router.push("/workspace")
+      router.refresh()
       return
     }
 
@@ -116,7 +152,8 @@ export function WorkspacesClient({
     startTransition(async () => {
       const res = await switchActiveWorkspaceAction(workspaceId)
       if (res.success) {
-        window.location.href = "/workspace"
+        router.push("/workspace")
+        router.refresh()
       } else {
         setErrorMsg(res.error || "Failed to switch active workspace.")
         setSwitchingId(null)
@@ -134,7 +171,8 @@ export function WorkspacesClient({
       const res = await createWorkspaceAction(newWorkspaceName.trim())
       if (res.success && res.workspaceId) {
         setNewWorkspaceName("")
-        window.location.href = "/workspace"
+        router.push("/workspace")
+        router.refresh()
       } else {
         setErrorMsg(res.error || "Failed to create workspace.")
       }

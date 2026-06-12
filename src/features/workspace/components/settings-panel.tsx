@@ -73,11 +73,15 @@ export function SettingsPanel({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-        <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Settings</h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Manage your profile and account settings.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
+        <div>
+          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
+            Settings
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Manage your profile and account settings.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">

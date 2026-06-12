@@ -1,25 +1,26 @@
 "use client";
 
 import React from "react";
-import { Plus, Trash2, Circle } from "lucide-react";
+import { Plus, Trash2, Circle, MoreVertical, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Project, Task, TaskStatus } from "../types/project.types";
+import type { Project, Task, TaskStatus, Column } from "../types/project.types";
 import { useRouter } from "next/navigation";
 
 interface ProjectsDashboardGridProps {
-  optimisticProjects: (Project & { tasks: Task[] })[];
+  optimisticProjects: (Project & { tasks: Task[]; columns?: Column[] })[];
   statusConfig: Record<
     TaskStatus,
     { label: string; color: string; icon: typeof Circle }
   >;
-  cycleTaskStatus: (taskId: string, currentStatus: TaskStatus) => void;
+  cycleTaskStatus: (taskId: string, currentStatus: string) => void;
   setDeleteTarget: (
     target: { type: "project" | "task"; id: string; name: string } | null
   ) => void;
-  setNewTaskStatus: (status: TaskStatus) => void;
+  setNewTaskStatus: (status: string) => void;
   setCreateTaskProjectId: (projectId: string | null) => void;
   setIsCreateProjectOpen: (open: boolean) => void;
   isWorkspaceMember?: boolean;
+  onEditProject: (project: Project) => void;
 }
 
 export function ProjectsDashboardGrid({
@@ -31,8 +32,22 @@ export function ProjectsDashboardGrid({
   setCreateTaskProjectId,
   setIsCreateProjectOpen,
   isWorkspaceMember = false,
+  onEditProject,
 }: ProjectsDashboardGridProps) {
   const router = useRouter();
+  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (activeMenuId && !(event.target as Element).closest(".project-card-menu")) {
+        setActiveMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeMenuId]);
 
   if (optimisticProjects.length === 0) {
     return (
@@ -89,20 +104,48 @@ export function ProjectsDashboardGrid({
                 </div>
                 {/* Delete Project Button */}
                 {!isWorkspaceMember && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTarget({
-                        type: "project",
-                        id: project.id,
-                        name: project.name,
-                      });
-                    }}
-                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50/10 border border-transparent hover:border-red-100 transition-all cursor-pointer"
-                    title="Delete project"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <div className="relative project-card-menu flex items-center shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(activeMenuId === project.id ? null : project.id);
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-655 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center border border-transparent hover:border-slate-200"
+                      title="Project Options"
+                    >
+                      <MoreVertical size={13} />
+                    </button>
+                    {activeMenuId === project.id && (
+                      <div className="absolute right-0 mt-1 top-6 w-32 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditProject(project);
+                            setActiveMenuId(null);
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Edit2 size={12} />
+                          Edit details
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget({
+                              type: "project",
+                              id: project.id,
+                              name: project.name,
+                            });
+                            setActiveMenuId(null);
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-red-655 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -136,7 +179,12 @@ export function ProjectsDashboardGrid({
                 <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1 scrollbar-thin">
                   {project.tasks && project.tasks.length > 0 ? (
                     project.tasks.map((task) => {
-                      const cfg = statusConfig[task.status];
+                      const activeCol = project.columns?.find((c) => c.id === task.columnId || c.id === task.status);
+                      const cfg = statusConfig[task.status as TaskStatus] || {
+                        label: activeCol ? activeCol.name : "To Do",
+                        color: "text-[#9bb0a5]",
+                        icon: Circle,
+                      };
                       const StatusIcon = cfg.icon;
 
                       return (

@@ -139,6 +139,24 @@ export class ProjectService {
       console.error("Exception during creator project member auto-assignment:", pmErr)
     }
 
+    // Seed default columns for the new project
+    try {
+      const defaultCols = [
+        { board_id: data.id, name: "To Do", position: 1000.0 },
+        { board_id: data.id, name: "In Progress", position: 2000.0 },
+        { board_id: data.id, name: "Done", position: 3000.0 }
+      ]
+      const { error: colError } = await supabase
+        .from("columns")
+        .insert(defaultCols)
+
+      if (colError) {
+        console.error("Failed to seed default columns for new project:", colError.message)
+      }
+    } catch (colErr) {
+      console.error("Exception during project column seeding:", colErr)
+    }
+
     return mapProject(data)
   }
 
@@ -196,6 +214,41 @@ export class ProjectService {
       }
     } catch (filterErr) {
       console.error("Error validating project access for user:", filterErr)
+    }
+
+    return mapProject(data)
+  }
+
+  /**
+   * Update project details.
+   */
+  static async updateProject(
+    id: string,
+    name: string,
+    description?: string
+  ): Promise<Project> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      throw new Error("Unauthorized")
+    }
+
+    const updateData: Record<string, unknown> = {
+      name,
+      description: description || null,
+    }
+
+    const { data, error } = await supabase
+      .from("projects")
+      .update(updateData)
+      .eq("id", id)
+      .select("id, workspace_id, name, description, created_by, created_at")
+      .single()
+
+    if (error) {
+      console.error("Error updating project:", error)
+      throw new Error(error.message)
     }
 
     return mapProject(data)
