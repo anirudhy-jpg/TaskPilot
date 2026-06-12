@@ -13,6 +13,7 @@ interface SelectProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  error?: boolean
 }
 
 export function Select({
@@ -22,6 +23,7 @@ export function Select({
   placeholder = "Select option...",
   disabled = false,
   className = "",
+  error = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,7 +50,11 @@ export function Select({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50 text-slate-800 text-left font-medium shadow-2xs hover:bg-slate-50/50 cursor-pointer transition-all duration-150"
+        className={`flex h-10 w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 text-slate-800 text-left font-medium shadow-2xs hover:bg-slate-50/50 cursor-pointer transition-all duration-150 ${
+          error
+            ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
+            : "border-slate-200 focus:ring-amber-500/20 focus:border-amber-500"
+        }`}
       >
         <span className="truncate">
           {selectedOption ? selectedOption.label : placeholder}

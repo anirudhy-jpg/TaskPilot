@@ -22,6 +22,10 @@ export async function createInvitationAction(
       return { success: false, error: "You must be logged in to invite members." }
     }
 
+    if (!projectId || !projectId.trim()) {
+      return { success: false, error: "Project assignment is required." }
+    }
+
     const inviteUrl = await InviteService.createInvitation(
       workspaceId,
       email,
