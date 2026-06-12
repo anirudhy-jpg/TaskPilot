@@ -3,11 +3,11 @@ import { requireUser } from "@/lib/supabase/server"
 import { ProfileService } from "@/features/auth/services/profile.service"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { ProjectService } from "@/features/project/services/project.service"
-import { TaskService } from "@/features/project/services/task.service"
+import { TaskService } from "@/features/tasks/services/task.service"
 import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 import { WorkspaceShell } from "@/features/workspace/components/workspace-shell"
 
-import { ColumnService } from "@/features/project/services/column.service"
+import { ColumnService } from "@/features/kanbanboard/services/column.service"
 
 export const dynamic = "force-dynamic"
 

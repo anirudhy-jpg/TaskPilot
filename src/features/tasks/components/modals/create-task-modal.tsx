@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
-import type { TaskStatus, TaskPriority, Column } from "../../types/project.types"
+import type { TaskStatus, TaskPriority, Column } from "@/features/project/types/project.types"
 
 interface CreateTaskModalProps {
   isOpen: boolean

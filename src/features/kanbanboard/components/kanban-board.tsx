@@ -21,14 +21,14 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import { Circle, Clock, CheckCircle2 } from "lucide-react";
-import type { Project, Task, Column, TaskPriority } from "../types/project.types";
+import type { Project, Task, Column } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
-import { TaskDetailsModal } from "./modals/task-details-modal";
+import { TaskDetailsModal } from "@/features/tasks/components/modals/task-details-modal";
 import { KanbanColumn } from "./kanban/kanban-column";
 import { TaskCard } from "./kanban/task-card";
 import { groupTasksByColumn, getColumnFromDropTarget, computeFractionalPosition } from "./kanban/utils";
 import type { KanbanColumnDef } from "./kanban/types";
-import { getProjectInitials } from "../utils/avatar";
+import { getProjectInitials } from "@/features/project/utils/avatar";
 
 interface KanbanBoardProps {
   project: Project & { tasks: Task[]; columns: Column[] };
@@ -65,8 +65,6 @@ export function KanbanBoard({
   // Active dragging items
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-
-
 
   // Column deletion options state
   const [columnToDelete, setColumnToDelete] = useState<KanbanColumnDef | null>(null);
@@ -569,7 +567,7 @@ export function KanbanBoard({
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setColumnToDelete(null)}
-                className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 rounded-lg cursor-pointer"
+                className="px-3 py-2 text-xs font-bold text-slate-550 hover:text-slate-700 bg-slate-50 rounded-lg cursor-pointer"
               >
                 Cancel
               </button>
@@ -582,7 +580,7 @@ export function KanbanBoard({
                   );
                   setColumnToDelete(null);
                 }}
-                className="px-3 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg cursor-pointer"
+                className="px-3 py-2 text-xs font-bold text-white bg-red-650 hover:bg-red-700 rounded-lg cursor-pointer"
               >
                 Delete Column
               </button>

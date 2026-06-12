@@ -7,8 +7,8 @@ import {
   AlertTriangle,
   Info,
 } from "lucide-react";
-import { AssigneeSelector } from "../assignee-selector";
-import { getVisualPriority } from "../../utils/avatar";
+import { AssigneeSelector } from "@/features/tasks/components/assignee-selector";
+import { getVisualPriority } from "@/features/project/utils/avatar";
 import type { TaskCardProps } from "./types";
 
 /**
@@ -50,12 +50,12 @@ export const TaskCard = React.memo(
       medium: {
         border: "border-l-[3.5px] border-l-amber-450",
         badge: "bg-amber-50 text-amber-700 border-amber-200/40 rounded-full",
-        icon: <AlertTriangle size={9} className="text-amber-600" />,
+        icon: <AlertTriangle size={9} className="text-amber-650" />,
         label: "Medium",
       },
       low: {
         border: "border-l-[3.5px] border-l-slate-350",
-        badge: "bg-slate-50 text-slate-650 border-slate-200/50 rounded-full",
+        badge: "bg-slate-50 text-slate-655 border-slate-200/50 rounded-full",
         icon: <Info size={9} className="text-slate-550" />,
         label: "Low",
       },

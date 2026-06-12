@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { TaskService } from "../services/task.service"
-import type { TaskStatus } from "../types/project.types"
+import type { TaskStatus } from "@/features/project/types/project.types"
 
 export interface ActionResponse {
   success: boolean

@@ -14,14 +14,14 @@ import { useProjectBoard } from "../hooks/use-project-board";
 import { ProjectBoardHeader } from "./project-board-header";
 import { ProjectsDashboardGrid } from "./projects-dashboard-grid";
 import { CreateProjectModal } from "./modals/create-project-modal";
-import { CreateTaskModal } from "./modals/create-task-modal";
-import { CreateColumnModal } from "./modals/create-column-modal";
+import { CreateTaskModal } from "@/features/tasks/components/modals/create-task-modal";
+import { CreateColumnModal } from "@/features/kanbanboard/components/modals/create-column-modal";
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal";
 import { ManageProjectMembersModal } from "./modals/manage-project-members-modal";
 import { EditProjectModal } from "./modals/edit-project-modal";
 
 const KanbanBoard = dynamic(
-  () => import("./kanban-board").then((mod) => mod.KanbanBoard),
+  () => import("@/features/kanbanboard/components/kanban-board").then((mod) => mod.KanbanBoard),
   {
     ssr: false,
     loading: () => (

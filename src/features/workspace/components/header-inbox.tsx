@@ -7,6 +7,9 @@ import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { createClient } from "@/lib/supabase/client"
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
 
+import { acceptInvitationAction } from "@/features/workspace/actions/accept-invitation.action"
+import { declineInvitationAction } from "@/features/workspace/actions/decline-invitation.action"
+
 interface InvitationNotification {
   id: string
   token: string
@@ -174,21 +177,17 @@ export function HeaderInbox({ email }: HeaderInboxProps) {
 
   // 3. Accept Invitation
   const handleAccept = async (id: string) => {
+    const invite = invitations.find((inv) => inv.id === id)
+    if (!invite) return
     setProcessingId(id)
     try {
-      const res = await fetch("/api/invitations/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invitationId: id }),
-      })
+      const result = await acceptInvitationAction(invite.token)
 
-      const result = await res.json()
-
-      if (res.ok && result.success) {
+      if (result.success) {
         // Remove from local list
         setInvitations((prev) => prev.filter((inv) => inv.id !== id))
         setIsOpen(false)
-        if (result.workspaceId) {
+        if (result.data) {
           setIsSwitching(true)
           router.push("/workspace")
           router.refresh()
@@ -209,17 +208,13 @@ export function HeaderInbox({ email }: HeaderInboxProps) {
 
   // 4. Reject/Decline Invitation
   const handleReject = async (id: string) => {
+    const invite = invitations.find((inv) => inv.id === id)
+    if (!invite) return
     setProcessingId(id)
     try {
-      const res = await fetch("/api/invitations/reject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invitationId: id }),
-      })
+      const result = await declineInvitationAction(invite.token)
 
-      const result = await res.json()
-
-      if (res.ok && result.success) {
+      if (result.success) {
         // Remove from local list
         setInvitations((prev) => prev.filter((inv) => inv.id !== id))
         router.refresh()

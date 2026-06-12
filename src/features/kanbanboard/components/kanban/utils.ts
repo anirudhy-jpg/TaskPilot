@@ -1,6 +1,6 @@
-import type { Task, TaskStatus } from "../../types/project.types";
+import type { Task, TaskStatus } from "@/features/project/types/project.types";
 import type { Active, Over } from "@dnd-kit/core";
-import type { TaskDragData, KanbanColumnDef } from "./types";
+import type { TaskDragData } from "./types";
 
 /**
  * Grouped tasks by column status/id with position-based ordering.

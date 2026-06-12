@@ -2,23 +2,24 @@
 
 import { revalidatePath } from "next/cache"
 import { TaskService } from "../services/task.service"
-import type { TaskStatus } from "../types/project.types"
 
 export interface ActionResponse {
   success: boolean
   error?: string
 }
 
-export async function batchUpdateTaskPositionsAction(
-  updates: { id: string; status: TaskStatus; position: number }[]
+export async function moveTaskAction(
+  taskId: string,
+  columnId: string,
+  position: number
 ): Promise<ActionResponse> {
   try {
-    await TaskService.batchUpdatePositions(updates)
+    await TaskService.moveTask(taskId, columnId, position)
     revalidatePath("/workspace")
     revalidatePath("/projects", "layout")
     return { success: true }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Failed to update task positions."
+    const message = error instanceof Error ? error.message : "Failed to move task."
     return { success: false, error: message }
   }
 }
