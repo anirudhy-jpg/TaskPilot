@@ -1,6 +1,5 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { TaskService } from "../services/task.service"
 
 export interface ActionResponse {
@@ -15,8 +14,6 @@ export async function moveTaskAction(
 ): Promise<ActionResponse> {
   try {
     await TaskService.moveTask(taskId, columnId, position)
-    revalidatePath("/workspace")
-    revalidatePath("/projects", "layout")
     return { success: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to move task."

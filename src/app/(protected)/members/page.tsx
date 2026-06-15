@@ -15,9 +15,11 @@ export default async function MembersPage() {
   const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
   if (!workspace) redirect("/workspaces")
 
-  const members = await MemberService.getMembersByWorkspace(workspace.id)
-  const pendingInvitations = await InviteService.getPendingInvitations(workspace.id)
-  const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
+  const [members, pendingInvitations, projects] = await Promise.all([
+    MemberService.getMembersByWorkspace(workspace.id),
+    InviteService.getPendingInvitations(workspace.id),
+    ProjectService.getProjectsByWorkspace(workspace.id, user.id),
+  ])
 
   const currentUserMemberRow = members.find(m => m.userId === user.id)
   const currentUserRole = currentUserMemberRow?.role || (workspace.ownerId === user.id ? "owner" : "member")

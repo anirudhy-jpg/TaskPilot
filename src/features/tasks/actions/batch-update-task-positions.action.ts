@@ -1,6 +1,5 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { TaskService } from "../services/task.service"
 import type { TaskStatus } from "@/features/project/types/project.types"
 
@@ -14,8 +13,6 @@ export async function batchUpdateTaskPositionsAction(
 ): Promise<ActionResponse> {
   try {
     await TaskService.batchUpdatePositions(updates)
-    revalidatePath("/workspace")
-    revalidatePath("/projects", "layout")
     return { success: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update task positions."

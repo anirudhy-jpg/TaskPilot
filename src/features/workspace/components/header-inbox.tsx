@@ -223,7 +223,6 @@ export function HeaderInbox({ email, workspaceId }: HeaderInboxProps) {
       if (result.success) {
         // Remove from local list
         setInvitations((prev) => prev.filter((inv) => inv.id !== id))
-        router.refresh()
       } else {
         alert(result.error || "Failed to reject invitation.")
       }

@@ -1,6 +1,5 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { TaskService } from "../services/task.service"
 
 export interface ActionResponse {
@@ -13,8 +12,6 @@ export async function deleteTaskAction(
 ): Promise<ActionResponse> {
   try {
     await TaskService.deleteTask(taskId)
-    revalidatePath("/workspace")
-    revalidatePath("/projects", "layout")
     return { success: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to delete task."

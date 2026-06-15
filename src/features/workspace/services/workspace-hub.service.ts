@@ -8,52 +8,36 @@ export class WorkspaceHubService {
   static async getWorkspacesForUser(userId: string): Promise<Workspace[]> {
     const supabase = await createClient()
 
-    // 1. Get workspaces owned by user
-    const { data: owned, error: ownedErr } = await supabase
-      .from("workspaces")
-      .select("*")
-      .eq("owner_id", userId)
-
-    if (ownedErr) {
-      console.error("Error fetching owned workspaces:", ownedErr)
-      throw new Error(ownedErr.message)
-    }
-
-    // 2. Get workspaces user is a member of (excluding owner role to prevent duplicates)
-    const { data: memberedRows, error: memberedErr } = await supabase
+    // Fetch all workspace memberships for the user and join workspace details
+    const { data: memberedRows, error } = await supabase
       .from("workspace_members")
-      .select("workspace_id")
+      .select(`
+        workspace_id,
+        workspaces (
+          id,
+          name,
+          owner_id,
+          created_at
+        )
+      `)
       .eq("user_id", userId)
-      .neq("role", "owner")
 
-    if (memberedErr) {
-      console.error("Error fetching membered rows:", memberedErr)
-      throw new Error(memberedErr.message)
+    if (error) {
+      console.error("Error fetching workspaces:", error)
+      throw new Error(error.message)
     }
 
-    const memberWorkspaceIds = (memberedRows || []).map((row) => row.workspace_id)
-
-    let membered: any[] = []
-    if (memberWorkspaceIds.length > 0) {
-      const { data, error } = await supabase
-        .from("workspaces")
-        .select("*")
-        .in("id", memberWorkspaceIds)
-
-      if (error) {
-        console.error("Error fetching member workspaces:", error)
-        throw new Error(error.message)
-      }
-      membered = data || []
-    }
-
-    const allWorkspaces = [...(owned || []), ...membered]
-    return allWorkspaces.map((row) => ({
-      id: row.id,
-      name: row.name,
-      ownerId: row.owner_id,
-      createdAt: row.created_at,
-    }))
+    return (memberedRows || [])
+      .map((row) => {
+        const ws = Array.isArray(row.workspaces) ? row.workspaces[0] : row.workspaces
+        return ws ? {
+          id: ws.id,
+          name: ws.name,
+          ownerId: ws.owner_id,
+          createdAt: ws.created_at,
+        } : null
+      })
+      .filter((ws): ws is NonNullable<typeof ws> => ws !== null)
   }
 
   /**

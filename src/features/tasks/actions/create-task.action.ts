@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import { TaskService } from "../services/task.service"
-import type { TaskPriority } from "@/features/project/types/project.types"
+import type { TaskPriority, Task } from "@/features/project/types/project.types"
 
 export interface ActionResponse {
   success: boolean
   error?: string
+  task?: Task
 }
 
 export async function createTaskAction(input: {
@@ -18,10 +19,8 @@ export async function createTaskAction(input: {
   assigneeId?: string
 }): Promise<ActionResponse> {
   try {
-    await TaskService.createTask(input)
-    revalidatePath("/workspace")
-    revalidatePath("/projects", "layout")
-    return { success: true }
+    const task = await TaskService.createTask(input)
+    return { success: true, task }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create task."
     return {

@@ -5,14 +5,22 @@ export class ProjectService {
   /**
    * Get all projects in a workspace.
    */
-  static async getProjectsByWorkspace(workspaceId: string): Promise<Project[]> {
+  static async getProjectsByWorkspace(workspaceId: string, userId?: string): Promise<Project[]> {
     const supabase = await createClient();
 
+    // 1. Fetch projects along with their project members (for regular member filtering) in one query
     const { data: projectsData, error } = await supabase
       .from("projects")
-      .select(
-        "id, workspace_id, name, description, created_by, created_at, profiles:created_by(email, full_name)",
-      )
+      .select(`
+        id,
+        workspace_id,
+        name,
+        description,
+        created_by,
+        created_at,
+        profiles:created_by(email, full_name),
+        project_members!left(user_id)
+      `)
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false });
 
@@ -25,51 +33,46 @@ export class ProjectService {
       return [];
     }
 
-    // Filter projects based on user permissions
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        // Fetch workspace owner
-        const { data: ws } = await supabase
-          .from("workspaces")
-          .select("owner_id")
-          .eq("id", workspaceId)
-          .maybeSingle();
+    // 2. Identify the active user ID
+    let activeUserId = userId;
+    if (!activeUserId) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        activeUserId = user?.id;
+      } catch (err) {
+        console.error("Error retrieving user inside getProjectsByWorkspace:", err);
+      }
+    }
 
-        // Fetch workspace member role
+    // 3. Filter projects based on user permissions
+    if (activeUserId) {
+      try {
+        // Fetch user workspace role (owner is registered as 'owner' member row)
         const { data: memberInfo } = await supabase
           .from("workspace_members")
           .select("role")
           .eq("workspace_id", workspaceId)
-          .eq("user_id", user.id)
+          .eq("user_id", activeUserId)
           .maybeSingle();
 
-        const isOwner = ws?.owner_id === user.id;
+        const isOwner = memberInfo?.role === "owner";
         const isAdmin = memberInfo?.role === "admin";
 
-        // If they are a regular member, filter projects to only those they are assigned to or created
+        // If regular member, only return projects they created or are assigned to
         if (!isOwner && !isAdmin) {
-          const { data: projectMembers } = await supabase
-            .from("project_members")
-            .select("project_id")
-            .eq("user_id", user.id);
-
-          const assignedProjectIds = new Set(
-            (projectMembers || []).map((pm) => pm.project_id),
-          );
           return projectsData
-            .filter(
-              (project) =>
-                assignedProjectIds.has(project.id) ||
-                project.created_by === user.id,
-            )
+            .filter((project: any) => {
+              const isCreator = project.created_by === activeUserId;
+              const isAssigned = (project.project_members || []).some(
+                (pm: any) => pm.user_id === activeUserId
+              );
+              return isCreator || isAssigned;
+            })
             .map(mapProject);
         }
+      } catch (filterErr) {
+        console.error("Error filtering projects for user:", filterErr);
       }
-    } catch (filterErr) {
-      console.error("Error filtering projects for user:", filterErr);
     }
 
     return projectsData.map(mapProject);

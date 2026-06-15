@@ -231,7 +231,7 @@ export class TaskService {
 
 // ─── Helpers ─────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapTask(row: any, assigneeData: any): Task {
+export function mapTask(row: any, assigneeData: any): Task {
   return {
     id: row.id,
     projectId: row.project_id,
