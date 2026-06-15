@@ -298,6 +298,24 @@ Handles email invitations for workspace membership.
   );
   ```
 
+### 7. `notifications`
+Stores workspace notifications for users.
+
+| Column Name    | Data Type                  | Constraints / Modifiers                           | Description                                  |
+| :------------- | :------------------------- | :------------------------------------------------ | :------------------------------------------- |
+| `id`           | `UUID`                     | `PRIMARY KEY`, `DEFAULT gen_random_uuid()`        | Unique notification identifier.              |
+| `user_id`      | `UUID`                     | `NOT NULL`, `REFERENCES profiles(id) ON DELETE CASCADE`   | The recipient user of the notification.      |
+| `workspace_id` | `UUID`                     | `NULLABLE`, `REFERENCES workspaces(id) ON DELETE CASCADE` | Associated workspace.                        |
+| `title`        | `TEXT`                     | `NOT NULL`                                        | Title of the notification.                   |
+| `message`      | `TEXT`                     | `NOT NULL`                                        | Message body of the notification.            |
+| `type`         | `TEXT`                     | `NOT NULL`                                        | Notification type (`invitation_accepted`, `invitation_rejected`, `member_left`). |
+| `read`         | `BOOLEAN`                  | `NOT NULL`, `DEFAULT false`                        | Read status flag.                            |
+| `created_at`   | `TIMESTAMP WITH TIME ZONE` | `NOT NULL`, `DEFAULT timezone('utc', now())`      | Record creation timestamp.                   |
+| `actor_id`     | `UUID`                     | `NULLABLE`, `REFERENCES profiles(id) ON DELETE SET NULL`  | The user who triggered the notification.     |
+
+#### RLS Policies:
+- Row Level Security is disabled for notifications per user preference (public access).
+
 ---
 
 ## ─── Supabase Realtime Publications ───

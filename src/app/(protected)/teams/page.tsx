@@ -50,7 +50,7 @@ export default async function TeamsPage() {
         const userIds = assigneesByProject.get(p.id) || new Set<string>()
         if (userIds.size > 0) {
           membersByProject[p.id] = allMembers.filter(
-            (m) => userIds.has(m.userId) && m.role !== "owner"
+            (m) => userIds.has(m.userId)
           )
         }
       })

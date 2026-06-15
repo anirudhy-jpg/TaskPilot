@@ -1,23 +1,23 @@
 "use client"
 
-import React, { useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { acceptInvitationAction } from "../actions/accept-invitation.action"
-import { declineInvitationAction } from "../actions/decline-invitation.action"
-import { logoutAction } from "@/features/auth/actions/logout.action"
-import { Shield, User, LogIn, CheckCircle2, XCircle, Loader2, FolderKanban } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
+import React, { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { acceptInvitationAction } from "../actions/accept-invitation.action";
+import { rejectInvitationAction } from "../actions/reject-invitation.action";
+import { logoutAction } from "@/features/auth/actions/logout.action";
+import { Shield, User, LogIn, CheckCircle2, XCircle, Loader2, FolderKanban } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SwitchingWorkspaceLoading } from "@/features/workspace/components/switching-workspace-loading";
 
 interface AcceptInviteClientProps {
-  token: string
-  workspaceName: string
-  inviterName: string
-  role: "admin" | "member"
-  email: string
-  currentUserEmail: string | null
-  projectName?: string | null
-  projectNames?: string[] | null
+  token: string;
+  workspaceName: string;
+  inviterName: string;
+  role: "admin" | "member";
+  email: string;
+  currentUserEmail: string | null;
+  projectName?: string | null;
+  projectNames?: string[] | null;
 }
 
 export function AcceptInviteClient({
@@ -30,17 +30,17 @@ export function AcceptInviteClient({
   projectName = null,
   projectNames = null,
 }: AcceptInviteClientProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const [loadingAction, setLoadingAction] = useState<"accept" | "decline" | null>(null)
-  const [isSwitching, setIsSwitching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const router = useRouter();
+  const pathname = usePathname();
+  const [loadingAction, setLoadingAction] = useState<"accept" | "reject" | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Reset switching loading screen on route changes
   React.useEffect(() => {
-    setIsSwitching(false)
-  }, [pathname])
+    setIsSwitching(false);
+  }, [pathname]);
 
   // 1. If user is not logged in, show login prompt
   if (!currentUserEmail) {
@@ -57,14 +57,14 @@ export function AcceptInviteClient({
         </div>
         <div className="pt-2">
           <Button
-            onClick={() => router.push(`/login?next=${encodeURIComponent(`/invite/accept?token=${token}`)}`)}
+            onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/invite/${token}`)}`)}
             className="w-full max-w-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition-all shadow-md cursor-pointer"
           >
             Continue to Login
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   // 2. If user email does not match invitation email
@@ -87,26 +87,28 @@ export function AcceptInviteClient({
           <Button
             variant="outline"
             onClick={async () => {
-              await logoutAction()
+              await logoutAction();
             }}
-            className="w-full text-slate-650 hover:text-slate-850 hover:bg-slate-550 border-slate-200 cursor-pointer rounded-xl py-2"
+            className="w-full text-slate-650 hover:text-slate-850 hover:bg-slate-50 border-slate-200 cursor-pointer rounded-xl py-2"
           >
             Sign Out
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
-  // 3. If invitation was declined successfully
+  // 3. If invitation was accepted or rejected successfully
   if (successMessage) {
     return (
       <div className="text-center space-y-6 py-6 animate-in fade-in duration-300">
-        <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto text-green-600">
-          <CheckCircle2 size={28} />
+        <div className={`w-16 h-16 rounded-full ${successMessage.includes("declined") || successMessage.includes("rejected") ? "bg-red-500/10 text-red-650" : "bg-green-500/10 text-green-600"} flex items-center justify-center mx-auto`}>
+          {successMessage.includes("declined") || successMessage.includes("rejected") ? <XCircle size={28} /> : <CheckCircle2 size={28} />}
         </div>
         <div className="space-y-2">
-          <h3 className="text-xl font-extrabold text-slate-900">Invitation Declined</h3>
+          <h3 className="text-xl font-extrabold text-slate-900">
+            {successMessage.includes("declined") || successMessage.includes("rejected") ? "Invitation Rejected" : "Invitation Accepted"}
+          </h3>
           <p className="text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
             {successMessage}
           </p>
@@ -120,44 +122,44 @@ export function AcceptInviteClient({
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   const handleAccept = async () => {
-    setLoadingAction("accept")
-    setError(null)
+    setLoadingAction("accept");
+    setError(null);
     try {
-      const res = await acceptInvitationAction(token)
+      const res = await acceptInvitationAction(token);
       if (res.success && res.data) {
-        setIsSwitching(true)
-        // Redirect to workspace dashboard using hard reload
-        window.location.href = "/workspace"
+        setIsSwitching(true);
+        // Redirect to workspace dashboard using hard reload to ensure data refresh
+        window.location.href = "/workspace";
       } else {
-        setError(res.error || "Failed to accept invitation.")
-        setLoadingAction(null)
+        setError(res.error || "Failed to accept invitation.");
+        setLoadingAction(null);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.")
-      setLoadingAction(null)
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      setLoadingAction(null);
     }
-  }
+  };
 
-  const handleDecline = async () => {
-    setLoadingAction("decline")
-    setError(null)
+  const handleReject = async () => {
+    setLoadingAction("reject");
+    setError(null);
     try {
-      const res = await declineInvitationAction(token)
+      const res = await rejectInvitationAction(token);
       if (res.success) {
-        setSuccessMessage("You have successfully declined the invitation.")
+        setSuccessMessage("You have successfully declined the invitation.");
       } else {
-        setError(res.error || "Failed to decline invitation.")
+        setError(res.error || "Failed to reject invitation.");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.")
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
-      setLoadingAction(null)
+      setLoadingAction(null);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -223,7 +225,7 @@ export function AcceptInviteClient({
         <Button
           onClick={handleAccept}
           disabled={loadingAction !== null}
-          className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 h-11 cursor-pointer text-sm"
+          className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 h-11 cursor-pointer text-sm font-semibold border-0"
         >
           {loadingAction === "accept" ? (
             <>
@@ -236,21 +238,21 @@ export function AcceptInviteClient({
         </Button>
         <Button
           variant="ghost"
-          onClick={handleDecline}
+          onClick={handleReject}
           disabled={loadingAction !== null}
           className="w-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 font-medium py-2 rounded-xl transition-colors h-10 cursor-pointer text-xs"
         >
-          {loadingAction === "decline" ? (
+          {loadingAction === "reject" ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Declining...
+              Rejecting...
             </>
           ) : (
-            "Decline"
+            "Reject"
           )}
         </Button>
       </div>
       {isSwitching && <SwitchingWorkspaceLoading />}
     </div>
-  )
+  );
 }

@@ -17,6 +17,7 @@ import { deleteProjectAction } from "../actions/delete-project.action";
 import { addProjectMemberAction } from "../actions/add-project-member.action";
 import { removeProjectMemberAction } from "../actions/remove-project-member.action";
 import { moveTaskAction } from "@/features/tasks/actions/move-task.action";
+import { updateTaskAction } from "@/features/tasks/actions/update-task.action";
 
 export interface UseProjectBoardProps {
   projects: (Project & { tasks: Task[]; columns: Column[] })[];
@@ -83,6 +84,11 @@ export function useProjectBoard({
             projectId: string;
             name: string;
             description?: string;
+          }
+        | {
+            type: "update_task";
+            taskId: string;
+            updates: { title?: string; description?: string | null; priority?: TaskPriority };
           },
     ) => {
       switch (action.type) {
@@ -112,6 +118,13 @@ export function useProjectBoard({
           return state.map((p) => ({
             ...p,
             tasks: p.tasks.filter((t) => t.id !== action.taskId),
+          }));
+        case "update_task":
+          return state.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === action.taskId ? { ...t, ...action.updates } : t
+            ),
           }));
         case "delete_project":
           return state.filter((p) => p.id !== action.projectId);
@@ -618,6 +631,30 @@ export function useProjectBoard({
     });
   };
 
+  const handleUpdateTask = (
+    taskId: string,
+    updates: { title?: string; description?: string | null; priority?: TaskPriority }
+  ) => {
+    if (taskId.startsWith("temp-")) return;
+    setErrorMsg(null);
+    startTransition(async () => {
+      setOptimisticProjects({ type: "update_task", taskId, updates });
+      const res = await updateTaskAction(taskId, updates);
+      if (res.success) {
+        setCurrentProjects((prev) =>
+          prev.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === taskId ? { ...t, ...updates } : t
+            ),
+          }))
+        );
+      } else {
+        setErrorMsg(res.error || "Failed to update task.");
+      }
+    });
+  };
+
   const handleCreateColumn = (name: string) => {
     if (!activeProjectId) return;
     setErrorMsg(null);
@@ -879,6 +916,7 @@ export function useProjectBoard({
     handleCreateTask,
     handleAssigneeChange,
     handleMoveTask,
+    handleUpdateTask,
     cycleTaskStatus,
     handleCreateColumn,
     handleRenameColumn,

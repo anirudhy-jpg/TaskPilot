@@ -49,7 +49,13 @@ export function createRealtimeChannel({
     },
   );
 
-  channel.subscribe();
+  channel.subscribe((status, err) => {
+    if (status === "SUBSCRIBED") {
+      console.log(`[Supabase Realtime] Subscribed to table: ${table}`);
+    } else if (status === "CHANNEL_ERROR") {
+      console.error(`[Supabase Realtime] Subscription error for table: ${table}:`, err);
+    }
+  });
 
   return {
     channel,

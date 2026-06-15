@@ -16,6 +16,7 @@ export function mapRealtimeInvitation(row: Record<string, any>): Invitation {
     createdAt: row.created_at,
     expiresAt: row.expires_at,
     projectId: row.project_id || null,
+    projectIds: row.project_ids || (row.project_id ? [row.project_id] : []),
   }
 }
 
