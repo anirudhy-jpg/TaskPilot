@@ -71,27 +71,30 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full min-h-0 w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 shrink-0">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
+          <h1 className="text-xl font-extrabold text-slate-100 tracking-tight sm:text-2xl">
             Settings
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Manage your profile and account settings.
           </p>
         </div>
       </div>
 
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto min-h-0 py-6 pr-1 scrollbar-thin">
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Left Side: Profile and Actions */}
         <div className="lg:col-span-2 space-y-6">
           {/* Profile Card */}
-          <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <div className="flex items-center gap-2 text-amber-600 mb-5">
+          <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+            <div className="flex items-center gap-2 text-amber-550 mb-5">
               <User size={18} />
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Profile Information</h3>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Profile Information</h3>
             </div>
 
             {/* Avatar + Name */}
@@ -103,15 +106,15 @@ export function SettingsPanel({
                   "?"}
               </div>
               <div>
-                <p className="text-base font-bold text-slate-800">
+                <p className="text-base font-bold text-slate-200">
                   {profile?.fullName || "Unknown User"}
                 </p>
-                <p className="text-xs text-slate-500">{profile?.email || user.email}</p>
+                <p className="text-xs text-slate-400">{profile?.email || user.email}</p>
               </div>
             </div>
 
             {/* Details */}
-            <div className="divide-y divide-amber-500/10">
+            <div className="divide-y divide-slate-800/80">
               <InfoRow
                 icon={<Mail size={14} />}
                 label="Email Address"
@@ -157,12 +160,12 @@ export function SettingsPanel({
 
           {/* Account Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-              <div className="flex items-center gap-2 text-red-650 mb-4">
+            <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+              <div className="flex items-center gap-2 text-red-400 mb-4">
                 <LogOut size={18} />
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Account Actions</h3>
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Account Actions</h3>
               </div>
-              <p className="text-xs text-slate-500 mb-5">
+              <p className="text-xs text-slate-400 mb-5">
                 Sign out of your account. You will be redirected to the login page.
               </p>
               <form action={logoutAction}>
@@ -179,15 +182,15 @@ export function SettingsPanel({
             </div>
 
             {!isWorkspaceOwner && workspaceId && (
-              <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-                <div className="flex items-center gap-2 text-red-655 mb-4">
+              <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+                <div className="flex items-center gap-2 text-red-400 mb-4">
                   <DoorOpen size={18} />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Workspace Actions</h3>
                 </div>
-                <p className="text-xs text-slate-500 mb-5">
+                <p className="text-xs text-slate-400 mb-5">
                   Leave the current workspace "{workspaceName}". You will lose access to all its projects.
                 </p>
-                {errorMsg && <p className="text-xs text-red-605 mb-3">{errorMsg}</p>}
+                {errorMsg && <p className="text-xs text-red-400 mb-3">{errorMsg}</p>}
                 <Button
                   onClick={handleLeaveWorkspace}
                   disabled={isPending}
@@ -211,33 +214,22 @@ export function SettingsPanel({
             )}
 
             {isWorkspaceOwner && workspaceId && (
-              <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-2 text-red-655 mb-4">
+              <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-2 text-red-400 mb-4">
                   <Trash2 size={18} />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Actions</h3>
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Workspace Actions</h3>
                 </div>
-                <p className="text-xs text-slate-500 mb-5">
-                  Permanently delete this workspace "{workspaceName}". All projects, tasks, and data will be destroyed.
+                <p className="text-xs text-slate-400 mb-5">
+                  Workspace owners are not permitted to delete workspaces.
                 </p>
-                {errorMsg && <p className="text-xs text-red-605 mb-3">{errorMsg}</p>}
                 <Button
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  disabled={isPending}
+                  disabled
                   variant="destructive"
                   size="sm"
-                  className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9 animate-all"
+                  className="cursor-not-allowed opacity-50 rounded-xl font-bold text-xs px-4 h-9"
                 >
-                  {isPending ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Deleting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 size={14} />
-                      <span>Delete Workspace</span>
-                    </>
-                  )}
+                  <Trash2 size={14} />
+                  <span>Delete Workspace</span>
                 </Button>
               </div>
             )}
@@ -247,35 +239,35 @@ export function SettingsPanel({
         {/* Right Side: Pro-tips & Security */}
         <div className="space-y-6">
           {/* Pro Tips Card */}
-          <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <div className="flex items-center gap-2 text-amber-600 mb-4">
+          <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80">
+            <div className="flex items-center gap-2 text-amber-550 mb-4">
               <Lightbulb size={18} />
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Workspace Pro-Tips</h3>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Workspace Pro-Tips</h3>
             </div>
             <div className="space-y-4">
               <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-3xs">💡</div>
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-3xs text-amber-500">💡</div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Quick-Action Toolbar</h4>
-                  <p className="text-[10px] text-slate-500 leading-relaxed mt-0.5">
+                  <h4 className="text-xs font-bold text-slate-200">Quick-Action Toolbar</h4>
+                  <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
                     Hover over any card on the Kanban board to trigger the floating toolbar for instant status changes and deletion.
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-3xs">👤</div>
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-3xs text-amber-500">👤</div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Instant Assignments</h4>
-                  <p className="text-[10px] text-slate-500 leading-relaxed mt-0.5">
+                  <h4 className="text-xs font-bold text-slate-200">Instant Assignments</h4>
+                  <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
                     Assign members instantly by clicking the assignee avatar on any Kanban card or in the Task Details dialog.
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-3xs">🛡️</div>
+                <div className="w-6 h-6 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-3xs text-teal-500">🛡️</div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Owner Privileges</h4>
-                  <p className="text-[10px] text-slate-500 leading-relaxed mt-0.5">
+                  <h4 className="text-xs font-bold text-slate-200">Owner Privileges</h4>
+                  <p className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
                     Only the Workspace Owner can add or delete projects, invite new members, or manage active invitations.
                   </p>
                 </div>
@@ -284,31 +276,34 @@ export function SettingsPanel({
           </div>
 
           {/* Security Card */}
-          <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <div className="flex items-center gap-2 text-slate-700 mb-4">
+          <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80">
+            <div className="flex items-center gap-2 text-slate-200 mb-4">
               <Lock size={16} />
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Security & Access</h3>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Security & Access</h3>
             </div>
-            <p className="text-[11.5px] text-slate-500 leading-relaxed mb-4">
+            <p className="text-[11.5px] text-slate-400 leading-relaxed mb-4">
               Your account is protected with enterprise-grade encryption. Here's a brief overview of your current access state:
             </p>
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] py-1 border-b border-amber-500/10">
+              <div className="flex items-center justify-between text-[11px] py-1 border-b border-slate-800/80">
                 <span className="text-slate-400 font-medium">Session Status</span>
-                <span className="text-amber-700 font-extrabold bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wide">Active</span>
+                <span className="text-amber-500 font-extrabold bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wide">Active</span>
               </div>
-              <div className="flex items-center justify-between text-[11px] py-1 border-b border-amber-500/10">
+              <div className="flex items-center justify-between text-[11px] py-1 border-b border-slate-800/80">
                 <span className="text-slate-400 font-medium">Encryption</span>
-                <span className="text-slate-755 font-bold">SSL / HTTPS</span>
+                <span className="text-slate-300 font-bold">SSL / HTTPS</span>
               </div>
               <div className="flex items-center justify-between text-[11px] py-1">
                 <span className="text-slate-400 font-medium">Primary Provider</span>
-                <span className="text-slate-755 font-bold capitalize">{user.app_metadata?.provider || "email"}</span>
+                <span className="text-slate-300 font-bold capitalize">{user.app_metadata?.provider || "email"}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      </div>
+
       <DeleteConfirmModal
         isOpen={isLeaveModalOpen}
         onClose={() => setIsLeaveModalOpen(false)}
@@ -345,13 +340,13 @@ function InfoRow({
   return (
     <div className="py-3 flex items-center justify-between">
       <div className="flex items-center gap-3 text-slate-400">
-        <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+        <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-550 flex items-center justify-center shrink-0">
           {icon}
         </div>
-        <span className="text-xs font-semibold text-slate-555">{label}</span>
+        <span className="text-xs font-semibold text-slate-400">{label}</span>
       </div>
       <span
-        className={`text-xs font-bold text-slate-800 ${
+        className={`text-xs font-bold text-slate-200 ${
           capitalize ? "capitalize" : ""
         }`}
       >

@@ -24,7 +24,7 @@ export function Logo({ className = "", iconOnly = false, size = "md" }: LogoProp
       {/* Sleek Navigation Arrow Logo Mark */}
       <div className={`flex items-center justify-center rounded-lg bg-amber-500 text-slate-950 shadow-sm p-1 ${size === "sm" ? "p-0.5" : ""}`}>
         <svg
-          className={`${iconSizes[size]} text-slate-955`}
+          className={`${iconSizes[size]} text-slate-950`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -37,7 +37,7 @@ export function Logo({ className = "", iconOnly = false, size = "md" }: LogoProp
         </svg>
       </div>
       {!iconOnly && (
-        <span className={`font-black text-slate-800 tracking-tight ${textSizes[size]}`}>
+        <span className={`font-black text-white tracking-tight ${textSizes[size]}`}>
           TaskPilot<span className="text-amber-500 font-extrabold">.</span>
         </span>
       )}

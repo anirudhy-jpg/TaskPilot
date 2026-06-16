@@ -125,18 +125,24 @@ export class MemberService {
       .map((row) => mapMember(row, row.profile))
   }
 
-  /**
-   * Remove a member from a workspace.
-   */
-  static async removeMember(workspaceId: string, memberId: string): Promise<void> {
+  static async removeMember(workspaceId: string, memberId: string, actorId?: string | null): Promise<void> {
     const supabase = await createClient()
 
-    // 1. Get the user_id of the member being removed
+    // 1. Get the user_id and profile of the member being removed
     const { data: memberRow } = await supabase
       .from("workspace_members")
-      .select("user_id")
+      .select(`
+        user_id,
+        profile:profiles(email, full_name)
+      `)
       .eq("id", memberId)
       .single()
+
+    let removedMemberName = "A member"
+    if (memberRow) {
+      const profile: any = Array.isArray(memberRow.profile) ? memberRow.profile[0] : memberRow.profile
+      removedMemberName = profile?.full_name || profile?.email || "A member"
+    }
 
     if (memberRow?.user_id) {
       const userId = memberRow.user_id
@@ -166,7 +172,31 @@ export class MemberService {
       }
     }
 
-    // 3. Delete from workspace_members
+    // 3. Create member_removed notification for the owner before we delete the membership
+    const { data: ws } = await supabase
+      .from("workspaces")
+      .select("owner_id, name")
+      .eq("id", workspaceId)
+      .single()
+
+    if (ws?.owner_id && memberRow?.user_id) {
+      const { error: notifErr } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: ws.owner_id,
+          workspace_id: workspaceId,
+          title: "Member Removed",
+          message: `${removedMemberName} was removed from the workspace.`,
+          type: "member_removed",
+          actor_id: actorId || null,
+        })
+
+      if (notifErr) {
+        console.error("Error creating member_removed notification:", notifErr)
+      }
+    }
+
+    // 4. Delete from workspace_members
     const { error } = await supabase
       .from("workspace_members")
       .delete()
@@ -178,6 +208,7 @@ export class MemberService {
       throw new Error(error.message)
     }
   }
+
 }
 
 // ─── Helpers ─────────────────────────────────────────────────

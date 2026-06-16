@@ -20,25 +20,46 @@ import { DeleteConfirmModal } from "./modals/delete-confirm-modal";
 import { ManageProjectMembersModal } from "./modals/manage-project-members-modal";
 import { EditProjectModal } from "./modals/edit-project-modal";
 import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const KanbanBoard = dynamic(
   () => import("@/features/kanbanboard/components/kanban-board").then((mod) => mod.KanbanBoard),
   {
     ssr: false,
     loading: () => (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full animate-pulse">
-        {[0, 1, 2].map((i) => (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start w-full animate-pulse animate-skeleton-fade">
+        {[0, 1, 2].map((colIdx) => (
           <div
-            key={i}
-            className="rounded-3xl bg-white/40 border border-amber-900/5 p-5 min-h-[600px] w-full"
+            key={colIdx}
+            className="bg-slate-900/60 backdrop-blur-sm border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-3 min-h-[450px]"
           >
-            <div className="h-6 w-24 bg-slate-200/60 rounded-lg mb-4" />
-            <div className="space-y-3.5">
-              {[0, 1].map((j) => (
+            {/* Column header */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+              <div className="flex items-center gap-2">
+                <Skeleton className="w-2.5 h-2.5 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-5 w-6 rounded-full" />
+              </div>
+              <Skeleton className="w-6 h-6 rounded" />
+            </div>
+
+            {/* Task card skeletons */}
+            <div className="space-y-3 flex-1">
+              {Array.from({ length: colIdx === 0 ? 3 : colIdx === 1 ? 2 : 1 }).map((_, cardIdx) => (
                 <div
-                  key={j}
-                  className="h-32 bg-white/60 rounded-2xl border border-amber-900/5"
-                />
+                  key={cardIdx}
+                  className="bg-slate-900 backdrop-blur-sm border border-slate-800/80 rounded-xl p-4 shadow-sm flex flex-col gap-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="w-4 h-4 rounded" />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 mt-1">
+                    <Skeleton className="h-3 w-14" />
+                    <Skeleton className="w-6 h-6 rounded-full" />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -166,7 +187,7 @@ function BoardContent(props: ProjectsListProps) {
       )}
 
       {/* ─── Main Content Views ─────────────────────────────────────────── */}
-      <div className="transition-all duration-300">
+      <div className="flex-1 min-h-0 overflow-hidden transition-all duration-300">
         {activeProject ? (
           /* ─── VIEW 1: KANBAN BOARD ─── */
           <KanbanBoard

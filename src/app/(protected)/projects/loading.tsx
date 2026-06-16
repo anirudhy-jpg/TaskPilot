@@ -2,9 +2,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ProjectsLoading() {
   return (
-    <div className="space-y-6 w-full select-none">
+    <div className="space-y-6 w-full select-none animate-skeleton-fade">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div className="space-y-2">
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-4 w-80 max-w-full" />
@@ -17,7 +17,7 @@ export default function ProjectsLoading() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-between min-h-[380px]"
+            className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-sm flex flex-col justify-between min-h-[380px]"
           >
             {/* Card top */}
             <div>
@@ -43,7 +43,7 @@ export default function ProjectsLoading() {
               </div>
 
               {/* Mini task list */}
-              <div className="border-t border-slate-100 pt-3">
+              <div className="border-t border-slate-800/80 pt-3">
                 <Skeleton className="h-3 w-24 mb-3" />
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, j) => (
@@ -57,7 +57,7 @@ export default function ProjectsLoading() {
             </div>
 
             {/* Card footer */}
-            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+            <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-7 w-20 rounded" />
             </div>

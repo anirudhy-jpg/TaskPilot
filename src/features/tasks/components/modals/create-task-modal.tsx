@@ -67,26 +67,26 @@ export function CreateTaskModal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Create New Task</h3>
+            <h3 className="text-base font-bold text-slate-100">Create New Task</h3>
             <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
               Adding to: {projectName}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+            className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-500 block mb-1">
+            <label className="text-xs font-semibold text-slate-400 block mb-1">
               Task Title
             </label>
             <input
@@ -94,12 +94,12 @@ export function CreateTaskModal({
               placeholder="e.g. Write API integration tests"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-800 bg-slate-955 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               autoFocus
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-500 block mb-1">
+            <label className="text-xs font-semibold text-slate-400 block mb-1">
               Description (optional)
             </label>
             <textarea
@@ -107,12 +107,12 @@ export function CreateTaskModal({
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-800 bg-slate-955 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-500 block mb-1">
+              <label className="text-xs font-semibold text-slate-400 block mb-1">
                 Initial Status
               </label>
               <Select
@@ -122,7 +122,7 @@ export function CreateTaskModal({
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 block mb-1">
+              <label className="text-xs font-semibold text-slate-400 block mb-1">
                 Priority
               </label>
               <Select
@@ -133,12 +133,12 @@ export function CreateTaskModal({
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-xs font-medium cursor-pointer"
+            className="text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
             Cancel
           </Button>

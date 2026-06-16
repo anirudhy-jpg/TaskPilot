@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { MemberService } from "../services/member.service"
+import { requireUser } from "@/lib/supabase/server"
+
 
 export interface ActionResponse {
   success: boolean
@@ -13,7 +15,8 @@ export async function removeWorkspaceMemberAction(
   memberId: string
 ): Promise<ActionResponse> {
   try {
-    await MemberService.removeMember(workspaceId, memberId)
+    const { user } = await requireUser()
+    await MemberService.removeMember(workspaceId, memberId, user.id)
     revalidatePath("/members")
     revalidatePath("/workspace")
     revalidatePath("/projects", "layout")

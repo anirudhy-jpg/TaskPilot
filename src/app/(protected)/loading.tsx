@@ -2,9 +2,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ProtectedLoading() {
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full animate-skeleton-fade">
       {/* Banner skeleton */}
-      <div className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 border-l-4 border-l-amber-500/30 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+      <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800 border-l-4 border-l-amber-500/30 shadow-sm">
         <Skeleton className="h-6 w-64 mb-2" />
         <Skeleton className="h-4 w-96 max-w-full" />
       </div>
@@ -14,7 +14,7 @@ export default function ProtectedLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-slate-200/60 shadow-sm"
+            className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm"
           >
             <div className="flex items-center gap-2 mb-3">
               <Skeleton className="w-5 h-5 rounded-full" />
@@ -30,7 +30,7 @@ export default function ProtectedLoading() {
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             key={i}
-            className="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-slate-200/60 shadow-sm"
+            className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm"
           >
             <div className="flex items-center gap-2 mb-6">
               <Skeleton className="w-2.5 h-2.5 rounded-full" />

@@ -95,16 +95,16 @@ export function KanbanBoard({
         "before:from-rose-400 before:to-rose-600",
       ];
       const badgeBgs = [
-        "bg-blue-50 text-blue-700 border border-blue-100/60",
-        "bg-amber-50 text-amber-700 border border-amber-250/60",
-        "bg-emerald-50 text-emerald-700 border border-emerald-100/60",
-        "bg-purple-50 text-purple-700 border border-purple-100/60",
-        "bg-rose-50 text-rose-700 border border-rose-250/60",
+        "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+        "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+        "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+        "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+        "bg-rose-500/10 text-rose-400 border border-rose-500/20",
       ];
       const icons = [
-        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 shadow-3xs shrink-0"><Circle size={11} /></span>,
-        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-50 border border-amber-200/50 text-amber-600 shadow-3xs shrink-0"><Clock size={11} /></span>,
-        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-3xs shrink-0"><CheckCircle2 size={11} /></span>,
+        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 shadow-3xs shrink-0"><Circle size={11} /></span>,
+        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-3xs shrink-0"><Clock size={11} /></span>,
+        <span key={c.id} className="flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-3xs shrink-0"><CheckCircle2 size={11} /></span>,
       ];
       const accentIndex = index % accents.length;
       const iconIndex = index % icons.length;
@@ -421,7 +421,7 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex flex-row gap-6 items-start w-full overflow-x-auto sm:overflow-x-visible pb-4 lg:pb-0 scrollbar-none sm:scrollbar-thin">
+      <div className="flex flex-row gap-6 items-start w-full overflow-x-auto pb-4 h-full scrollbar-none sm:scrollbar-thin">
         {/* Sortable column context */}
         <SortableContext items={columnDefs.map(c => `column-${c.id}`)} strategy={horizontalListSortingStrategy}>
           {columnDefs.map((column) => (
@@ -493,10 +493,10 @@ export function KanbanBoard({
       />
 
       {columnToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 text-left">
             <div>
-              <h3 className="text-base font-extrabold text-slate-900">Delete Column</h3>
+              <h3 className="text-base font-extrabold text-slate-100">Delete Column</h3>
               <p className="text-xs text-slate-400 font-semibold mt-0.5">
                 Column name: {columnToDelete.title}
               </p>
@@ -504,26 +504,26 @@ export function KanbanBoard({
 
             {hasTasks ? (
               <>
-                <p className="text-xs text-slate-550 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   What would you like to do with the tasks currently assigned to this column?
                 </p>
 
                 <div className="space-y-3">
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-800 hover:bg-slate-950/60 cursor-pointer transition-colors">
                     <input
                       type="radio"
                       name="deleteAction"
                       checked={deleteAction === "delete"}
                       onChange={() => setDeleteAction("delete")}
-                      className="text-amber-500 focus:ring-amber-500"
+                      className="accent-amber-500 focus:ring-amber-500"
                     />
                     <div>
-                      <p className="text-xs font-bold text-slate-700">Delete all tasks</p>
-                      <p className="text-[10px] text-slate-450 mt-0.5">Permanently delete all tasks inside this column.</p>
+                      <p className="text-xs font-bold text-slate-205 text-slate-200">Delete all tasks</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Permanently delete all tasks inside this column.</p>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-800 hover:bg-slate-950/60 cursor-pointer transition-colors">
                     <input
                       type="radio"
                       name="deleteAction"
@@ -533,11 +533,11 @@ export function KanbanBoard({
                         const firstTarget = columnDefs.find(c => c.id !== columnToDelete.id);
                         if (firstTarget) setTargetColumnId(firstTarget.id);
                       }}
-                      className="text-amber-500 focus:ring-amber-500"
+                      className="accent-amber-500 focus:ring-amber-500"
                     />
                     <div className="w-full">
-                      <p className="text-xs font-bold text-slate-700">Move tasks to another column</p>
-                      <p className="text-[10px] text-slate-450 mt-0.5">Keep tasks and transfer them to a selected column.</p>
+                      <p className="text-xs font-bold text-slate-205 text-slate-200">Move tasks to another column</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Keep tasks and transfer them to a selected column.</p>
                     </div>
                   </label>
                 </div>
@@ -548,12 +548,12 @@ export function KanbanBoard({
                     <select
                       value={targetColumnId}
                       onChange={(e) => setTargetColumnId(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/25 bg-white text-slate-700"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/25 bg-slate-955 text-slate-200"
                     >
                       {columnDefs
                         .filter((c) => c.id !== columnToDelete.id)
                         .map((c) => (
-                          <option key={c.id} value={c.id}>
+                          <option key={c.id} value={c.id} className="bg-slate-900 text-slate-200">
                             {c.title}
                           </option>
                         ))}
@@ -562,15 +562,15 @@ export function KanbanBoard({
                 )}
               </>
             ) : (
-              <p className="text-xs text-slate-550 leading-relaxed">
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Are you sure you want to delete this column? This action cannot be undone.
               </p>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 onClick={() => setColumnToDelete(null)}
-                className="px-3 py-2 text-xs font-bold text-slate-550 hover:text-slate-700 bg-slate-50 rounded-lg cursor-pointer"
+                className="px-3 py-2 text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -583,7 +583,7 @@ export function KanbanBoard({
                   );
                   setColumnToDelete(null);
                 }}
-                className="px-3 py-2 text-xs font-bold text-white bg-red-650 hover:bg-red-700 rounded-lg cursor-pointer"
+                className="px-3 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer transition-colors"
               >
                 Delete Column
               </button>

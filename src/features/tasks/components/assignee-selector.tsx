@@ -109,11 +109,11 @@ export function AssigneeSelector({
             <img
               src={task.assignee.avatarUrl}
               alt={task.assignee.fullName || task.assignee.email}
-              className={`${sizeClasses} rounded-full object-cover border border-slate-200 shadow-sm hover:border-amber-500 transition-colors`}
+              className={`${sizeClasses} rounded-full object-cover border border-slate-800 shadow-sm hover:border-amber-500 transition-colors`}
             />
           ) : (
             <div
-              className={`${sizeClasses} rounded-full flex items-center justify-center ${textClasses} font-bold border border-white shadow-sm uppercase hover:scale-105 transition-all ${getAvatarBgColor(
+              className={`${sizeClasses} rounded-full flex items-center justify-center ${textClasses} font-bold border border-slate-900 shadow-sm uppercase hover:scale-105 transition-all ${getAvatarBgColor(
                 task.assignee.fullName || task.assignee.email
               )}`}
               title={task.assignee.fullName || task.assignee.email}
@@ -123,7 +123,7 @@ export function AssigneeSelector({
           )
         ) : (
           <div
-            className={`${sizeClasses} rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm hover:border-slate-350 transition-colors`}
+            className={`${sizeClasses} rounded-full bg-slate-950 flex items-center justify-center text-slate-400 border border-slate-800 shadow-sm hover:border-slate-700 transition-colors`}
             title="Unassigned"
           >
             <User size={iconSize} />
@@ -139,7 +139,7 @@ export function AssigneeSelector({
             top: `${coords.top}px`,
             left: `${coords.left}px`,
           }}
-          className="assignee-dropdown-portal z-50 w-64 bg-zinc-950/95 backdrop-blur-md text-slate-200 rounded-xl border border-amber-500/20 shadow-2xl p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150"
+          className="assignee-dropdown-portal z-50 w-64 bg-slate-900/95 backdrop-blur-md text-slate-200 rounded-xl border border-amber-500/20 shadow-2xl p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Unassigned */}
           <button
@@ -148,14 +148,14 @@ export function AssigneeSelector({
               onChange(task.id, null);
               setIsOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-2.5 py-2 text-left rounded-lg text-xs font-semibold hover:bg-zinc-900 transition-colors cursor-pointer ${
-              !task.assigneeId ? "bg-amber-500/10 border border-amber-500/25 text-amber-250" : ""
+            className={`w-full flex items-center gap-3 px-2.5 py-2 text-left rounded-lg text-xs font-semibold hover:bg-slate-800/80 transition-colors cursor-pointer ${
+              !task.assigneeId ? "bg-amber-500/10 border border-amber-500/25 text-amber-300" : ""
             }`}
           >
-            <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+            <div className="w-6 h-6 rounded-full bg-slate-950 flex items-center justify-center text-slate-500">
               <User size={12} />
             </div>
-            <span className="text-zinc-300 font-bold">Unassigned</span>
+            <span className="text-slate-350 font-bold">Unassigned</span>
           </button>
 
           {/* Automatic */}
@@ -165,15 +165,15 @@ export function AssigneeSelector({
               onChange(task.id, null);
               setIsOpen(false);
             }}
-            className="w-full flex items-center gap-3 px-2.5 py-2 text-left rounded-lg text-xs font-semibold hover:bg-zinc-900 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-3 px-2.5 py-2 text-left rounded-lg text-xs font-semibold hover:bg-slate-800/80 transition-colors cursor-pointer"
           >
-            <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+            <div className="w-6 h-6 rounded-full bg-slate-950 flex items-center justify-center text-slate-500">
               <User size={12} />
             </div>
-            <span className="text-zinc-300 font-bold">Automatic</span>
+            <span className="text-slate-350 font-bold">Automatic</span>
           </button>
 
-          <div className="h-[1px] bg-zinc-800 my-1" />
+          <div className="h-[1px] bg-slate-800 my-1" />
 
           {/* Members */}
           <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
@@ -190,19 +190,19 @@ export function AssigneeSelector({
                     onChange(task.id, member.userId);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-2.5 py-1.5 text-left rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer ${
-                    isSelected ? "bg-amber-500/10 border border-amber-500/25 text-amber-250" : ""
+                  className={`w-full flex items-center gap-3 px-2.5 py-1.5 text-left rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer ${
+                    isSelected ? "bg-amber-500/10 border border-amber-500/25 text-amber-300" : ""
                   }`}
                 >
                   {member.profile?.avatarUrl ? (
                     <img
                       src={member.profile.avatarUrl}
                       alt={displayName}
-                      className="w-6 h-6 rounded-full object-cover border border-zinc-750 shadow-sm"
+                      className="w-6 h-6 rounded-full object-cover border border-slate-800 shadow-sm"
                     />
                   ) : (
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold uppercase border border-zinc-750 shadow-sm ${getAvatarBgColor(
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold uppercase border border-slate-800 shadow-sm ${getAvatarBgColor(
                         displayName
                       )}`}
                     >
@@ -211,11 +211,11 @@ export function AssigneeSelector({
                   )}
 
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-bold text-zinc-150 truncate">
-                      {displayName} {isCurrentUser && <span className="text-[10px] text-zinc-450 font-semibold ml-0.5">(Assign to me)</span>}
+                    <span className="text-[11px] font-bold text-slate-200 truncate">
+                      {displayName} {isCurrentUser && <span className="text-[10px] text-slate-500 font-semibold ml-0.5">(Assign to me)</span>}
                     </span>
                     {member.profile?.email && (
-                      <span className="text-[9px] text-zinc-550 truncate mt-0.5">
+                      <span className="text-[9px] text-slate-500 truncate mt-0.5">
                         {member.profile.email}
                       </span>
                     )}

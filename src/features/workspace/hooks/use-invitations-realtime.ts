@@ -1,4 +1,4 @@
-import { useRealtimeList } from "@/lib/realtime/subscribeToTable"
+import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
 import type { Invitation } from "../services/invite.service"
 
 /**
@@ -37,27 +37,52 @@ export function useInvitationsRealtime({
   invitations,
   setInvitations,
 }: UseInvitationsRealtimeProps) {
-  let filter: string | undefined = undefined
-  if (workspaceId) {
-    filter = `workspace_id=eq.${workspaceId}`
-  } else if (email) {
-    filter = `email=eq.${email}`
-  }
-
-  useRealtimeList<Invitation>(
-    invitations,
-    setInvitations,
-    {
-      table: "workspace_invitations",
-      filter,
-      mapRow: mapRealtimeInvitation,
-    },
-    {
-      onUpdate: (updatedItem) => {
-        if (updatedItem.status !== "pending") {
-          setInvitations((prev) => prev.filter((inv) => inv.id !== updatedItem.id))
+  useRealtimeSubscription({
+    table: "workspace_invitations",
+    filter: undefined,
+    onPayload: (payload) => {
+      const { eventType, new: newRow, old: oldRow } = payload
+      if (eventType === "INSERT" && newRow) {
+        const isMatch = workspaceId
+          ? newRow.workspace_id === workspaceId
+          : email
+          ? newRow.email?.toLowerCase() === email.toLowerCase()
+          : false
+        if (isMatch) {
+          const mapped = mapRealtimeInvitation(newRow)
+          setInvitations((prev) => {
+            const exists = prev.some((inv) => inv.id === mapped.id)
+            if (exists) return prev
+            return [...prev, mapped]
+          })
         }
-      },
-    }
-  )
+      } else if (eventType === "UPDATE" && newRow) {
+        const isMatch = workspaceId
+          ? newRow.workspace_id === workspaceId
+          : email
+          ? newRow.email?.toLowerCase() === email.toLowerCase()
+          : false
+        if (isMatch) {
+          const mapped = mapRealtimeInvitation(newRow)
+          setInvitations((prev) => {
+            const exists = prev.some((inv) => inv.id === mapped.id)
+            if (!exists) {
+              if (mapped.status === "pending") {
+                return [...prev, mapped]
+              }
+              return prev
+            }
+            if (mapped.status !== "pending") {
+              return prev.filter((inv) => inv.id !== mapped.id)
+            }
+            return prev.map((inv) => (inv.id === mapped.id ? mapped : inv))
+          })
+        } else {
+          setInvitations((prev) => prev.filter((inv) => inv.id !== newRow.id))
+        }
+      } else if (eventType === "DELETE" && oldRow) {
+        setInvitations((prev) => prev.filter((inv) => inv.id !== oldRow.id))
+      }
+    },
+  })
 }

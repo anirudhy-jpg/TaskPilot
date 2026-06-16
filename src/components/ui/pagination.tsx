@@ -61,14 +61,14 @@ export function Pagination({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 rounded-2xl bg-white/40 border border-amber-900/5 backdrop-blur-md shadow-[0_4px_20px_-4px_rgba(245,158,11,0.02)] transition-all duration-300",
+        "flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] transition-all duration-300",
         className
       )}
     >
       {/* Page status text */}
-      <div className="text-[11px] font-semibold text-slate-500">
-        Showing <span className="text-slate-800 font-extrabold">{startItem}-{endItem}</span> of{" "}
-        <span className="text-slate-800 font-extrabold">{totalItems}</span> {itemName}
+      <div className="text-[11px] font-semibold text-slate-400">
+        Showing <span className="text-slate-200 font-extrabold">{startItem}-{endItem}</span> of{" "}
+        <span className="text-slate-200 font-extrabold">{totalItems}</span> {itemName}
       </div>
 
       {/* Pagination Controls */}
@@ -79,7 +79,7 @@ export function Pagination({
           size="icon-sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="border-amber-900/5 bg-white/70 hover:bg-amber-500/10 hover:text-amber-800 disabled:opacity-30 disabled:hover:bg-white/70 disabled:hover:text-slate-400 cursor-pointer rounded-xl transition-all"
+          className="border-slate-800 bg-slate-950/40 hover:bg-amber-500/10 hover:text-amber-400 disabled:opacity-20 disabled:hover:bg-slate-950/40 disabled:hover:text-slate-500 cursor-pointer rounded-xl transition-all"
           title="Previous Page"
         >
           <ChevronLeft size={14} />
@@ -92,7 +92,7 @@ export function Pagination({
               return (
                 <span
                   key={`ellipsis-${idx}`}
-                  className="px-2 text-xs font-semibold text-slate-400 select-none"
+                  className="px-2 text-xs font-semibold text-slate-500 select-none"
                 >
                   ...
                 </span>
@@ -109,10 +109,10 @@ export function Pagination({
                 size="icon-sm"
                 onClick={() => onPageChange(pageNum)}
                 className={cn(
-                  "font-bold text-xs rounded-xl transition-all cursor-pointer border-amber-900/5",
+                  "font-bold text-xs rounded-xl transition-all cursor-pointer",
                   isActive
-                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-3xs"
-                    : "bg-white/70 hover:bg-amber-500/10 hover:text-amber-800"
+                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-3xs border-0"
+                    : "border-slate-800 bg-slate-950/40 hover:bg-amber-500/10 hover:text-amber-400 text-slate-400"
                 )}
               >
                 {pageNum}
@@ -127,7 +127,7 @@ export function Pagination({
           size="icon-sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="border-amber-900/5 bg-white/70 hover:bg-amber-500/10 hover:text-amber-800 disabled:opacity-30 disabled:hover:bg-white/70 disabled:hover:text-slate-400 cursor-pointer rounded-xl transition-all"
+          className="border-slate-800 bg-slate-955/40 hover:bg-amber-500/10 hover:text-amber-400 disabled:opacity-20 disabled:hover:bg-slate-955/40 disabled:hover:text-slate-500 cursor-pointer rounded-xl transition-all"
           title="Next Page"
         >
           <ChevronRight size={14} />

@@ -2,10 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { Project } from "../types/project.types";
 
 export class ProjectService {
-  /**
-   * Get all projects in a workspace.
-   */
-  static async getProjectsByWorkspace(workspaceId: string, userId?: string): Promise<Project[]> {
+  static async getProjectsByWorkspace(
+    workspaceId: string,
+    userId?: string,
+    userRole?: string
+  ): Promise<Project[]> {
     const supabase = await createClient();
 
     // 1. Fetch projects along with their project members (for regular member filtering) in one query
@@ -47,16 +48,20 @@ export class ProjectService {
     // 3. Filter projects based on user permissions
     if (activeUserId) {
       try {
-        // Fetch user workspace role (owner is registered as 'owner' member row)
-        const { data: memberInfo } = await supabase
-          .from("workspace_members")
-          .select("role")
-          .eq("workspace_id", workspaceId)
-          .eq("user_id", activeUserId)
-          .maybeSingle();
+        let role = userRole;
+        if (!role) {
+          // Fetch user workspace role (owner is registered as 'owner' member row)
+          const { data: memberInfo } = await supabase
+            .from("workspace_members")
+            .select("role")
+            .eq("workspace_id", workspaceId)
+            .eq("user_id", activeUserId)
+            .maybeSingle();
+          role = memberInfo?.role;
+        }
 
-        const isOwner = memberInfo?.role === "owner";
-        const isAdmin = memberInfo?.role === "admin";
+        const isOwner = role === "owner";
+        const isAdmin = role === "admin";
 
         // If regular member, only return projects they created or are assigned to
         if (!isOwner && !isAdmin) {
@@ -77,6 +82,7 @@ export class ProjectService {
 
     return projectsData.map(mapProject);
   }
+
 
   /**
    * Create a new project inside a workspace.

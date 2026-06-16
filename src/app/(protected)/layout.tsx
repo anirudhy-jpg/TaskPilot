@@ -1,8 +1,11 @@
 import React from "react"
 import { requireUser, createClient } from "@/lib/supabase/server"
-import { ProfileService } from "@/features/auth/services/profile.service"
+import {
+  getCachedProfile,
+  getCachedWorkspaceForUser,
+  getCachedProjectsByWorkspace
+} from "@/lib/cached-requests"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
-import { ProjectService } from "@/features/project/services/project.service"
 import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 import { WorkspaceShell } from "@/features/workspace/components/workspace-shell"
 
@@ -15,19 +18,19 @@ export default async function WorkspaceLayout({
 }) {
   const { user } = await requireUser()
 
-  // 1. Fetch profile and workspace in parallel
+  // 1. Fetch profile and workspace in parallel (cached)
   let profile = null
   let workspace = null
   try {
     const [pRes, wsRes] = await Promise.all([
-      ProfileService.getProfile(user.id).catch(() => null),
-      WorkspaceService.getWorkspaceForUser(user.id).catch(() => null),
+      getCachedProfile(user.id).catch(() => null),
+      getCachedWorkspaceForUser(user.id).catch(() => null),
     ])
     profile = pRes
     workspace = wsRes
 
     if (profile && !workspace) {
-      // Auto-create a default workspace for the user
+      // Auto-create a default workspace for the user (not cached as it writes/mutates)
       workspace = await WorkspaceService.createWorkspace(
         `${profile.fullName || user.email?.split("@")[0] || "My"}'s Workspace`,
         user.id
@@ -39,7 +42,7 @@ export default async function WorkspaceLayout({
 
   const workspaceName = workspace?.name || "Workspace"
 
-  // 2. Parallel fetch Owner profile, Projects, Workspaces list
+  // 2. Parallel fetch Owner profile, Projects, Workspaces list (cached)
   let ownerEmail = ""
   let projects: any[] = []
   let workspaces: any[] = []
@@ -47,8 +50,8 @@ export default async function WorkspaceLayout({
   if (workspace) {
     try {
       const [ownerProfile, projRes, wsListRes] = await Promise.all([
-        ProfileService.getProfile(workspace.ownerId).catch(() => null),
-        ProjectService.getProjectsByWorkspace(workspace.id, user.id).catch(() => []),
+        getCachedProfile(workspace.ownerId).catch(() => null),
+        getCachedProjectsByWorkspace(workspace.id, user.id, workspace.currentUserRole).catch(() => []),
         WorkspaceHubService.getWorkspacesForUser(user.id).catch(() => []),
       ])
 
