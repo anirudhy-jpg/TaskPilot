@@ -1,9 +1,10 @@
 import React from "react"
 import Link from "next/link"
-import { UserPlus, Trash2, Plus, MoreVertical, Edit2 } from "lucide-react"
+import { UserPlus, Trash2, Plus, MoreVertical, Edit2, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Project } from "../types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
+import { getProjectInitials, getUserInitials } from "@/features/project/utils/avatar"
 
 interface ProjectBoardHeaderProps {
   activeProject: Project | null
@@ -15,6 +16,7 @@ interface ProjectBoardHeaderProps {
   onEditProject: () => void
   onNewProject: () => void
   onAddColumn?: () => void
+  onAddTask?: () => void
 }
 
 export function ProjectBoardHeader({
@@ -27,6 +29,7 @@ export function ProjectBoardHeader({
   onEditProject,
   onNewProject,
   onAddColumn,
+  onAddTask,
 }: ProjectBoardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)
@@ -44,68 +47,49 @@ export function ProjectBoardHeader({
   }, [isMenuOpen])
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
-      <div>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-wrap items-center gap-3">
         {activeProject ? (
           <>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 font-extrabold text-xs shadow-3xs border border-amber-500/20 shrink-0">
-                {activeProject.name.slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
-                  {activeProject.name}
+            {/* Back to Projects Arrow */}
+            <Link
+              href="/projects"
+              className="text-slate-400 hover:text-slate-200 transition-colors shrink-0"
+              title="Back to Projects"
+            >
+              <ArrowLeft size={18} />
+            </Link>
+
+            {/* Black Square Logo Icon */}
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-950 text-amber-500 border border-slate-800 font-extrabold text-xs shadow-sm shrink-0 select-none">
+              {activeProject.name[0].toUpperCase()}
+            </div>
+
+            {/* Project Title Block */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm font-extrabold text-slate-100 tracking-tight leading-none uppercase">
+                  {getProjectInitials(activeProject.name)}
                 </h1>
 
-                {/* Overlapping Avatar Stack of Project Members */}
-                <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
-                  <div className="flex items-center">
-                    {currentProjectMembers.slice(0, 4).map((m, i) => (
-                      <div
-                        key={m.userId}
-                        className={`w-6 h-6 rounded-full bg-amber-500/10 text-amber-600 border border-white flex items-center justify-center font-extrabold text-[9px] shadow-2xs shrink-0 select-none ${
-                          i > 0 ? "-ml-2" : ""
-                        }`}
-                        title={m.profile?.fullName || m.profile?.email}
-                      >
-                        {(m.profile?.fullName || m.profile?.email || "?")[0].toUpperCase()}
-                      </div>
-                    ))}
-                    {currentProjectMembers.length > 4 && (
-                      <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 border border-white flex items-center justify-center font-bold text-[8px] -ml-2 shadow-2xs select-none">
-                        +{currentProjectMembers.length - 4}
-                      </div>
-                    )}
-                  </div>
-
-                  {isWorkspaceOwner && (
-                    <button
-                      onClick={onManageMembers}
-                      className="text-slate-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-                      title="Manage project members"
-                    >
-                      <UserPlus size={14} />
-                    </button>
-                  )}
-                </div>
-
+                {/* Project Menu */}
                 {!isWorkspaceMember && (
                   <div ref={menuRef} className="relative shrink-0 flex items-center">
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className="text-slate-400 hover:text-slate-650 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
+                      className="text-slate-400 hover:text-slate-205 p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center"
                       title="Project Options"
                     >
-                      <MoreVertical size={16} />
+                      <MoreVertical size={14} />
                     </button>
                     {isMenuOpen && (
-                      <div className="absolute left-0 mt-1.5 top-8 w-36 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
+                      <div className="absolute left-0 mt-1 top-6 w-36 bg-slate-900 border border-slate-800 rounded-lg shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
                         <button
                           onClick={() => {
                             onEditProject()
                             setIsMenuOpen(false)
                           }}
-                          className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-2"
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-2"
                         >
                           <Edit2 size={13} />
                           Edit details
@@ -119,7 +103,7 @@ export function ProjectBoardHeader({
                             })
                             setIsMenuOpen(false)
                           }}
-                          className="w-full px-3 py-2 text-left text-xs font-semibold text-red-655 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-450 hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center gap-2"
                         >
                           <Trash2 size={13} />
                           Delete project
@@ -129,67 +113,75 @@ export function ProjectBoardHeader({
                   </div>
                 )}
               </div>
+              <span className="text-[10px] text-slate-400 font-semibold tracking-wide mt-0.5">
+                {activeProject.name}
+              </span>
             </div>
-            {activeProject.description && (
-              <p className="text-xs text-slate-550 mt-1.5 pl-11 max-w-2xl leading-relaxed">
-                {activeProject.description}
-              </p>
-            )}
-            {(activeProject.creatorEmail || activeProject.creatorName) && (
-              <p className="text-[10px] text-slate-400 pl-11 mt-1 font-semibold">
-                created by: <span className="text-slate-550 font-bold">{activeProject.creatorName || activeProject.creatorEmail}</span>
-              </p>
-            )}
+
+            {/* Vertical Separator */}
+            <div className="h-6 w-px bg-slate-800 mx-2 shrink-0" />
+
+            {/* Overlapping Avatar Stack of Project Members */}
+            <div className="flex items-center -space-x-1.5 ml-2 shrink-0">
+              {currentProjectMembers.map((m) => {
+                const initials = getUserInitials(m.profile?.fullName, m.profile?.email);
+                return (
+                  <div
+                    key={m.userId}
+                    className="w-6 h-6 rounded-full bg-slate-950 text-slate-300 border border-slate-850 flex items-center justify-center font-extrabold text-[9px] shadow-2xs shrink-0 select-none"
+                    title={m.profile?.fullName || m.profile?.email}
+                  >
+                    {initials}
+                  </div>
+                );
+              })}
+              {isWorkspaceOwner && (
+                <button
+                  onClick={onManageMembers}
+                  className="text-slate-400 hover:text-amber-500 p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center shrink-0 ml-1"
+                  title="Manage project members"
+                >
+                  <UserPlus size={13} />
+                </button>
+              )}
+            </div>
           </>
         ) : (
           <div>
-            <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
+            <h1 className="text-xl font-extrabold text-slate-100 tracking-tight">
               Projects Dashboard
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5">
               Overview of all active projects and task pipelines
             </p>
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-4 shrink-0">
         {activeProject ? (
           <>
-            {onAddColumn && (() => {
-              const isLimitReached = (activeProject?.columns || []).length >= 5;
-              return (
-                <Button
-                  size="sm"
-                  className={`shadow-3xs text-xs font-black rounded-xl px-4 py-2 ${
-                    isLimitReached
-                      ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed hover:bg-slate-100"
-                      : "bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer"
-                  }`}
-                  onClick={isLimitReached ? undefined : onAddColumn}
-                  disabled={isLimitReached}
-                  title={isLimitReached ? "A project cannot have more than 5 columns" : undefined}
-                >
-                  <Plus size={14} className="mr-1.5" />
-                  <span>Add Column</span>
-                </Button>
-              );
-            })()}
-            <Link href="/projects">
+            {onAddColumn && (
               <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-500/20 hover:bg-amber-500/5 text-amber-600 cursor-pointer text-xs font-semibold rounded-xl"
+                onClick={onAddColumn}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1.5 h-10 border-0 cursor-pointer shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/20 transition-all active:scale-[0.98]"
               >
-                <span>Back to Projects</span>
+                <Plus size={14} />
+                Add Column
               </Button>
+            )}
+            <Link
+              href="/projects"
+              className="text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              Back to Projects
             </Link>
           </>
         ) : (
           !isWorkspaceMember && (
             <Button
               size="sm"
-              className="bg-amber-500 hover:bg-amber-600 text-slate-955 cursor-pointer shadow-3xs text-xs font-black rounded-xl px-4 py-2"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/20 text-xs font-black rounded-xl px-4 py-2 h-10 border-0 transition-all active:scale-[0.98]"
               onClick={onNewProject}
             >
               <Plus size={14} className="mr-1.5" />

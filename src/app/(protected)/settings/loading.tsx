@@ -10,7 +10,7 @@ export default function SettingsLoading() {
       </div>
 
       {/* Profile Card */}
-      <div className="p-6 rounded-xl bg-white/70 backdrop-blur-md border border-slate-200/60 shadow-sm space-y-6">
+      <div className="p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800 shadow-sm space-y-6">
         <div className="flex items-center gap-2">
           <Skeleton className="w-[18px] h-[18px] rounded" />
           <Skeleton className="h-4 w-36" />
@@ -26,7 +26,7 @@ export default function SettingsLoading() {
         </div>
 
         {/* Info rows */}
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-800">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export default function SettingsLoading() {
       </div>
 
       {/* Account Actions */}
-      <div className="p-6 rounded-xl bg-white/70 backdrop-blur-md border border-slate-200/60 shadow-sm space-y-4">
+      <div className="p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center gap-2">
           <Skeleton className="w-[18px] h-[18px] rounded" />
           <Skeleton className="h-4 w-32" />

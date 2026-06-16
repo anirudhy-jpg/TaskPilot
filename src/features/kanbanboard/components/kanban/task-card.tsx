@@ -42,21 +42,21 @@ export const TaskCard = React.memo(
     const visualPriority = getVisualPriority(task);
     const priorityStyles = {
       high: {
-        border: "border-l-[3.5px] border-l-rose-450",
-        badge: "bg-rose-50 text-rose-600 border-rose-100/60 rounded-full",
-        icon: <AlertCircle size={9} className="text-rose-500" />,
+        border: "border-l-[3.5px] border-l-rose-500",
+        badge: "bg-rose-500/10 text-rose-400 border-rose-500/20 rounded-full",
+        icon: <AlertCircle size={9} className="text-rose-450" />,
         label: "High",
       },
       medium: {
-        border: "border-l-[3.5px] border-l-amber-450",
-        badge: "bg-amber-50 text-amber-700 border-amber-200/40 rounded-full",
-        icon: <AlertTriangle size={9} className="text-amber-650" />,
+        border: "border-l-[3.5px] border-l-amber-500",
+        badge: "bg-amber-500/10 text-amber-400 border-amber-500/20 rounded-full",
+        icon: <AlertTriangle size={9} className="text-amber-500" />,
         label: "Medium",
       },
       low: {
-        border: "border-l-[3.5px] border-l-slate-350",
-        badge: "bg-slate-50 text-slate-655 border-slate-200/50 rounded-full",
-        icon: <Info size={9} className="text-slate-550" />,
+        border: "border-l-[3.5px] border-l-slate-700",
+        badge: "bg-slate-800 text-slate-400 border-slate-700/80 rounded-full",
+        icon: <Info size={9} className="text-slate-500" />,
         label: "Low",
       },
     }[visualPriority];
@@ -64,21 +64,21 @@ export const TaskCard = React.memo(
     return (
       <div
         onClick={() => onSelectTask(task.id)}
-        className={`bg-white border border-amber-900/5 rounded-2.5xl p-4 flex flex-col gap-3 shadow-3xs cursor-pointer select-none relative overflow-hidden transition-all duration-300 ${priorityStyles.border} ${
+        className={`bg-slate-900 border border-slate-800/80 rounded-2.5xl p-4 flex flex-col gap-3 shadow-3xs cursor-pointer select-none relative overflow-hidden transition-all duration-300 ${priorityStyles.border} ${
           isDragOverlay
             ? "shadow-lg border-amber-500/30 ring-2 ring-amber-500/10 scale-[1.02]"
             : disableHover
             ? ""
-            : "hover:shadow-2xs hover:border-amber-500/15 hover:scale-[1.01]"
+            : "hover:shadow-2xs hover:border-slate-700 hover:scale-[1.01]"
         }`}
       >
         {/* Title and ID */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">
               {projectPrefix}-{taskNumber || "???"}
             </span>
-            <h4 className="text-xs font-bold text-slate-800 leading-snug mt-1 hover:text-amber-700 transition-colors">
+            <h4 className="text-xs font-bold text-slate-200 leading-snug mt-1 hover:text-amber-400 transition-colors">
               {task.title}
             </h4>
           </div>
@@ -86,13 +86,13 @@ export const TaskCard = React.memo(
 
         {/* Description Snippet */}
         {task.description && (
-          <p className="text-[10px] text-slate-450 leading-relaxed line-clamp-2">
+          <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">
             {task.description}
           </p>
         )}
 
         {/* Divider */}
-        <div className="h-px bg-slate-100/60 my-0.5" />
+        <div className="h-px bg-slate-800/80 my-0.5" />
 
         {/* Footer info: Priority, Date, Assignee */}
         <div className="flex items-center justify-between gap-2">
@@ -106,7 +106,7 @@ export const TaskCard = React.memo(
             </span>
 
             {/* Date Badge */}
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-200/50 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-full">
               <Calendar size={9} />
               {formatTaskDate(task.createdAt)}
             </span>

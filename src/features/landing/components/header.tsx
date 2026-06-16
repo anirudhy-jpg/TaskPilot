@@ -31,7 +31,7 @@ export function Header({ user }: HeaderProps) {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
         scrolled
-          ? "bg-white/90 backdrop-blur-md border-b border-slate-200/80 py-3"
+          ? "bg-[#0b0f19]/90 backdrop-blur-md border-b border-slate-800/80 py-3"
           : "bg-transparent py-5"
       }`}
     >
@@ -46,13 +46,13 @@ export function Header({ user }: HeaderProps) {
           <nav className="hidden md:flex items-center gap-8">
             <a
               href="#features"
-              className="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors duration-150"
+              className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-amber-500 transition-colors duration-150"
             >
               Features
             </a>
             <a
               href="#stack"
-              className="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors duration-150"
+              className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-amber-500 transition-colors duration-150"
             >
               Tech Stack
             </a>
@@ -65,7 +65,7 @@ export function Header({ user }: HeaderProps) {
                 <form action={logoutAction}>
                   <button
                     type="submit"
-                    className="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors duration-150 cursor-pointer px-3 py-2 bg-transparent border-none outline-none font-sans"
+                    className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer px-3 py-2 bg-transparent border-none outline-none font-sans"
                   >
                     Sign Out
                   </button>
@@ -83,7 +83,7 @@ export function Header({ user }: HeaderProps) {
             ) : (
               <>
                 <Link href="/login">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors duration-150 cursor-pointer px-3 py-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer px-3 py-2">
                     Sign In
                   </span>
                 </Link>
@@ -103,7 +103,7 @@ export function Header({ user }: HeaderProps) {
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none transition-colors duration-150"
+              className="inline-flex items-center justify-center p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 focus:outline-none transition-colors duration-150"
               aria-expanded="false"
             >
               <span className="sr-only">Open main menu</span>
@@ -115,7 +115,7 @@ export function Header({ user }: HeaderProps) {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-200 transition-all duration-200 ease-in-out origin-top ${
+        className={`md:hidden absolute top-full left-0 right-0 bg-[#0b0f19] border-b border-slate-800 transition-all duration-200 ease-in-out origin-top ${
           isOpen ? "opacity-100 transform scale-y-100" : "opacity-0 transform scale-y-0 pointer-events-none"
         }`}
       >
@@ -123,19 +123,19 @@ export function Header({ user }: HeaderProps) {
           <a
             href="#features"
             onClick={() => setIsOpen(false)}
-            className="block py-2 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-all"
+            className="block py-2 text-sm font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-all"
           >
             Features
           </a>
           <a
             href="#stack"
             onClick={() => setIsOpen(false)}
-            className="block py-2 text-sm font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-all"
+            className="block py-2 text-sm font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-all"
           >
             Tech Stack
           </a>
 
-          <div className="pt-4 border-t border-slate-200 flex flex-col gap-3">
+          <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
             {user ? (
               <>
                 <Link href="/workspace" onClick={() => setIsOpen(false)}>
@@ -148,7 +148,7 @@ export function Header({ user }: HeaderProps) {
                   <Button
                     type="submit"
                     variant="outline"
-                    className="w-full border-slate-200 hover:bg-slate-50 text-[#1c201e] font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent"
+                    className="w-full border-slate-800 hover:bg-slate-900 text-slate-300 font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent cursor-pointer"
                   >
                     Sign Out
                   </Button>
@@ -159,7 +159,7 @@ export function Header({ user }: HeaderProps) {
                 <Link href="/login" onClick={() => setIsOpen(false)}>
                   <Button
                     variant="outline"
-                    className="w-full border-slate-200 hover:bg-slate-50 text-[#1c201e] font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent"
+                    className="w-full border-slate-800 hover:bg-slate-900 text-slate-300 font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent cursor-pointer"
                   >
                     Sign In
                   </Button>

@@ -65,27 +65,27 @@ export function MultiSelect({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-10 w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 text-slate-800 text-left font-medium shadow-2xs hover:bg-slate-50/50 cursor-pointer transition-all duration-150 ${
+        className={`flex h-10 w-full items-center justify-between rounded-lg border bg-slate-955 px-3 py-2 text-sm focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 text-left font-medium shadow-2xs hover:bg-slate-900/60 cursor-pointer transition-all duration-150 ${
           error
-            ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
-            : "border-slate-200 focus:ring-amber-500/20 focus:border-amber-500"
+            ? "border-rose-500/80 focus:ring-rose-500/20 focus:border-rose-500"
+            : "border-slate-800 focus:ring-amber-500/20 focus:border-amber-500"
         }`}
       >
-        <span className="truncate pr-4 text-slate-800">
+        <span className={`truncate pr-4 ${selectedLabels.length > 0 ? "text-slate-200" : "text-slate-500"}`}>
           {buttonText}
         </span>
         <ChevronDown
-          className={`h-4 w-4 opacity-50 transition-transform duration-200 shrink-0 ${
+          className={`h-4 w-4 text-slate-400 transition-transform duration-200 shrink-0 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 min-w-[8rem] w-full overflow-hidden rounded-lg border border-slate-200 bg-white p-1 text-slate-950 shadow-md animate-in fade-in-80 slide-in-from-top-1 duration-150 mt-1.5">
+        <div className="absolute z-50 min-w-[8rem] w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950 p-1 text-slate-200 shadow-md animate-in fade-in-80 slide-in-from-top-1 duration-150 mt-1.5">
           <div className="max-h-60 overflow-y-auto scrollbar-thin py-0.5">
             {options.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-slate-400 italic">No options available</div>
+              <div className="px-3 py-2 text-xs text-slate-500 italic">No options available</div>
             ) : (
               options.map((option) => {
                 const isSelected = value.includes(option.value)
@@ -94,13 +94,13 @@ export function MultiSelect({
                     key={option.value}
                     type="button"
                     onClick={() => handleToggle(option.value)}
-                    className={`relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2.5 text-xs outline-none hover:bg-slate-50 hover:text-slate-900 transition-colors text-left font-bold ${
-                      isSelected ? "bg-amber-500/5 text-amber-900" : "text-slate-700"
+                    className={`relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2.5 text-xs outline-none hover:bg-slate-900 hover:text-slate-100 transition-colors text-left font-bold ${
+                      isSelected ? "bg-amber-500/10 text-amber-400" : "text-slate-400"
                     }`}
                   >
                     <span className="absolute left-2.5 flex h-3.5 w-3.5 items-center justify-center">
                       {isSelected && (
-                        <Check className="h-3.5 w-3.5 text-amber-600 stroke-[2.5]" />
+                        <Check className="h-3.5 w-3.5 text-amber-500 stroke-[2.5]" />
                       )}
                     </span>
                     <span className="truncate">{option.label}</span>

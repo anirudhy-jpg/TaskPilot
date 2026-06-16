@@ -40,22 +40,22 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
         <SummaryCard
           label="Total Projects"
           value={totalProjects}
-          color="text-amber-700 bg-amber-50 border-amber-100/60"
-          hoverColor="hover:border-amber-500/20 hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.12)]"
+          color="text-amber-400 bg-amber-500/10 border-amber-500/20"
+          hoverColor="hover:border-amber-500/30 hover:shadow-[0_8px_30px_rgb(245,158,11,0.05)]"
           icon="📁"
         />
         <SummaryCard
           label="Total Tasks"
           value={totalTasks}
-          color="text-teal-700 bg-teal-50 border-teal-100/60"
-          hoverColor="hover:border-teal-500/20 hover:shadow-[0_12px_24px_-8px_rgba(20,184,166,0.12)]"
+          color="text-teal-400 bg-teal-500/10 border-teal-500/20"
+          hoverColor="hover:border-teal-500/30 hover:shadow-[0_8px_30px_rgb(20,184,166,0.05)]"
           icon="📋"
         />
         <SummaryCard
           label="Completed"
           value={tasksByStatus.find((d) => d.name === "Done")?.value || 0}
-          color="text-indigo-700 bg-indigo-50 border-indigo-100/60"
-          hoverColor="hover:border-indigo-500/20 hover:shadow-[0_12px_24px_-8px_rgba(99,102,241,0.12)]"
+          color="text-indigo-400 bg-indigo-500/10 border-indigo-500/20"
+          hoverColor="hover:border-indigo-500/30 hover:shadow-[0_8px_30px_rgb(99,102,241,0.05)]"
           icon="✅"
         />
         <SummaryCard
@@ -63,15 +63,15 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
           value={
             tasksByStatus.find((d) => d.name === "In Progress")?.value || 0
           }
-          color="text-amber-700 bg-amber-50 border-amber-100/60"
-          hoverColor="hover:border-amber-500/20 hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.12)]"
+          color="text-amber-400 bg-amber-500/10 border-amber-500/20"
+          hoverColor="hover:border-amber-500/30 hover:shadow-[0_8px_30px_rgb(245,158,11,0.05)]"
           icon="⏳"
         />
       </div>
 
       {/* ── Pie Chart — Tasks by Status ───────────────────── */}
-      <div className="p-6 rounded-2xl bg-white/75 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+      <div className="p-6 rounded-2xl bg-slate-900/40 backdrop-blur-md border border-slate-800/80 shadow-sm">
+        <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse" />
           Tasks by Status
         </h3>
@@ -97,18 +97,18 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
                   <Tooltip
                     contentStyle={{
                       borderRadius: "12px",
-                      border: "1px solid rgba(45, 74, 62, 0.1)",
+                      border: "1px solid #334155",
                       fontSize: "11px",
-                      boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
-                      background: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(4px)",
+                      background: "#0f172a",
+                      color: "#fff",
                     }}
+                    itemStyle={{ color: "#fff" }}
                   />
                   <Legend
                     verticalAlign="bottom"
                     iconType="circle"
                     iconSize={8}
-                    wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }}
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "12px", color: "#94a3b8" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -124,8 +124,8 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
       </div>
 
       {/* ── Bar Chart — Tasks per Project ─────────────────── */}
-      <div className="p-6 rounded-2xl bg-white/75 backdrop-blur-md border border-amber-900/5 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+      <div className="p-6 rounded-2xl bg-slate-900/40 backdrop-blur-md border border-slate-800/80 shadow-sm">
+        <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse" />
           Tasks per Project
         </h3>
@@ -144,12 +144,12 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
                   />
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
                     axisLine={{ stroke: "rgba(148, 163, 184, 0.15)" }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: "#64748b" }}
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
                     axisLine={false}
                     tickLine={false}
                     allowDecimals={false}
@@ -157,23 +157,23 @@ export function OverviewCharts({ analytics }: OverviewChartsProps) {
                   <Tooltip
                     contentStyle={{
                       borderRadius: "12px",
-                      border: "1px solid rgba(45, 74, 62, 0.1)",
+                      border: "1px solid #334155",
                       fontSize: "11px",
-                      boxShadow: "0 8px 30px rgba(0,0,0,0.05)",
-                      background: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(4px)",
+                      background: "#0f172a",
+                      color: "#fff",
                     }}
+                    itemStyle={{ color: "#fff" }}
                   />
                   <Legend
                     verticalAlign="bottom"
                     iconType="circle"
                     iconSize={8}
-                    wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "8px", color: "#94a3b8" }}
                   />
                   <Bar
                     dataKey="total"
                     name="Total Tasks"
-                    fill="#cbd5e1"
+                    fill="#334155"
                     radius={[4, 4, 0, 0]}
                     barSize={28}
                   />
@@ -216,7 +216,7 @@ function SummaryCard({
   icon: string
 }) {
   return (
-    <div className={`p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between ${hoverColor}`}>
+    <div className={`p-5 rounded-2xl bg-slate-900/40 backdrop-blur-md border border-slate-800/80 shadow-sm hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between ${hoverColor}`}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
           {label}
@@ -225,7 +225,7 @@ function SummaryCard({
           {icon}
         </span>
       </div>
-      <div className="text-3xl font-extrabold text-slate-800 tracking-tight">{value}</div>
+      <div className="text-3xl font-extrabold text-white tracking-tight">{value}</div>
     </div>
   )
 }
@@ -235,7 +235,7 @@ function EmptyState({ message }: { message: string }) {
     <div className="h-64 flex items-center justify-center">
       <div className="text-center">
         <div className="text-3xl mb-3">📊</div>
-        <p className="text-xs text-slate-500 max-w-[200px]">{message}</p>
+        <p className="text-xs text-slate-400 max-w-[200px]">{message}</p>
       </div>
     </div>
   )

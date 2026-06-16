@@ -350,8 +350,8 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2 rounded-full border transition-all duration-300 cursor-pointer ${
           isOpen
-            ? "bg-amber-50 border-amber-500/30 text-amber-600 shadow-sm"
-            : "border-amber-900/10 hover:border-amber-500/20 hover:bg-amber-50/50 text-slate-500 hover:text-slate-800"
+            ? "bg-amber-500/15 border-amber-500/40 text-amber-500 shadow-sm"
+            : "border-slate-800 hover:border-amber-500/20 hover:bg-slate-900 text-slate-400 hover:text-white"
         }`}
         title="Inbox Notifications"
       >
@@ -365,26 +365,26 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2.5 w-auto sm:w-80 bg-white/95 backdrop-blur-xl border border-amber-900/10 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-250 select-none">
+        <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2.5 w-auto sm:w-80 bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-250 select-none">
           {/* Header */}
-          <div className="px-4 py-3 bg-gradient-to-r from-amber-50/50 to-yellow-50/50 border-b border-amber-900/5 flex items-center justify-between">
-            <span className="text-xs font-black text-slate-800">Inbox Notifications</span>
+          <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+            <span className="text-xs font-black text-slate-200">Inbox Notifications</span>
             {pendingCount > 0 && (
-              <span className="text-[10px] font-bold text-amber-800 bg-amber-500/10 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
                 {pendingCount} Pending
               </span>
             )}
           </div>
 
           {/* List Content */}
-          <div className="max-h-[320px] overflow-y-auto divide-y divide-amber-955/5 scrollbar-thin">
+          <div className="max-h-[320px] overflow-y-auto divide-y divide-slate-800 scrollbar-thin">
             {pendingCount === 0 ? (
               <div className="p-8 text-center flex flex-col items-center justify-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                <div className="w-10 h-10 rounded-full bg-slate-850 flex items-center justify-center text-slate-400 border border-slate-800">
                   <MailOpen size={16} />
                 </div>
-                <div className="text-xs font-bold text-slate-700">All caught up!</div>
-                <p className="text-[10px] text-slate-400 max-w-[180px] leading-normal">
+                <div className="text-xs font-bold text-slate-300">All caught up!</div>
+                <p className="text-[10px] text-slate-500 max-w-[180px] leading-normal">
                   You don&apos;t have any pending notifications right now.
                 </p>
               </div>
@@ -394,22 +394,22 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                 {invitations.map((invite) => {
                   const isProcessing = processingId === invite.id
                   return (
-                    <div key={invite.id} className="p-4 hover:bg-slate-50/50 transition-colors flex flex-col gap-3">
+                    <div key={invite.id} className="p-4 hover:bg-slate-900/50 transition-colors flex flex-col gap-3">
                       {/* Inviter Info */}
                       <div className="flex items-start gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-700 flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center text-xs font-bold uppercase shrink-0">
                           <UserPlus size={14} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs text-slate-550 leading-normal">
-                            <span className="font-extrabold text-slate-800">{invite.invitedBy}</span> invited you to join
+                          <p className="text-xs text-slate-400 leading-normal">
+                            <span className="font-extrabold text-slate-200">{invite.invitedBy}</span> invited you to join
                           </p>
-                          <p className="text-xs font-black text-slate-850 truncate mt-0.5" title={invite.projectName}>
+                          <p className="text-xs font-black text-slate-350 truncate mt-0.5" title={invite.projectName}>
                             {invite.projectName}
                           </p>
                           <div className="flex items-center gap-1.5 mt-1.5">
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-455 capitalize px-2 py-0.5 rounded bg-white border border-slate-200">
-                              {invite.role === "admin" && <Shield size={9} className="text-blue-500" />}
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 capitalize px-2 py-0.5 rounded bg-slate-950 border border-slate-850">
+                              {invite.role === "admin" && <Shield size={9} className="text-blue-400" />}
                               {invite.role}
                             </span>
                           </div>
@@ -419,9 +419,9 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                       {/* Actions */}
                       <div className="flex items-center gap-2 pt-1">
                         <button
-                          onClick={() => handleAccept(invite.id)}
-                          disabled={isProcessing}
-                          className="flex-1 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-black transition-all duration-150 flex items-center justify-center gap-1 shadow-3xs hover:shadow-2xs active:scale-[0.97] cursor-pointer disabled:opacity-50"
+                           onClick={() => handleAccept(invite.id)}
+                           disabled={isProcessing}
+                           className="flex-1 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-black transition-all duration-150 flex items-center justify-center gap-1 shadow-3xs hover:shadow-2xs active:scale-[0.97] cursor-pointer disabled:opacity-50"
                         >
                           {isProcessing ? (
                             <Loader2 size={11} className="animate-spin text-slate-950" />
@@ -433,7 +433,7 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                         <button
                           onClick={() => handleReject(invite.id)}
                           disabled={isProcessing}
-                          className="flex-1 h-8 rounded-lg border border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-550 hover:text-slate-800 text-[10px] font-bold transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.97] cursor-pointer disabled:opacity-50"
+                          className="flex-1 h-8 rounded-lg border border-slate-800 hover:border-slate-700 hover:bg-slate-900 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.97] cursor-pointer disabled:opacity-50"
                         >
                           <X size={12} className="stroke-[2.5]" />
                           Decline
@@ -451,31 +451,31 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   // - invitation_accepted: green (Accept)
                   // - invitation_rejected: red (Reject)
                   // - member_left: red (Leave)
-                  let colorClass = "bg-amber-500/10 text-amber-600"
+                  let colorClass = "bg-amber-500/10 text-amber-500"
                   let icon = <Bell size={14} />
 
                   if (notif.type === "invitation_accepted") {
-                    colorClass = "bg-emerald-500/10 text-emerald-600"
+                    colorClass = "bg-emerald-500/10 text-emerald-455"
                     icon = <Check size={14} className="stroke-[2.5]" />
                   } else if (notif.type === "invitation_rejected") {
-                    colorClass = "bg-rose-500/10 text-rose-600"
+                    colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <X size={14} className="stroke-[2.5]" />
                   } else if (notif.type === "member_left") {
-                    colorClass = "bg-rose-500/10 text-rose-600"
+                    colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <UserMinus size={14} />
                   }
 
                   return (
-                    <div key={notif.id} className="p-4 hover:bg-slate-50/50 transition-colors flex flex-col gap-2.5">
+                    <div key={notif.id} className="p-4 hover:bg-slate-900/50 transition-colors flex flex-col gap-2.5">
                       <div className="flex items-start gap-2.5">
                         <div className={`w-8 h-8 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold uppercase shrink-0`}>
                           {icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black text-slate-800 leading-normal">
+                          <p className="text-xs font-black text-slate-200 leading-normal">
                             {notif.title}
                           </p>
-                          <p className="text-xs text-slate-550 leading-relaxed mt-0.5">
+                          <p className="text-xs text-slate-400 leading-relaxed mt-0.5">
                             {notif.message}
                           </p>
                         </div>
@@ -486,7 +486,7 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                         <button
                           onClick={() => handleDismissNotification(notif.id)}
                           disabled={isProcessing}
-                          className="px-3 h-7 rounded-lg border border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-550 hover:text-slate-800 text-[10px] font-bold transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.97] cursor-pointer disabled:opacity-50"
+                          className="px-3 h-7 rounded-lg border border-slate-850 hover:border-slate-700 hover:bg-slate-900 text-slate-400 hover:text-slate-200 text-[10px] font-bold transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.97] cursor-pointer disabled:opacity-50"
                         >
                           {isProcessing ? (
                             <Loader2 size={10} className="animate-spin text-slate-550" />
