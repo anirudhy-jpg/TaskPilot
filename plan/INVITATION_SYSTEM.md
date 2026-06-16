@@ -1,157 +1,143 @@
-# TaskPilot Workspace & Real-Time Invitation System Walkthrough
+# TaskPilot Email-Based Workspace Invitation System
 
-This document details the architectural structure, directory/file organization, database updates, API endpoints, and components that power the real-time workspace management and member invitation system in TaskPilot.
+This document provides a comprehensive overview of the secure, email-based workspace invitation system implemented in TaskPilot. It describes the folders, database schema, end-to-end flows, security policies, and SendGrid configurations that power this feature.
 
 ---
 
 ## 🏗️ Folder Structure Overview
 
-The system features are separated into logical directories to ensure clean segregation of concerns:
+The invitations feature is organized following TaskPilot's modular, feature-based architecture to isolate code and minimize overlap:
 
 ```
 taskpilot/
-├── plan/
-│   └── update_schema.sql                  # Database migration schema additions
+├── supabase/
+│   └── migrations/
+│       └── 20260615144500_update_workspace_invitations.sql  # Database migrations
 ├── src/
-│   ├── actions/
-│   │   ├── invite.actions.ts              # Server Actions for sending invitations
-│   │   └── workspace/
-│   │       ├── workspace.actions.ts       # Core Project / Task actions
-│   │       └── workspace-hub.actions.ts   # Isolated Workspace Switcher/Leave actions
 │   ├── app/
-│   │   ├── api/
-│   │   │   ├── invitations/
-│   │   │   │   ├── accept/
-│   │   │   │   │   └── route.ts           # API Route to accept invitation
-│   │   │   │   └── reject/
-│   │   │   │       └── route.ts           # API Route to reject invitation
-│   │   │   └── sse/
-│   │   │       └── route.ts               # SSE route for pushing real-time invites to client
-│   │   └── (protected)/
-│   │       └── workspaces/
-│   │           ├── loading.tsx            # Skeletal loading placeholder page
-│   │           └── page.tsx               # Server Component fetching owned & member workspaces
-│   ├── components/
-│   │   └── workspace/
-│   │       ├── Header.tsx                 # Header with Switcher info and custom Leave Modal
-│   │       ├── HeaderInbox.tsx            # SSE Notification listener & Bell Badge Dropdown
-│   │       ├── SettingsPanel.tsx          # Panel showing user settings and "Leave Workspace"
-│   │       ├── WorkspacesClient.tsx       # Client dashboard for managing and switching workspaces
-│   │       └── modals/
-│   │           └── DeleteConfirmModal.tsx # Portal-rendered confirmation modal (supports workspaces)
-│   └── services/
-│       ├── workspace.service.ts           # Core workspace database queries
-│       └── workspace-hub.service.ts       # Isolated Hub service (multi-workspace queries & leaving)
+│   │   ├── (auth)/
+│   │   │   ├── login/
+│   │   │   │   └── page.tsx           # Login page aliasing ?redirect to ?next
+│   │   │   └── signup/
+│   │   │       └── page.tsx           # Signup page aliasing ?redirect to ?next
+│   │   └── invite/
+│   │       ├── accept/
+│   │       │   └── page.tsx           # Legacy route redirecting to /invite/[token]
+│   │       └── [token]/
+│   │           └── page.tsx           # Dynamic token-based accept/reject page
+│   ├── lib/
+│   │   └── email/
+│   │       ├── sendgrid.ts            # SendGrid mail service helper wrapper
+│   │       └── templates/
+│   │           └── invitation-email.ts # Branded responsive HTML email template
+│   └── features/
+│       ├── auth/
+│       │   └── components/
+│       │       ├── login-form.tsx     # Resolves ?redirect params during form submit
+│       │       └── signup-form.tsx    # Resolves ?redirect params during form submit
+│       ├── workspace/
+│       │   ├── actions/               # Legacy actions delegating to invitations feature
+│       │   │   ├── accept-invitation.action.ts
+│       │   │   ├── create-invitation.action.ts
+│       │   │   └── decline-invitation.action.ts
+│       │   └── services/
+│       │       └── invite.service.ts  # Legacy service re-exporting new service
+│       └── invitations/
+│           ├── actions/               # Core invitation server actions
+│           │   ├── accept-invitation.action.ts
+│           │   ├── create-invitation.action.ts
+│           │   └── reject-invitation.action.ts
+│           ├── components/
+│           │   └── accept-invite-client.tsx # Accept/decline client interactive UI
+│           ├── repositories/
+│           │   └── invitation.repository.ts # Supabase DB query layer
+│           └── services/
+│               └── invite.service.ts  # Core invitation logic (token gen, SendGrid trigger)
 ```
 
 ---
 
 ## 🔁 End-to-End Invitation Flow
 
-The invitation system operates asynchronously and securely across server and client layers:
+The invitation flow combines server actions, secure database constraints, external email delivery, and user authentication:
 
 ```mermaid
 sequenceDiagram
-    participant Admin as Workspace Admin
+    participant Admin as Workspace Owner/Admin
+    participant Service as InviteService (Server)
+    participant SG as SendGrid API
+    participant Invitee as Invitee Email/Browser
+    participant Auth as Auth Router
     participant DB as Supabase DB
-    participant SSE as Next.js SSE Route (/api/sse)
-    participant Client as User Browser (HeaderInbox)
-    participant API as Accept API (/api/invitations/accept)
 
-    Admin->>DB: Generates invite (workspace_invitations)
-    Client->>SSE: Establishes event stream connection
-    DB-->>SSE: Detects pending invite (via 5s poll)
-    SSE-->>Client: Pushes "invitation" event
-    Client->>Client: Renders bell badge & dropdown item
-    Client->>API: User clicks "Accept"
-    API->>DB: Sets status to "accepted"
-    DB->>DB: Trigger inserts member into project_members
-    API-->>Client: Returns success
-    Client->>Client: Invokes router.push & router.refresh() (Sidebar updates)
-```
-
-### 1. Generating an Invitation
-* **Action**: In the project member management view, an admin invites an email address and assigns them to a specific project.
-* **Database Representation**: Inserts a row into `workspace_invitations` with status `'pending'` and the target `project_id`.
-
-### 2. Real-Time Listening (SSE)
-* **API Endpoint**: `/src/app/api/sse/route.ts`
-* **Mechanism**: When a user logs in, `HeaderInbox.tsx` opens a persistent EventSource connection to `/api/sse`. The route polls the database every 5 seconds for pending invitations matching the user's logged-in email. If found, it pushes an update immediately to the client without page requests.
-* **UI**: The Header bell notification icon displays a red count badge. Opening the dropdown allows accepting or rejecting the invite.
-
-### 3. Accepting the Invitation
-* **API Endpoint**: `/src/app/api/invitations/accept/route.ts`
-* **Execution**:
-  1. Validates that the invitation exists and belongs to the authenticated user.
-  2. Updates invitation status in `workspace_invitations` to `'accepted'`.
-  3. Inserts a row into `workspace_members`.
-  4. Triggers database procedures (see below) to auto-join the project mapping.
-  5. Sets the client cookie `active_workspace_id` to switch the active layout.
-  6. Refreshes routes cleanly via Next.js `useRouter.refresh()`.
-
----
-
-## 🗄️ Database Trigger Configuration
-
-To auto-populate project member relationships upon invite acceptance, a security trigger executes inside the Postgres engine:
-
-```sql
--- Create helper trigger function to auto-assign a user to the specified project when accepted
-CREATE OR REPLACE FUNCTION public.handle_accepted_invitation()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_user_id UUID;
-END;
-$$ BEGIN
-  IF NEW.status = 'accepted' AND OLD.status = 'pending' AND NEW.project_id IS NOT NULL THEN
-    -- Find the user ID matching the invite email
-    SELECT id INTO v_user_id FROM public.profiles WHERE LOWER(email) = LOWER(NEW.email);
-    
-    IF v_user_id IS NOT NULL THEN
-      -- Insert into project_members, setting role to 'member'
-      INSERT INTO public.project_members (project_id, user_id, role)
-      VALUES (NEW.project_id, v_user_id, 'member')
-      ON CONFLICT (project_id, user_id) DO NOTHING;
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Recreate trigger mapping
-DROP TRIGGER IF EXISTS on_workspace_invitations_accepted ON public.workspace_invitations;
-
-CREATE TRIGGER on_workspace_invitations_accepted
-  AFTER UPDATE ON public.workspace_invitations
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_accepted_invitation();
+    Admin->>Service: Invites member (Email, Role, Project IDs)
+    Service->>Service: Generates unique token (random UUID)
+    Service->>DB: Inserts invitation row (status: pending)
+    Service->>SG: Dispatches invitation HTML email
+    Note over Service,SG: Email fails? Invitation record is still created.
+    SG-->>Invitee: Delivers email with "Accept Invitation" button
+    Invitee->>Invitee: Clicks button (invitationUrl: /invite/[token])
+    Invitee->>Auth: Lands on /invite/[token] (unauthenticated?)
+    Auth-->>Invitee: Redirects to /login?redirect=/invite/[token]
+    Invitee->>Auth: Authenticates successfully
+    Auth-->>Invitee: Redirects back to /invite/[token]
+    Invitee->>Service: Validates token & email matching
+    Invitee->>DB: Clicks "Accept" (triggers membership mutations)
+    DB-->>Invitee: Workspace member & project member created
+    Invitee->>Invitee: Redirection to /workspace dashboard
 ```
 
 ---
 
-## 🚪 Workspace Switcher Hub & Leaving Mechanics
+## ⚙️ Detailed Architectural Breakdown
 
-We isolated the switcher logic and leaving commands to support granular controls.
+### 1. Database Schema (`workspace_invitations`)
+The schema enforces constraints and preserves structural mapping:
+- **`token`** (`UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()`): Sent to the recipient in the URL query parameters. Serves as the primary validation key.
+- **`email`** (`TEXT NOT NULL`): The email address invited to the workspace.
+- **`role`** (`TEXT NOT NULL`): The target role inside the workspace (`'admin'` or `'member'`).
+- **`status`** (`TEXT NOT NULL`): Invitation states: `'pending'`, `'accepted'`, or `'declined'`.
+- **`expires_at`** (`TIMESTAMP WITH TIME ZONE`): Expiration limit set to 7 days from creation.
+- **`project_ids`** (`UUID[]`): Projects the user will join immediately upon acceptance.
 
-### 1. Workspace Switcher Hub (`/workspaces` & `WorkspacesClient.tsx`)
-* A dedicated dashboard displaying **Owned Workspaces** and **Member Workspaces** side-by-side.
-* Includes a **Leave** button for any workspace where the user is an invited member, allowing them to leave without switching active focus first.
+### 2. SendGrid Integration
+- Wraps SendGrid inside `src/lib/email/sendgrid.ts` using `@sendgrid/mail`.
+- Configured using environment variables:
+  - `SENDGRID_API_KEY`: API authentication key.
+  - `SENDGRID_FROM_EMAIL`: The verified Single Sender Identity email address (configured to `vsumit1762@gmail.com`).
+- Delivery errors are caught and logged inside the action thread, preventing mail failures from blocking or rolling back invitation creation.
 
-### 2. Settings Panel (`SettingsPanel.tsx`)
-* Displays a dedicated **Leave Workspace** card if the active workspace is a member workspace.
-* Safely calls `leaveWorkspaceAction` and removes all child project permissions.
+### 3. Invitation Creation Flow
+1. **Verification**: Checks if the user performing the invite holds admin or owner privileges in the workspace.
+2. **Member Check**: Checks if the invitee is already a workspace member.
+3. **Pending Check**: Checks for any unexpired pending invitation to the same email for this workspace.
+4. **Token Generation**: Generates a cryptographically secure random UUID token.
+5. **Database Entry**: Inserts the row into `workspace_invitations` with a 7-day expiration.
+6. **SendGrid Call**: Resolves workspace, inviter, and project details, constructs the HTML email, and dispatches it via SendGrid.
 
-### 3. Header Action (`Header.tsx`)
-* Replaces the standard **Sign Out** button in the header with a **Leave Workspace** button (`DoorOpen` icon) when the user is in a workspace they do not own.
-
-### 4. DOM Portal Rendering (`DeleteConfirmModal.tsx`)
-* Replaced standard browser `confirm()` calls in all views with the unified `DeleteConfirmModal`.
-* Configured using React's `createPortal` to render directly onto `document.body` to resolve position offsets and clipping issues caused by sticky/backdrop-blur elements.
+### 4. Interactive Invite UI & Accept Page
+- Located at `/invite/[token]`.
+- Checks for active sessions using `getSession()`. If missing, forces Next.js redirection to `/login?redirect=/invite/[token]`.
+- Displays workspace title, inviter name, role details, and assigned projects list.
+- **Security Check**: Before displaying the Accept button, checks that the authenticated user's email matches the invitation email. If they differ, an "Email Mismatch" screen appears with a Sign Out option.
+- **Accept Action**:
+  - Adds user to `workspace_members`.
+  - Adds user to `project_members` for all assigned project IDs.
+  - Sets all other pending invitations for this email in this workspace to `'accepted'`.
+  - Sets active workspace cookie `active_workspace_id`.
+  - Records real-time notifications for owners/inviters.
+- **Reject Action**:
+  - Sets invitation status to `'declined'`.
+  - Emits real-time notifications for owners/inviters.
 
 ---
 
-## ⚡ Client Navigation & Stability Enhancements
+## 🔒 Security Policies & Validation Rules
 
-1. **State-Preserving Transitions**: Replaced all raw page reloads (`window.location.reload()`) with Next.js `useRouter` handles to prevent layout flicker.
-2. **Date Hydration Mismatch Fix**: Standardized date rendering in `KanbanBoard.tsx` to print in a fully deterministic format (`Jun 9` using local getters and arrays) to resolve React SSR hydration mismatches.
-3. **Forced Dynamic Rendering**: Added `export const dynamic = "force-dynamic"` to protected views so the router does not cache stale workspaces or members.
+- **Inviter Privilege Verification**: Before creating the invitation, the system queries workspace membership roles to confirm the inviter is either the workspace owner or holds the `admin` role.
+- **Authentication Redirect Pipeline**: When an unauthenticated user lands on `/invite/[token]`, they are redirected with the `redirect` query parameter. Both the Login and Signup pages capture this parameter, appending it to form submission actions so the user is returned to the exact invitation validation page after successful sign-in.
+- **Email Mismatch Protection**: Protects workspaces against unauthorized access by preventing users signed in with a different account from accepting an invitation intended for another email address.
+- **Token Validity Enforcement**: The page checks:
+  - If the token exists.
+  - If the status is `'pending'`.
+  - If the current time is less than `expires_at`.

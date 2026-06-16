@@ -92,7 +92,6 @@ export class MemberService {
         profile:profiles(email, full_name, avatar_url)
       `)
       .in("user_id", uniqueUserIds)
-      .neq("role", "owner")
 
     if (workspaceId) {
       query = query.eq("workspace_id", workspaceId)
@@ -106,7 +105,6 @@ export class MemberService {
         .from("workspace_members")
         .select("*")
         .in("user_id", uniqueUserIds)
-        .neq("role", "owner")
 
       if (workspaceId) {
         fallbackQuery = fallbackQuery.eq("workspace_id", workspaceId)
@@ -120,12 +118,11 @@ export class MemberService {
       }
 
       const members = await fetchProfilesForMembers(supabase, fallbackData || [])
-      return members.filter((m) => m.role !== "owner")
+      return members
     }
 
     return (data || [])
       .map((row) => mapMember(row, row.profile))
-      .filter((m) => m.role !== "owner")
   }
 
   /**
@@ -134,6 +131,42 @@ export class MemberService {
   static async removeMember(workspaceId: string, memberId: string): Promise<void> {
     const supabase = await createClient()
 
+    // 1. Get the user_id of the member being removed
+    const { data: memberRow } = await supabase
+      .from("workspace_members")
+      .select("user_id")
+      .eq("id", memberId)
+      .single()
+
+    if (memberRow?.user_id) {
+      const userId = memberRow.user_id
+
+      // 2. Fetch projects in this workspace
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+
+      if (projects && projects.length > 0) {
+        const projectIds = projects.map((p) => p.id)
+
+        // Remove project memberships for projects in this workspace
+        await supabase
+          .from("project_members")
+          .delete()
+          .in("project_id", projectIds)
+          .eq("user_id", userId)
+
+        // Unassign the user from tasks in this workspace's projects
+        await supabase
+          .from("tasks")
+          .update({ assigned_to: null })
+          .in("project_id", projectIds)
+          .eq("assigned_to", userId)
+      }
+    }
+
+    // 3. Delete from workspace_members
     const { error } = await supabase
       .from("workspace_members")
       .delete()

@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 
 export function SignupForm() {
   const searchParams = useSearchParams()
-  const next = searchParams.get("next")
+  const next = searchParams.get("next") || searchParams.get("redirect")
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")

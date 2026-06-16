@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Menu, X, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/ui/logo"
+import { logoutAction } from "@/features/auth/actions/logout.action"
 
 interface HeaderProps {
   user: any // Current authenticated user, if any
@@ -60,15 +61,25 @@ export function Header({ user }: HeaderProps) {
           {/* Desktop Action Buttons */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
-              <Link href="/workspace">
-                <Button
-                  variant="default"
-                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm shadow-amber-500/10"
-                >
-                  Workspace
-                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-slate-950" />
-                </Button>
-              </Link>
+              <>
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors duration-150 cursor-pointer px-3 py-2 bg-transparent border-none outline-none font-sans"
+                  >
+                    Sign Out
+                  </button>
+                </form>
+                <Link href="/workspace">
+                  <Button
+                    variant="default"
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm shadow-amber-500/10"
+                  >
+                    Workspace
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-slate-950" />
+                  </Button>
+                </Link>
+              </>
             ) : (
               <>
                 <Link href="/login">
@@ -126,12 +137,23 @@ export function Header({ user }: HeaderProps) {
 
           <div className="pt-4 border-t border-slate-200 flex flex-col gap-3">
             {user ? (
-              <Link href="/workspace" onClick={() => setIsOpen(false)}>
-                <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer">
-                  Workspace
-                  <ArrowRight className="w-4 h-4 text-slate-950" />
-                </Button>
-              </Link>
+              <>
+                <Link href="/workspace" onClick={() => setIsOpen(false)}>
+                  <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                    Workspace
+                    <ArrowRight className="w-4 h-4 text-slate-950" />
+                  </Button>
+                </Link>
+                <form action={logoutAction} onSubmit={() => setIsOpen(false)} className="w-full">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="w-full border-slate-200 hover:bg-slate-50 text-[#1c201e] font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent"
+                  >
+                    Sign Out
+                  </Button>
+                </form>
+              </>
             ) : (
               <>
                 <Link href="/login" onClick={() => setIsOpen(false)}>

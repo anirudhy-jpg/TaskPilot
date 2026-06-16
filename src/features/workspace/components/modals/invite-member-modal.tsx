@@ -3,13 +3,14 @@ import { createPortal } from "react-dom"
 import { X, Check, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
+import { MultiSelect } from "@/components/ui/multi-select"
 import type { Project } from "@/features/project/types/project.types"
 
 interface InviteMemberModalProps {
   isOpen: boolean
   onClose: () => void
   isPending: boolean
-  onInvite: (email: string, role: "admin" | "member", projectId?: string | null) => Promise<string | null>
+  onInvite: (email: string, role: "admin" | "member", projectIds: string[]) => Promise<string | null>
   projects?: Project[]
 }
 
@@ -23,7 +24,7 @@ export function InviteMemberModal({
   const [mounted, setMounted] = useState(false)
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<"admin" | "member">("member")
-  const [selectedProjectId, setSelectedProjectId] = useState("")
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
   const [showErrors, setShowErrors] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,13 +37,13 @@ export function InviteMemberModal({
 
   const handleSubmit = async () => {
     if (!email.trim()) return
-    if (projects.length > 0 && !selectedProjectId) {
+    if (role === "member" && projects.length > 0 && selectedProjectIds.length === 0) {
       setShowErrors(true)
       return
     }
     setError(null)
     try {
-      const url = await onInvite(email.trim(), role, selectedProjectId || null)
+      const url = await onInvite(email.trim(), role, selectedProjectIds)
       if (url) {
         setIsSuccess(true)
       } else {
@@ -57,7 +58,7 @@ export function InviteMemberModal({
   const handleReset = () => {
     setEmail("")
     setRole("member")
-    setSelectedProjectId("")
+    setSelectedProjectIds([])
     setShowErrors(false)
     setIsSuccess(false)
     setError(null)
@@ -66,9 +67,6 @@ export function InviteMemberModal({
 
   return createPortal(
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleReset()
-      }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
@@ -80,7 +78,7 @@ export function InviteMemberModal({
           </h3>
           <button
             onClick={handleReset}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+            className="text-slate-400 hover:text-slate-650 p-1 rounded-lg hover:bg-slate-100 transition-all cursor-pointer border-0"
           >
             <X size={18} />
           </button>
@@ -127,7 +125,7 @@ export function InviteMemberModal({
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <User size={13} className={role === "member" ? "text-amber-600" : "text-slate-400"} />
+                    <User size={13} className={role === "member" ? "text-amber-650" : "text-slate-400"} />
                     Member
                   </div>
                   <span className="text-[10px] text-slate-450 mt-1 leading-normal">
@@ -138,7 +136,10 @@ export function InviteMemberModal({
                 {/* Admin Option */}
                 <button
                   type="button"
-                  onClick={() => setRole("admin")}
+                  onClick={() => {
+                    setRole("admin")
+                    setShowErrors(false)
+                  }}
                   disabled={isPending}
                   className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     role === "admin"
@@ -147,7 +148,7 @@ export function InviteMemberModal({
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <Shield size={13} className={role === "admin" ? "text-amber-600" : "text-slate-400"} />
+                    <Shield size={13} className={role === "admin" ? "text-amber-650" : "text-slate-400"} />
                     Admin
                   </div>
                   <span className="text-[10px] text-slate-455 mt-1 leading-normal">
@@ -158,43 +159,34 @@ export function InviteMemberModal({
             </div>
 
             {/* Project Selection */}
-            {projects.length > 0 ? (
+            {projects.length > 0 && (
               <div>
                 <label className="text-xs font-semibold text-slate-500 block mb-1">
-                  Assign to Project <span className="text-rose-500">*</span>
+                  Assign to Projects {role === "member" && <span className="text-rose-500">*</span>}
                 </label>
-                <Select
-                  value={selectedProjectId}
+                <MultiSelect
+                  value={selectedProjectIds}
                   onChange={(val) => {
-                    setSelectedProjectId(val)
-                    if (val) setShowErrors(false)
+                    setSelectedProjectIds(val)
+                    if (val.length > 0) setShowErrors(false)
                   }}
-                  options={[
-                    { value: "", label: "Select a project..." },
-                    ...projects.map((project) => ({
-                      value: project.id,
-                      label: project.name,
-                    })),
-                  ]}
-                  error={showErrors && !selectedProjectId}
+                  options={projects.map((project) => ({
+                    value: project.id,
+                    label: project.name,
+                  }))}
+                  error={showErrors && role === "member" && selectedProjectIds.length === 0}
                   disabled={isPending}
+                  placeholder="Select projects..."
                 />
-                {(!selectedProjectId && email.trim() && email.includes("@")) || showErrors ? (
+                {showErrors && role === "member" && selectedProjectIds.length === 0 ? (
                   <p className="text-[10px] text-rose-500 mt-1 font-bold animate-in fade-in duration-200">
-                    Please select a project. Project assignment is compulsory.
+                    Please select at least one project. Project assignment is compulsory for members.
                   </p>
                 ) : (
                   <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
                     Workspace members will be restricted to see only their assigned projects.
                   </p>
                 )}
-              </div>
-            ) : (
-              <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center space-y-1 select-none">
-                <p className="text-xs font-black text-amber-800">No Projects Available</p>
-                <p className="text-[10px] text-amber-700 leading-normal">
-                  You must create at least one project in this workspace before you can invite members.
-                </p>
               </div>
             )}
 
@@ -209,7 +201,7 @@ export function InviteMemberModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isPending || !email.trim() || !email.includes("@") || (projects.length > 0 && !selectedProjectId)}
+                disabled={isPending || !email.trim() || !email.includes("@") || (role === "member" && projects.length > 0 && selectedProjectIds.length === 0)}
                 className={`text-xs font-bold px-4 h-9 rounded-xl transition-all duration-200 cursor-pointer border-0 ${
                   isPending
                     ? "bg-amber-500 text-slate-950 opacity-90 cursor-wait"

@@ -19,6 +19,7 @@ import { CreateColumnModal } from "@/features/kanbanboard/components/modals/crea
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal";
 import { ManageProjectMembersModal } from "./modals/manage-project-members-modal";
 import { EditProjectModal } from "./modals/edit-project-modal";
+import { Pagination } from "@/components/ui/pagination";
 
 const KanbanBoard = dynamic(
   () => import("@/features/kanbanboard/components/kanban-board").then((mod) => mod.KanbanBoard),
@@ -100,6 +101,7 @@ function BoardContent(props: ProjectsListProps) {
     handleCreateTask,
     handleAssigneeChange,
     handleMoveTask,
+    handleUpdateTask,
     cycleTaskStatus,
     handleCreateColumn,
     handleRenameColumn,
@@ -110,6 +112,21 @@ function BoardContent(props: ProjectsListProps) {
   } = useProjectBoard(props);
 
   const [isCreateColumnOpen, setIsCreateColumnOpen] = React.useState(false);
+
+  // Pagination state and logic
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 6;
+  const totalItems = optimisticProjects.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProjects = optimisticProjects.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-6 flex flex-col h-full w-full select-none relative">
@@ -164,6 +181,7 @@ function BoardContent(props: ProjectsListProps) {
               setDeleteTarget({ type: "task", id, name: title })
             }
             onMoveTask={handleMoveTask}
+            onUpdateTask={handleUpdateTask}
             onCreateColumn={handleCreateColumn}
             onRenameColumn={handleRenameColumn}
             onMoveColumn={handleMoveColumn}
@@ -172,17 +190,27 @@ function BoardContent(props: ProjectsListProps) {
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */
-          <ProjectsDashboardGrid
-            optimisticProjects={optimisticProjects}
-            statusConfig={statusConfig}
-            cycleTaskStatus={cycleTaskStatus}
-            setDeleteTarget={setDeleteTarget}
-            setNewTaskStatus={setNewTaskStatus}
-            setCreateTaskProjectId={setCreateTaskProjectId}
-            setIsCreateProjectOpen={setIsCreateProjectOpen}
-            isWorkspaceMember={isWorkspaceMember}
-            onEditProject={(project) => setProjectToEdit(project)}
-          />
+          <div className="space-y-6">
+            <ProjectsDashboardGrid
+              optimisticProjects={paginatedProjects}
+              statusConfig={statusConfig}
+              cycleTaskStatus={cycleTaskStatus}
+              setDeleteTarget={setDeleteTarget}
+              setNewTaskStatus={setNewTaskStatus}
+              setCreateTaskProjectId={setCreateTaskProjectId}
+              setIsCreateProjectOpen={setIsCreateProjectOpen}
+              isWorkspaceMember={isWorkspaceMember}
+              onEditProject={(project) => setProjectToEdit(project)}
+            />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              itemName="projects"
+            />
+          </div>
         )}
       </div>
 

@@ -1,16 +1,12 @@
 import React from "react"
-import { requireUser } from "@/lib/supabase/server"
+import { requireUser, createClient } from "@/lib/supabase/server"
 import { ProfileService } from "@/features/auth/services/profile.service"
 import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { ProjectService } from "@/features/project/services/project.service"
-import { TaskService } from "@/features/tasks/services/task.service"
 import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 import { WorkspaceShell } from "@/features/workspace/components/workspace-shell"
 
-import { ColumnService } from "@/features/kanbanboard/services/column.service"
-
 export const dynamic = "force-dynamic"
-
 
 export default async function WorkspaceLayout({
   children,
@@ -19,74 +15,89 @@ export default async function WorkspaceLayout({
 }) {
   const { user } = await requireUser()
 
-  // Fetch profile
+  // 1. Fetch profile and workspace in parallel
   let profile = null
-  try {
-    profile = await ProfileService.getProfile(user.id)
-    if (!profile && user.email) {
-      profile = await ProfileService.createProfile(
-        user.id,
-        user.email,
-        user.user_metadata?.full_name || user.user_metadata?.name || undefined
-      )
-    }
-  } catch (err) {
-    console.error("Error loading profile:", err)
-  }
-
-  // Fetch or create workspace
   let workspace = null
   try {
-    workspace = await WorkspaceService.getWorkspaceForUser(user.id)
-    if (!workspace) {
+    const [pRes, wsRes] = await Promise.all([
+      ProfileService.getProfile(user.id).catch(() => null),
+      WorkspaceService.getWorkspaceForUser(user.id).catch(() => null),
+    ])
+    profile = pRes
+    workspace = wsRes
+
+    if (profile && !workspace) {
       // Auto-create a default workspace for the user
       workspace = await WorkspaceService.createWorkspace(
-        `${profile?.fullName || user.email?.split("@")[0] || "My"}'s Workspace`,
+        `${profile.fullName || user.email?.split("@")[0] || "My"}'s Workspace`,
         user.id
       )
     }
   } catch (err) {
-    console.error("Error loading workspace:", err)
+    console.error("Error loading profile and workspace:", err)
   }
 
   const workspaceName = workspace?.name || "Workspace"
 
-  // Fetch owner email if workspace exists
+  // 2. Parallel fetch Owner profile, Projects, Workspaces list
   let ownerEmail = ""
-  if (workspace) {
-    try {
-      const ownerProfile = await ProfileService.getProfile(workspace.ownerId)
-      if (ownerProfile) {
-        ownerEmail = ownerProfile.email
-      }
-    } catch (err) {
-      console.error("Error fetching workspace owner profile for layout:", err)
-    }
-  }
-
-  // Fetch projects and tasks for the sidebar
-  let projectsWithTasks: any[] = []
-  if (workspace) {
-    try {
-      const projects = await ProjectService.getProjectsByWorkspace(workspace.id)
-      projectsWithTasks = await Promise.all(
-        projects.map(async (project) => {
-          const tasks = await TaskService.getTasksByProject(project.id)
-          const columns = await ColumnService.getColumnsByProject(project.id)
-          return { ...project, tasks, columns }
-        })
-      )
-    } catch (err) {
-      console.error("Error fetching projects for sidebar layout:", err)
-    }
-  }
-
-  // Fetch workspaces for switcher
+  let projects: any[] = []
   let workspaces: any[] = []
-  try {
-    workspaces = await WorkspaceHubService.getWorkspacesForUser(user.id)
-  } catch (err) {
-    console.error("Error loading workspaces for layout switcher:", err)
+
+  if (workspace) {
+    try {
+      const [ownerProfile, projRes, wsListRes] = await Promise.all([
+        ProfileService.getProfile(workspace.ownerId).catch(() => null),
+        ProjectService.getProjectsByWorkspace(workspace.id, user.id).catch(() => []),
+        WorkspaceHubService.getWorkspacesForUser(user.id).catch(() => []),
+      ])
+
+      if (ownerProfile) ownerEmail = ownerProfile.email
+      projects = projRes
+      workspaces = wsListRes
+    } catch (err) {
+      console.error("Error parallel fetching workspace layout details:", err)
+    }
+  }
+
+  // 3. Batch fetch tasks for all projects to avoid N+1 sidebar lookups
+  let projectsWithTasks: any[] = []
+  if (workspace && projects.length > 0) {
+    try {
+      const projectIds = projects.map((p) => p.id)
+      const supabase = await createClient()
+
+      // Fetch all tasks for these projects in one query
+      const { data: allTasks, error: tasksErr } = await supabase
+        .from("tasks")
+        .select("id, project_id, title, status")
+        .in("project_id", projectIds)
+        .order("position", { ascending: true })
+
+      if (tasksErr) throw new Error(tasksErr.message)
+
+      // Map tasks to their corresponding projects
+      const tasksByProject = new Map<string, any[]>()
+      ;(allTasks || []).forEach((t) => {
+        const list = tasksByProject.get(t.project_id) || []
+        list.push({
+          id: t.id,
+          projectId: t.project_id,
+          title: t.title,
+          status: t.status,
+        })
+        tasksByProject.set(t.project_id, list)
+      })
+
+      projectsWithTasks = projects.map((project) => ({
+        ...project,
+        tasks: tasksByProject.get(project.id) || [],
+        columns: [], // columns is unused in the sidebar layout
+      }))
+    } catch (err) {
+      console.error("Error batch fetching tasks for sidebar layout:", err)
+      projectsWithTasks = projects.map((p) => ({ ...p, tasks: [], columns: [] }))
+    }
   }
 
   return (

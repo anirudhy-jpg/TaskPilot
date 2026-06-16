@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button"
 import { useMembersRealtime } from "../hooks/use-members-realtime"
 import { useInvitationsRealtime } from "../hooks/use-invitations-realtime"
 import { createClient } from "@/lib/supabase/client"
+import { Pagination } from "@/components/ui/pagination"
+import { MemberDetailsModal } from "./modals/member-details-modal"
 
 function ClientDate({ dateString }: { dateString: string }) {
   const [mounted, setMounted] = useState(false)
@@ -76,6 +78,7 @@ export function MembersList({
 }: MembersListProps) {
   const [localMembers, setLocalMembers] = useState(members)
   const [localInvitations, setLocalInvitations] = useState(pendingInvitations)
+  const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null)
 
   useEffect(() => {
     setLocalMembers(members)
@@ -105,6 +108,18 @@ export function MembersList({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
   const [removingMember, setRemovingMember] = useState<{ id: string; userId: string; name: string } | null>(null)
 
+  // Pagination state and logic
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6
+  const totalItems = localMembers.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages)
+    }
+  }, [totalPages, currentPage])
+
   // Click outside to close options dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -123,15 +138,18 @@ export function MembersList({
     return (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2)
   })
 
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedMembers = sortedMembers.slice(startIndex, startIndex + itemsPerPage)
+
   const handleInviteSubmit = async (
     email: string,
     role: "admin" | "member",
-    projectId?: string | null
+    projectIds: string[]
   ): Promise<string | null> => {
     return new Promise((resolve, reject) => {
       startTransition(async () => {
         try {
-          const res = await createInvitationAction(workspaceId, email, role, projectId)
+          const res = await createInvitationAction(workspaceId, email, role, projectIds)
           if (res.success && res.data) {
             resolve(res.data)
           } else {
@@ -213,7 +231,7 @@ export function MembersList({
           <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
             Workspace Members
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-550 mt-0.5">
             Manage your workspace members, roles, and pending invitations.
           </p>
         </div>
@@ -244,76 +262,93 @@ export function MembersList({
             <p className="text-sm text-slate-500 font-medium">No members found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedMembers.map((member) => {
-              const cfg = roleConfig[member.role] || roleConfig.member
-              const RoleIcon = cfg.icon
-              return (
-                <div
-                  key={member.id}
-                  className="p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-[124px]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      {/* Avatar */}
-                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-700 text-sm font-extrabold uppercase shrink-0">
-                        {member.profile?.fullName?.[0] ||
-                          member.profile?.email?.[0] ||
-                          "?"}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedMembers.map((member) => {
+                const cfg = roleConfig[member.role] || roleConfig.member
+                const RoleIcon = cfg.icon
+                return (
+                  <div
+                    key={member.id}
+                    onClick={() => setSelectedMember(member)}
+                    className="p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-[124px] cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        {/* Avatar */}
+                        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-700 text-sm font-extrabold uppercase shrink-0">
+                          {member.profile?.fullName?.[0] ||
+                            member.profile?.email?.[0] ||
+                            "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 truncate">
+                            {member.profile?.fullName || "Active User"}
+                          </p>
+                          <p className="text-xs text-slate-450 truncate mt-0.5">
+                            {member.profile?.email || member.userId}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-800 truncate">
-                          {member.profile?.fullName || "Active User"}
-                        </p>
-                        <p className="text-xs text-slate-450 truncate mt-0.5">
-                          {member.profile?.email || member.userId}
-                        </p>
-                      </div>
+
+                      {currentUserRole === "owner" && member.userId !== currentUserId && (
+                        <div className="relative member-menu-container shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setActiveMenuId(activeMenuId === member.id ? null : member.id)
+                            }}
+                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                          {activeMenuId === member.id && (
+                            <div className="absolute right-0 mt-1 w-40 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRemoveMember(member.id, member.userId, member.profile?.fullName || member.profile?.email || "this member")
+                                }}
+                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-655 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
+                              >
+                                <Trash2 size={13} />
+                                Remove member
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {currentUserRole === "owner" && member.userId !== currentUserId && (
-                      <div className="relative member-menu-container shrink-0">
-                        <button
-                          onClick={() => setActiveMenuId(activeMenuId === member.id ? null : member.id)}
-                          className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                        {activeMenuId === member.id && (
-                          <div className="absolute right-0 mt-1 w-40 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
-                            <button
-                              onClick={() => handleRemoveMember(member.id, member.userId, member.profile?.fullName || member.profile?.email || "this member")}
-                              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-650 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
-                            >
-                              <Trash2 size={13} />
-                              Remove member
-                            </button>
-                          </div>
+                    {/* Role badge + join date */}
+                    <div className="mt-3 flex items-center justify-between pt-3 border-t border-amber-955/10">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bgColor} ${cfg.color}`}
+                      >
+                        <RoleIcon size={10} />
+                        {cfg.label}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        Joined{" "}
+                        {member.joinedAt ? (
+                          <ClientDate dateString={member.joinedAt} />
+                        ) : (
+                          "N/A"
                         )}
-                      </div>
-                    )}
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Role badge + join date */}
-                  <div className="mt-3 flex items-center justify-between pt-3 border-t border-amber-955/10">
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bgColor} ${cfg.color}`}
-                    >
-                      <RoleIcon size={10} />
-                      {cfg.label}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      Joined{" "}
-                      {member.joinedAt ? (
-                        <ClientDate dateString={member.joinedAt} />
-                      ) : (
-                        "N/A"
-                      )}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              itemName="members"
+            />
           </div>
         )}
       </div>
@@ -398,6 +433,14 @@ export function MembersList({
         name={removingMember?.name || ""}
         isPending={isPending}
         onConfirm={confirmRemoveMember}
+      />
+
+      {/* Member Details Modal */}
+      <MemberDetailsModal
+        isOpen={!!selectedMember}
+        onClose={() => setSelectedMember(null)}
+        member={selectedMember}
+        workspaceId={workspaceId}
       />
     </div>
   )

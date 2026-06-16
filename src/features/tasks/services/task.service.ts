@@ -202,6 +202,30 @@ export class TaskService {
   }
 
   /**
+   * Update task fields (title, description, priority).
+   */
+  static async updateTask(
+    taskId: string,
+    updates: {
+      title?: string
+      description?: string | null
+      priority?: TaskPriority
+    }
+  ): Promise<void> {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", taskId)
+
+    if (error) {
+      console.error("Error updating task:", error)
+      throw new Error(error.message)
+    }
+  }
+
+  /**
    * Batch update positions for multiple tasks.
    * Deprecated but kept for type compatibility if referenced elsewhere.
    */
@@ -231,7 +255,7 @@ export class TaskService {
 
 // ─── Helpers ─────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapTask(row: any, assigneeData: any): Task {
+export function mapTask(row: any, assigneeData: any): Task {
   return {
     id: row.id,
     projectId: row.project_id,

@@ -17,6 +17,7 @@ import { deleteProjectAction } from "../actions/delete-project.action";
 import { addProjectMemberAction } from "../actions/add-project-member.action";
 import { removeProjectMemberAction } from "../actions/remove-project-member.action";
 import { moveTaskAction } from "@/features/tasks/actions/move-task.action";
+import { updateTaskAction } from "@/features/tasks/actions/update-task.action";
 
 export interface UseProjectBoardProps {
   projects: (Project & { tasks: Task[]; columns: Column[] })[];
@@ -83,6 +84,11 @@ export function useProjectBoard({
             projectId: string;
             name: string;
             description?: string;
+          }
+        | {
+            type: "update_task";
+            taskId: string;
+            updates: { title?: string; description?: string | null; priority?: TaskPriority };
           },
     ) => {
       switch (action.type) {
@@ -112,6 +118,13 @@ export function useProjectBoard({
           return state.map((p) => ({
             ...p,
             tasks: p.tasks.filter((t) => t.id !== action.taskId),
+          }));
+        case "update_task":
+          return state.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === action.taskId ? { ...t, ...action.updates } : t
+            ),
           }));
         case "delete_project":
           return state.filter((p) => p.id !== action.projectId);
@@ -401,7 +414,17 @@ export function useProjectBoard({
         });
         const res = await addProjectMemberAction(activeProject.id, userId);
         if (res.success) {
-          router.refresh();
+          setCurrentProjects((prev) =>
+            prev.map((p) => {
+              if (p.id !== activeProject.id) return p;
+              const exists = (p.memberUserIds || []).includes(userId);
+              if (exists) return p;
+              return {
+                ...p,
+                memberUserIds: [...(p.memberUserIds || []), userId],
+              };
+            })
+          );
           resolve();
         } else {
           setErrorMsg(res.error || "Failed to add member.");
@@ -423,7 +446,15 @@ export function useProjectBoard({
         });
         const res = await removeProjectMemberAction(activeProject.id, userId);
         if (res.success) {
-          router.refresh();
+          setCurrentProjects((prev) =>
+            prev.map((p) => {
+              if (p.id !== activeProject.id) return p;
+              return {
+                ...p,
+                memberUserIds: (p.memberUserIds || []).filter((id) => id !== userId),
+              };
+            })
+          );
           resolve();
         } else {
           setErrorMsg(res.error || "Failed to remove member.");
@@ -520,9 +551,19 @@ export function useProjectBoard({
         priority: tempTask.priority,
         assigneeId: assigneeId || undefined,
       });
-      if (res.success) {
-        router.refresh();
-      } else {
+      if (res.success && res.task) {
+        setCurrentProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== createTaskProjectId) return p;
+            const exists = p.tasks.some((t) => t.id === res.task!.id);
+            if (exists) return p;
+            return {
+              ...p,
+              tasks: [...p.tasks, res.task!],
+            };
+          })
+        );
+      } else if (!res.success) {
         setErrorMsg(res.error || "Failed to create task.");
       }
     });
@@ -539,7 +580,26 @@ export function useProjectBoard({
       });
       const res = await updateTaskAssigneeAction(taskId, assigneeId);
       if (res.success) {
-        router.refresh();
+        setCurrentProjects((prev) =>
+          prev.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === taskId
+                ? {
+                    ...t,
+                    assigneeId,
+                    assignee: members.find((m) => m.userId === assigneeId)?.profile
+                      ? {
+                          fullName: members.find((m) => m.userId === assigneeId)!.profile!.fullName || null,
+                          email: members.find((m) => m.userId === assigneeId)!.profile!.email || "",
+                          avatarUrl: members.find((m) => m.userId === assigneeId)!.profile!.avatarUrl || null,
+                        }
+                      : undefined,
+                  }
+                : t
+            ),
+          }))
+        );
       } else {
         setErrorMsg(res.error || "Failed to update task assignee.");
       }
@@ -557,9 +617,40 @@ export function useProjectBoard({
       setOptimisticProjects({ type: "move_task", taskId, columnId, position });
       const res = await moveTaskAction(taskId, columnId, position);
       if (res.success) {
-        router.refresh();
+        setCurrentProjects((prev) =>
+          prev.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === taskId ? { ...t, columnId, status: columnId, position } : t
+            ),
+          }))
+        );
       } else {
         setErrorMsg(res.error || "Failed to move task.");
+      }
+    });
+  };
+
+  const handleUpdateTask = (
+    taskId: string,
+    updates: { title?: string; description?: string | null; priority?: TaskPriority }
+  ) => {
+    if (taskId.startsWith("temp-")) return;
+    setErrorMsg(null);
+    startTransition(async () => {
+      setOptimisticProjects({ type: "update_task", taskId, updates });
+      const res = await updateTaskAction(taskId, updates);
+      if (res.success) {
+        setCurrentProjects((prev) =>
+          prev.map((p) => ({
+            ...p,
+            tasks: p.tasks.map((t) =>
+              t.id === taskId ? { ...t, ...updates } : t
+            ),
+          }))
+        );
+      } else {
+        setErrorMsg(res.error || "Failed to update task.");
       }
     });
   };
@@ -594,9 +685,19 @@ export function useProjectBoard({
       const { createColumnAction } =
         await import("@/features/kanbanboard/actions/create-column.action");
       const res = await createColumnAction(activeProjectId, name);
-      if (res.success) {
-        router.refresh();
-      } else {
+      if (res.success && res.column) {
+        setCurrentProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== activeProjectId) return p;
+            const exists = (p.columns || []).some((c) => c.id === res.column!.id);
+            if (exists) return p;
+            return {
+              ...p,
+              columns: [...(p.columns || []), res.column!],
+            };
+          })
+        );
+      } else if (!res.success) {
         setErrorMsg(res.error || "Failed to create column.");
       }
     });
@@ -610,7 +711,17 @@ export function useProjectBoard({
         await import("@/features/kanbanboard/actions/update-column-name.action");
       const res = await updateColumnNameAction(columnId, name);
       if (res.success) {
-        router.refresh();
+        setCurrentProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== activeProjectId) return p;
+            return {
+              ...p,
+              columns: (p.columns || []).map((c) =>
+                c.id === columnId ? { ...c, name } : c
+              ),
+            };
+          })
+        );
       } else {
         setErrorMsg(res.error || "Failed to rename column.");
       }
@@ -625,7 +736,17 @@ export function useProjectBoard({
         await import("@/features/kanbanboard/actions/move-column.action");
       const res = await moveColumnAction(columnId, position);
       if (res.success) {
-        router.refresh();
+        setCurrentProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== activeProjectId) return p;
+            return {
+              ...p,
+              columns: (p.columns || []).map((c) =>
+                c.id === columnId ? { ...c, position } : c
+              ),
+            };
+          })
+        );
       } else {
         setErrorMsg(res.error || "Failed to move column.");
       }
@@ -674,7 +795,6 @@ export function useProjectBoard({
             return p;
           }),
         );
-        router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to delete column.");
       }
@@ -706,7 +826,6 @@ export function useProjectBoard({
               : p,
           ),
         );
-        router.refresh();
       } else {
         setErrorMsg(res.error || "Failed to update project.");
       }
@@ -752,7 +871,16 @@ export function useProjectBoard({
       }
 
       if (res.success) {
-        router.refresh();
+        if (target.type === "task") {
+          setCurrentProjects((prev) =>
+            prev.map((p) => ({
+              ...p,
+              tasks: p.tasks.filter((t) => t.id !== target.id),
+            }))
+          );
+        } else if (target.type === "project") {
+          setCurrentProjects((prev) => prev.filter((p) => p.id !== target.id));
+        }
       } else {
         setErrorMsg(res.error || "Failed to execute delete action.");
       }
@@ -788,6 +916,7 @@ export function useProjectBoard({
     handleCreateTask,
     handleAssigneeChange,
     handleMoveTask,
+    handleUpdateTask,
     cycleTaskStatus,
     handleCreateColumn,
     handleRenameColumn,

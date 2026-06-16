@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import { Circle, Clock, CheckCircle2 } from "lucide-react";
-import type { Project, Task, Column } from "@/features/project/types/project.types";
+import type { Project, Task, Column, TaskPriority } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { TaskDetailsModal } from "@/features/tasks/components/modals/task-details-modal";
 import { KanbanColumn } from "./kanban/kanban-column";
@@ -42,6 +42,7 @@ interface KanbanBoardProps {
   onMoveColumn: (columnId: string, position: number) => void;
   onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
+  onUpdateTask?: (taskId: string, updates: { title?: string; description?: string | null; priority?: TaskPriority }) => void;
 }
 
 export function KanbanBoard({
@@ -56,6 +57,7 @@ export function KanbanBoard({
   onMoveColumn,
   onDeleteColumn,
   onDeleteTask,
+  onUpdateTask,
 }: KanbanBoardProps) {
   const lastOverRef = useRef<Over | null>(null);
   
@@ -487,6 +489,7 @@ export function KanbanBoard({
         }}
         onDeleteTask={onDeleteTask}
         columns={project.columns}
+        onUpdateTask={onUpdateTask}
       />
 
       {columnToDelete && (

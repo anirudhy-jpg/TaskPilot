@@ -5,11 +5,12 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { LoginForm } from "@/features/auth/components/login-form"
 
 interface LoginPageProps {
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; redirect?: string }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { next } = await searchParams
+  const params = await searchParams
+  const next = params.next || params.redirect
   const { user } = await getSession()
 
   if (user) {
