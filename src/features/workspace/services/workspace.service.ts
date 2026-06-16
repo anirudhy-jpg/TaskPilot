@@ -22,13 +22,17 @@ export class WorkspaceService {
             name,
             owner_id,
             created_at,
-            workspace_members!inner(user_id)
+            workspace_members!inner(user_id, role)
           `)
           .eq("id", activeWorkspaceId)
           .eq("workspace_members.user_id", userId)
           .maybeSingle()
 
-        if (ws) return mapWorkspace(ws)
+        if (ws) {
+          const members = ws.workspace_members
+          const role = Array.isArray(members) ? members[0]?.role : (members as any)?.role
+          return mapWorkspace(ws, role)
+        }
       }
     } catch (err) {
       console.warn("Could not retrieve active_workspace_id from cookies:", err)
@@ -39,6 +43,7 @@ export class WorkspaceService {
       .from("workspace_members")
       .select(`
         workspace_id,
+        role,
         workspaces (
           id,
           name,
@@ -58,7 +63,7 @@ export class WorkspaceService {
     if (!memberRow) return null
 
     const ws = Array.isArray(memberRow.workspaces) ? memberRow.workspaces[0] : memberRow.workspaces
-    return ws ? mapWorkspace(ws) : null
+    return ws ? mapWorkspace(ws, memberRow.role) : null
   }
 
   /**
@@ -95,7 +100,7 @@ export class WorkspaceService {
       // Workspace was created, log but don't throw
     }
 
-    return mapWorkspace(data)
+    return mapWorkspace(data, "owner")
   }
 
   /**
@@ -180,11 +185,13 @@ export class WorkspaceService {
 
 // ─── Helpers ─────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapWorkspace(row: any): Workspace {
+function mapWorkspace(row: any, userRole?: string): Workspace {
   return {
     id: row.id,
     name: row.name,
     ownerId: row.owner_id,
     createdAt: row.created_at,
+    currentUserRole: userRole,
   }
 }
+

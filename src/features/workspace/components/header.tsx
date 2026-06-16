@@ -129,20 +129,20 @@ export function Header({
             </button>
           )}
           <Link href="/" className="cursor-pointer shrink-0">
-            <Logo size="md" className="hidden sm:flex" />
-            <Logo size="md" iconOnly className="flex sm:hidden" />
+            <Logo size="lg" className="hidden sm:flex" />
+            <Logo size="lg" iconOnly className="flex sm:hidden" />
           </Link>
           {workspaceId && workspaces && workspaces.length > 0 && (
             <>
               <div className="h-4 w-px bg-slate-800 shrink-0" />
               <button
                 onClick={() => setIsSwitchModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60 hover:bg-slate-900 text-slate-200 transition-all cursor-pointer font-bold text-sm shrink-0 select-none animate-in fade-in"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-900/60 hover:bg-slate-900 text-slate-200 transition-all cursor-pointer font-bold text-base shrink-0 select-none animate-in fade-in"
                 title="Switch Workspace"
               >
-                <Briefcase size={13} className="text-amber-500 shrink-0" />
-                <span className="truncate max-w-[70px] sm:max-w-[120px]">{workspaceName}</span>
-                <ChevronDown size={10} className="text-slate-400 shrink-0" />
+                <Briefcase size={15} className="text-amber-500 shrink-0" />
+                <span className="truncate max-w-[80px] sm:max-w-[140px]">{workspaceName}</span>
+                <ChevronDown size={11} className="text-slate-400 shrink-0" />
               </button>
             </>
           )}
@@ -157,14 +157,14 @@ export function Header({
           />
 
           {/* User chip */}
-          <div className="flex items-center gap-2 bg-slate-900/60 hover:bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800 transition-all duration-300">
-            <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-slate-950 text-[10px] font-black uppercase tracking-wider shadow-sm select-none">
+          <div className="flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-900 px-3.5 py-2 rounded-full border border-slate-800 transition-all duration-300">
+            <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm select-none">
               {profile?.fullName?.[0] ||
                 profile?.email?.[0] ||
                 user.email?.[0] ||
                 "?"}
             </div>
-            <span className="text-sm font-semibold text-slate-200 hidden sm:inline-block truncate max-w-[150px]">
+            <span className="text-base font-semibold text-slate-200 hidden sm:inline-block truncate max-w-[160px]">
               {profile?.fullName || profile?.email || user.email}
             </span>
           </div>

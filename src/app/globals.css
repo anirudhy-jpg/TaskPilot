@@ -180,3 +180,15 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Delayed Fade-in for Skeletons to Prevent Navigation Flicker */
+@keyframes skeleton-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-skeleton-fade {
+  animation: skeleton-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 150ms;
+  opacity: 0;
+}

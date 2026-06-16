@@ -139,7 +139,8 @@ export const TaskCard = React.memo(
       prevProps.task.assigneeId === nextProps.task.assigneeId &&
       prevProps.disableHover === nextProps.disableHover &&
       prevProps.taskNumber === nextProps.taskNumber &&
-      prevProps.isDragOverlay === nextProps.isDragOverlay
+      prevProps.isDragOverlay === nextProps.isDragOverlay &&
+      prevProps.members === nextProps.members
     );
   }
 );

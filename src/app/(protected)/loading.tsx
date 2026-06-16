@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ProtectedLoading() {
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full animate-skeleton-fade">
       {/* Banner skeleton */}
       <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800 border-l-4 border-l-amber-500/30 shadow-sm">
         <Skeleton className="h-6 w-64 mb-2" />

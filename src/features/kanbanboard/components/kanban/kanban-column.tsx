@@ -95,10 +95,10 @@ export const KanbanColumn = React.memo(
       <div
         ref={setNodeRef}
         style={style}
-        className={`rounded-3xl bg-white/45 backdrop-blur-md border p-5 flex flex-col gap-4 h-[calc(100vh-240px)] min-h-[500px] max-h-[720px] w-[88vw] shrink-0 sm:w-full sm:flex-1 sm:shrink sm:min-w-[200px] sm:max-w-[320px] relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:${column.accentClass} shadow-xs transition-all duration-200 ${
+        className={`rounded-3xl bg-slate-900/60 backdrop-blur-md border p-5 flex flex-col gap-4 h-full min-h-[500px] w-[88vw] shrink-0 sm:w-full sm:flex-1 sm:shrink sm:min-w-[200px] sm:max-w-[320px] relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:${column.accentClass} shadow-xs transition-all duration-200 ${
           isOver
-            ? "border-amber-500/40 bg-amber-50/30 ring-2 ring-amber-500/20"
-            : "border-amber-900/5"
+            ? "border-amber-500/40 bg-amber-500/5 ring-2 ring-amber-500/10"
+            : "border-slate-800"
         }`}
       >
         {/* Column Header */}
@@ -112,7 +112,7 @@ export const KanbanColumn = React.memo(
                 onChange={(e) => setEditedName(e.target.value)}
                 onBlur={handleSaveName}
                 onKeyDown={handleKeyDown}
-                className="w-full px-2 py-0.5 text-xs font-bold border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                className="w-full px-2 py-0.5 text-xs font-bold border border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 bg-slate-950 text-slate-200"
               />
               <button onClick={handleSaveName} className="text-emerald-600 hover:text-emerald-700 cursor-pointer">
                 <Check size={14} />
@@ -134,7 +134,7 @@ export const KanbanColumn = React.memo(
                   <GripVertical size={14} />
                 </div>
                 {column.headerIcon}
-                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider truncate">
+                <h3 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider truncate">
                   {column.title}
                 </h3>
                 {tasks.length > 0 && (
@@ -156,13 +156,13 @@ export const KanbanColumn = React.memo(
                   <MoreHorizontal size={14} />
                 </button>
                 {isMenuOpen && (
-                  <div className="absolute right-0 mt-1.5 top-6 w-36 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
+                  <div className="absolute right-0 mt-1.5 top-6 w-36 bg-slate-950 border border-slate-800 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
                     <button
                       onClick={() => {
                         setIsEditing(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-2"
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-350 hover:bg-slate-900 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
                     >
                       <Edit2 size={13} />
                       Rename
@@ -173,7 +173,7 @@ export const KanbanColumn = React.memo(
                           onDeleteColumn(column.id, "delete");
                           setIsMenuOpen(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-xs font-semibold text-red-650 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-2"
                       >
                         <Trash2 size={13} />
                         Delete
@@ -204,21 +204,21 @@ export const KanbanColumn = React.memo(
             ))}
 
             {tasks.length === 0 && !isOver && (
-              <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-amber-500/10 rounded-3xl bg-white/20 shadow-3xs p-4">
+              <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-slate-800 rounded-3xl bg-slate-950/20 shadow-3xs p-4">
                 <span className="text-xl mb-1.5 opacity-70">📥</span>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Empty Column
                 </p>
-                <p className="text-[9px] text-slate-400/90 mt-0.5">
+                <p className="text-[9px] text-slate-500 mt-0.5">
                   No tasks in this stage
                 </p>
               </div>
             )}
 
             {tasks.length === 0 && isOver && (
-              <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-amber-500/30 rounded-3xl bg-amber-50/30 p-4 animate-pulse">
+              <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-amber-500/30 rounded-3xl bg-amber-500/5 p-4 animate-pulse">
                 <span className="text-xl mb-1.5">📌</span>
-                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
                   Drop here
                 </p>
               </div>
@@ -229,9 +229,9 @@ export const KanbanColumn = React.memo(
         {/* Add Task Button at Bottom */}
         <button
           onClick={() => onAddTask(column.id)}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-slate-655 hover:text-amber-700 bg-white/60 hover:bg-white border border-amber-900/5 hover:border-amber-500/20 rounded-2xl text-xs font-extrabold shadow-3xs hover:shadow-2xs transition-all duration-250 cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-slate-300 hover:text-white bg-slate-950/40 hover:bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-2xl text-xs font-extrabold shadow-3xs hover:shadow-2xs transition-all duration-250 cursor-pointer"
         >
-          <Plus size={13} className="text-amber-600 stroke-[2.5]" />
+          <Plus size={13} className="text-amber-500 stroke-[2.5]" />
           <span>Add Task</span>
         </button>
       </div>
@@ -257,7 +257,7 @@ export const KanbanColumn = React.memo(
       prevProps.column.id === nextProps.column.id &&
       prevProps.column.title === nextProps.column.title &&
       prevProps.allColumns.length === nextProps.allColumns.length &&
-      prevProps.members.length === nextProps.members.length &&
+      prevProps.members === nextProps.members &&
       prevProps.currentUserId === nextProps.currentUserId &&
       prevProps.projectPrefix === nextProps.projectPrefix
     );

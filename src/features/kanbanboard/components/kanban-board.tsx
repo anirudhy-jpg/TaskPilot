@@ -421,7 +421,7 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex flex-row gap-6 items-start w-full overflow-x-auto sm:overflow-x-visible pb-4 lg:pb-0 scrollbar-none sm:scrollbar-thin">
+      <div className="flex flex-row gap-6 items-start w-full overflow-x-auto pb-4 h-full scrollbar-none sm:scrollbar-thin">
         {/* Sortable column context */}
         <SortableContext items={columnDefs.map(c => `column-${c.id}`)} strategy={horizontalListSortingStrategy}>
           {columnDefs.map((column) => (

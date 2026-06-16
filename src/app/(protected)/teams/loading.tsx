@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function TeamsLoading() {
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full animate-skeleton-fade">
       {/* Header */}
       <div className="space-y-1">
         <Skeleton className="h-6 w-24" />

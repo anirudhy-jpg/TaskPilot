@@ -242,12 +242,10 @@ export function WorkspaceShell({
   }, [children]);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-[#fffdf9] via-[#fbfaf8] to-[#f6f5f0] dark:from-[#0f0e0c] dark:via-[#131211] dark:to-[#181613] text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full relative overflow-hidden">
-      {/* Ambient glows (High-vibrancy gold, smoky dark, and warm rose-red highlights) */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[55%] rounded-full bg-amber-400/20 dark:bg-amber-500/12 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[45%] rounded-full bg-rose-500/15 dark:bg-rose-600/8 blur-[130px] pointer-events-none" />
-      <div className="absolute top-[30%] right-[15%] w-[40%] h-[40%] rounded-full bg-amber-50/15 dark:bg-amber-500/8 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[20%] left-[10%] w-[35%] h-[35%] rounded-full bg-slate-400/12 dark:bg-slate-800/10 blur-[110px] pointer-events-none" />
+    <div className="h-screen bg-[#0b0f19] text-white flex flex-col font-sans w-full relative overflow-hidden">
+      {/* Ambient glows (Subtle, premium amber and dark slate accents) */}
+      <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/3 blur-[120px] pointer-events-none" />
 
       {/* ── Navbar ─────────────────────────────────────────── */}
       <Header
@@ -276,15 +274,15 @@ export function WorkspaceShell({
           <div className="fixed inset-0 z-50 md:hidden flex">
             {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
               onClick={() => setIsMobileSidebarOpen(false)}
             />
             {/* Drawer */}
-            <div className="relative w-64 bg-white dark:bg-[#131211] border-r border-amber-900/10 flex flex-col z-50 animate-in slide-in-from-left duration-250">
+            <div className="relative w-64 bg-[#090d16]/95 backdrop-blur-md border-r border-slate-800 flex flex-col z-50 animate-in slide-in-from-left duration-250">
               <div className="absolute top-4 right-4 z-50">
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-200/60 dark:hover:border-slate-800 transition-all cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent hover:border-slate-850 transition-all cursor-pointer"
                 >
                   <X size={15} />
                 </button>
@@ -300,7 +298,7 @@ export function WorkspaceShell({
           </div>
         )}
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-transparent flex flex-col gap-6 relative w-full min-w-0 overflow-x-hidden">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden bg-transparent flex flex-col relative w-full min-w-0">
           {children}
         </main>
       </div>

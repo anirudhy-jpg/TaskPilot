@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ProjectsLoading() {
   return (
-    <div className="space-y-6 w-full select-none">
+    <div className="space-y-6 w-full select-none animate-skeleton-fade">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div className="space-y-2">

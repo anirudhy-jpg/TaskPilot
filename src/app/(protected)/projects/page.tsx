@@ -1,9 +1,11 @@
 import React from "react"
 import { redirect } from "next/navigation"
 import { requireUser, createClient } from "@/lib/supabase/server"
-import { WorkspaceService } from "@/features/workspace/services/workspace.service"
-import { ProjectService } from "@/features/project/services/project.service"
-import { MemberService } from "@/features/workspace/services/member.service"
+import {
+  getCachedWorkspaceForUser,
+  getCachedProjectsByWorkspace,
+  getCachedMembersByWorkspace,
+} from "@/lib/cached-requests"
 import { ProjectsList } from "@/features/project/components/projects-list"
 
 export const dynamic = "force-dynamic"
@@ -11,13 +13,13 @@ export const dynamic = "force-dynamic"
 export default async function ProjectsPage() {
   const { user } = await requireUser()
 
-  const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
+  const workspace = await getCachedWorkspaceForUser(user.id)
   if (!workspace) redirect("/workspaces")
 
   // Parallelize initial projects and workspace members fetch
   const [projects, members] = await Promise.all([
-    ProjectService.getProjectsByWorkspace(workspace.id, user.id),
-    MemberService.getMembersByWorkspace(workspace.id),
+    getCachedProjectsByWorkspace(workspace.id, user.id, workspace.currentUserRole),
+    getCachedMembersByWorkspace(workspace.id),
   ])
 
   // Batch query tasks, columns, and project member IDs to eliminate N+1 queries

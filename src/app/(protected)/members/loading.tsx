@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function MembersLoading() {
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-8 w-full animate-skeleton-fade">
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-sm">
         <div className="space-y-2">

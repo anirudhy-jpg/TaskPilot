@@ -1,22 +1,24 @@
 import React from "react"
 import { redirect } from "next/navigation"
 import { requireUser, createClient } from "@/lib/supabase/server"
-import { WorkspaceService } from "@/features/workspace/services/workspace.service"
-import { ProjectService } from "@/features/project/services/project.service"
-import { MemberService } from "@/features/workspace/services/member.service"
+import {
+  getCachedWorkspaceForUser,
+  getCachedProjectsByWorkspace,
+  getCachedMembersByWorkspace,
+} from "@/lib/cached-requests"
 import { TeamsList } from "@/features/workspace/components/teams-list"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 
 export default async function TeamsPage() {
   const { user } = await requireUser()
 
-  const workspace = await WorkspaceService.getWorkspaceForUser(user.id)
+  const workspace = await getCachedWorkspaceForUser(user.id)
   if (!workspace) redirect("/workspaces")
 
   // 1. Fetch projects and all workspace members in parallel
   const [projects, allMembers] = await Promise.all([
-    ProjectService.getProjectsByWorkspace(workspace.id, user.id),
-    MemberService.getMembersByWorkspace(workspace.id),
+    getCachedProjectsByWorkspace(workspace.id, user.id, workspace.currentUserRole),
+    getCachedMembersByWorkspace(workspace.id),
   ])
 
   // 2. Fetch all tasks assignees for these projects in a single query

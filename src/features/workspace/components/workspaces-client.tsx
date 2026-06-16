@@ -188,7 +188,7 @@ export function WorkspacesClient({
       <div
         key={ws.id}
         onClick={() => handleSwitch(ws.id)}
-        className={`relative bg-slate-900/40 backdrop-blur-md border rounded-2xl p-5 shadow-sm hover:-translate-y-1 hover:border-amber-500/30 transition-all duration-300 flex items-center justify-between group cursor-pointer ${
+        className={`relative bg-slate-900/60 backdrop-blur-md border rounded-2xl p-5 shadow-sm hover:-translate-y-1 hover:border-amber-500/30 transition-all duration-300 flex items-center justify-between group cursor-pointer ${
           isActive ? "border-amber-500 ring-2 ring-amber-500/20" : "border-slate-800"
         }`}
       >
@@ -269,118 +269,120 @@ export function WorkspacesClient({
   }
 
   return (
-    <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
-      {/* Premium top linear loading bar showing sync state */}
-      {isPending && typeof window !== "undefined" && createPortal(
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
-          <div className="h-full bg-amber-450 animate-pulse w-full" />
-        </div>,
-        document.body
-      )}
+    <div className="flex-1 flex flex-col overflow-y-auto pr-1 scrollbar-thin">
+      <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none relative transition-all duration-300 pb-10 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+        {/* Premium top linear loading bar showing sync state */}
+        {isPending && typeof window !== "undefined" && createPortal(
+          <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
+            <div className="h-full bg-amber-450 animate-pulse w-full" />
+          </div>,
+          document.body
+        )}
 
-      {/* Page Header */}
-      <div className="flex flex-col gap-1 border-b border-slate-800 pb-5">
-        <h1 className="text-xl font-extrabold text-white tracking-tight sm:text-2xl flex items-center gap-2">
-          <Briefcase size={22} className="text-amber-500" />
-          <span>Workspaces Hub</span>
-        </h1>
-        <p className="text-xs text-slate-400 font-medium">
-          Manage, create, or switch between all workspaces you own or are part of.
-        </p>
-      </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
-          <span>{errorMsg}</span>
+        {/* Page Header */}
+        <div className="flex flex-col gap-1 border-b border-slate-800 pb-5">
+          <h1 className="text-xl font-extrabold text-white tracking-tight sm:text-2xl flex items-center gap-2">
+            <Briefcase size={22} className="text-amber-500" />
+            <span>Workspaces Hub</span>
+          </h1>
+          <p className="text-xs text-slate-400 font-medium">
+            Manage, create, or switch between all workspaces you own or are part of.
+          </p>
         </div>
-      )}
 
-      {/* Owned Workspaces */}
-      <div className="space-y-4">
-        <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">
-          Workspaces You Own
-        </h2>
-        {ownedWorkspaces.length === 0 ? (
-          <p className="text-xs text-slate-500 italic pl-1">You don&apos;t own any workspaces yet.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {ownedWorkspaces.map(renderWorkspaceCard)}
+        {errorMsg && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
+            <span>{errorMsg}</span>
           </div>
         )}
-      </div>
 
-      {/* Member Workspaces */}
-      <div className="space-y-4 pt-2">
-        <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">
-          Workspaces You Joined (as Member)
-        </h2>
-        {memberWorkspaces.length === 0 ? (
-          <p className="text-xs text-slate-500 italic pl-1">No shared workspaces joined.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {memberWorkspaces.map(renderWorkspaceCard)}
+        {/* Owned Workspaces */}
+        <div className="space-y-4">
+          <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Workspaces You Own
+          </h2>
+          {ownedWorkspaces.length === 0 ? (
+            <p className="text-xs text-slate-500 italic pl-1">You don&apos;t own any workspaces yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ownedWorkspaces.map(renderWorkspaceCard)}
+            </div>
+          )}
+        </div>
+
+        {/* Member Workspaces */}
+        <div className="space-y-4 pt-2">
+          <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Workspaces You Joined (as Member)
+          </h2>
+          {memberWorkspaces.length === 0 ? (
+            <p className="text-xs text-slate-500 italic pl-1">No shared workspaces joined.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {memberWorkspaces.map(renderWorkspaceCard)}
+            </div>
+          )}
+        </div>
+
+        {/* Create Workspace Section */}
+        {ownedWorkspaces.length === 0 && (
+          <div className="border-t border-slate-800 pt-6 mt-4">
+            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-extrabold text-slate-200 mb-1">
+                Create a New Workspace
+              </h3>
+              <p className="text-xs text-slate-400 mb-4 font-medium">
+                Start a new dashboard for project tracking, board management, and team collaboration.
+              </p>
+
+              <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-3 max-w-xl">
+                <Input
+                  type="text"
+                  placeholder="e.g. Acme Marketing, Alpha Team"
+                  value={newWorkspaceName}
+                  onChange={(e) => setNewWorkspaceName(e.target.value)}
+                  disabled={isPending}
+                  className="flex-1 bg-slate-955 border-slate-800 focus-visible:ring-amber-500 focus-visible:border-amber-500 text-slate-200 text-xs font-medium rounded-xl h-10 px-3.5"
+                />
+                <Button
+                  type="submit"
+                  disabled={isPending || !newWorkspaceName.trim()}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black cursor-pointer shadow-3xs text-xs rounded-xl h-10 px-5 flex items-center justify-center gap-1.5"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin text-slate-950" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} />
+                      <span>Create Workspace</span>
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
           </div>
         )}
+        <DeleteConfirmModal
+          isOpen={leaveWorkspaceId !== null}
+          onClose={() => setLeaveWorkspaceId(null)}
+          type="leave_workspace"
+          name={leaveWorkspaceName}
+          isPending={leavingId !== null}
+          onConfirm={handleLeaveConfirm}
+        />
+        <DeleteConfirmModal
+          isOpen={deleteWorkspaceId !== null}
+          onClose={() => setDeleteWorkspaceId(null)}
+          type="delete_workspace"
+          name={deleteWorkspaceName}
+          isPending={deletingId !== null}
+          onConfirm={handleDeleteConfirm}
+        />
+        {switchingId !== null && <SwitchingWorkspaceLoading />}
       </div>
-
-      {/* Create Workspace Section */}
-      {ownedWorkspaces.length === 0 && (
-        <div className="border-t border-slate-800 pt-6 mt-4">
-          <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-extrabold text-slate-200 mb-1">
-              Create a New Workspace
-            </h3>
-            <p className="text-xs text-slate-400 mb-4 font-medium">
-              Start a new dashboard for project tracking, board management, and team collaboration.
-            </p>
-
-            <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-3 max-w-xl">
-              <Input
-                type="text"
-                placeholder="e.g. Acme Marketing, Alpha Team"
-                value={newWorkspaceName}
-                onChange={(e) => setNewWorkspaceName(e.target.value)}
-                disabled={isPending}
-                className="flex-1 bg-slate-950 border-slate-800 focus-visible:ring-amber-500 focus-visible:border-amber-500 text-slate-200 text-xs font-medium rounded-xl h-10 px-3.5"
-              />
-              <Button
-                type="submit"
-                disabled={isPending || !newWorkspaceName.trim()}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black cursor-pointer shadow-3xs text-xs rounded-xl h-10 px-5 flex items-center justify-center gap-1.5"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin text-slate-950" />
-                    <span>Creating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={14} />
-                    <span>Create Workspace</span>
-                  </>
-                )}
-              </Button>
-            </form>
-          </div>
-        </div>
-      )}
-      <DeleteConfirmModal
-        isOpen={leaveWorkspaceId !== null}
-        onClose={() => setLeaveWorkspaceId(null)}
-        type="leave_workspace"
-        name={leaveWorkspaceName}
-        isPending={leavingId !== null}
-        onConfirm={handleLeaveConfirm}
-      />
-      <DeleteConfirmModal
-        isOpen={deleteWorkspaceId !== null}
-        onClose={() => setDeleteWorkspaceId(null)}
-        type="delete_workspace"
-        name={deleteWorkspaceName}
-        isPending={deletingId !== null}
-        onConfirm={handleDeleteConfirm}
-      />
-      {switchingId !== null && <SwitchingWorkspaceLoading />}
     </div>
   )
 }

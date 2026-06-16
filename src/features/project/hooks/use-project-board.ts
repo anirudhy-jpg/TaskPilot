@@ -1,4 +1,4 @@
-import { useTransition } from "react";
+import { useTransition, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useProjectBoardState } from "./use-project-board-state";
 import { useProjectBoardModals } from "./use-project-board-modals";
@@ -65,17 +65,23 @@ export function useProjectBoard({
     currentUserMember?.role || (isWorkspaceOwner ? "owner" : "member");
   const isWorkspaceMember = currentUserRole === "member";
 
-  const projectMemberUserIds = activeProject?.memberUserIds || [];
-  const currentProjectMembers = members.filter(
-    (m) =>
-      projectMemberUserIds.includes(m.userId) ||
-      m.userId === activeProject?.createdBy,
-  );
-  const eligibleMembers = members.filter(
-    (m) =>
-      !projectMemberUserIds.includes(m.userId) &&
-      m.userId !== activeProject?.createdBy,
-  );
+  const currentProjectMembers = useMemo(() => {
+    const projectMemberUserIds = activeProject?.memberUserIds || [];
+    return members.filter(
+      (m) =>
+        projectMemberUserIds.includes(m.userId) ||
+        m.userId === activeProject?.createdBy,
+    );
+  }, [members, activeProject?.memberUserIds, activeProject?.createdBy]);
+
+  const eligibleMembers = useMemo(() => {
+    const projectMemberUserIds = activeProject?.memberUserIds || [];
+    return members.filter(
+      (m) =>
+        !projectMemberUserIds.includes(m.userId) &&
+        m.userId !== activeProject?.createdBy,
+    );
+  }, [members, activeProject?.memberUserIds, activeProject?.createdBy]);
 
   const [isPending, startTransition] = useTransition();
 

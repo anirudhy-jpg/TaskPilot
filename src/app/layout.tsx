@@ -4,19 +4,20 @@ import "./globals.css"
 import fs from "fs"
 import path from "path"
 
-try {
-  const result = {
-    env: Object.keys(process.env).reduce((acc: any, key) => {
-      if (key.includes("SUPABASE") || key.includes("KEY") || key.includes("PORT") || key.includes("URL") || key.includes("DB")) {
-        acc[key] = process.env[key];
-      }
-      return acc;
-    }, {})
-  };
-  fs.writeFileSync(path.join(process.cwd(), "debug_output.json"), JSON.stringify(result, null, 2));
-} catch (e: any) {
-  console.error("Failed to write debug info:", e);
-}
+//this is for just debugging purpose it will not affect the application.
+// try {
+//   const result = {
+//     env: Object.keys(process.env).reduce((acc: any, key) => {
+//       if (key.includes("SUPABASE") || key.includes("KEY") || key.includes("PORT") || key.includes("URL") || key.includes("DB")) {
+//         acc[key] = process.env[key];
+//       }
+//       return acc;
+//     }, {})
+//   };
+//   fs.writeFileSync(path.join(process.cwd(), "debug_output.json"), JSON.stringify(result, null, 2));
+// } catch (e: any) {
+//   console.error("Failed to write debug info:", e);
+// }
 
 
 const inter = Inter({
