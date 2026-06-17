@@ -152,11 +152,8 @@ export function useProjectBoardOperations({
       setIsCreateProjectOpen(false);
       const res = await createProjectAction(workspaceId, name, description);
       if (res.success) {
-        if (res.projectId) {
-          router.push(`/projects/${res.projectId}`);
-        } else {
-          router.refresh();
-        }
+        router.refresh();
+        router.push("/projects");
       } else {
         setErrorMsg(res.error || "Failed to create project.");
       }

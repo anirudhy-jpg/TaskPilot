@@ -171,7 +171,7 @@ function BoardContent(props: ProjectsListProps) {
         onDeleteProject={(target) => setDeleteTarget(target)}
         onEditProject={() => setProjectToEdit(activeProject || null)}
         onNewProject={() => setIsCreateProjectOpen(true)}
-        onAddColumn={() => setIsCreateColumnOpen(true)}
+        onAddColumn={activeProject && (activeProject.columns || []).length < 5 ? () => setIsCreateColumnOpen(true) : undefined}
       />
 
       {errorMsg && (
