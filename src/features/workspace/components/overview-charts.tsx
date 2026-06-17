@@ -1,6 +1,7 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import {
   PieChart,
   Pie,
@@ -16,44 +17,132 @@ import {
 } from "recharts"
 import type { WorkspaceAnalytics, WorkspaceMember } from "../types/workspace.types"
 
+type NotificationItem = {
+  id: string
+  title: string
+  message: string
+  type: string
+  createdAt: string
+  actor: {
+    fullName: string | null
+    email: string
+    avatarUrl: string | null
+  } | null
+}
+
+type MemberWithStats = WorkspaceMember & {
+  totalTasksCount: number
+  completedTasksCount: number
+}
+
 interface OverviewChartsProps {
   analytics: WorkspaceAnalytics
-  notifications: {
-    id: string
-    title: string
-    message: string
-    type: string
-    createdAt: string
-    actor: {
-      fullName: string | null
-      email: string
-      avatarUrl: string | null
-    } | null
-  }[]
-  members: (WorkspaceMember & {
-    totalTasksCount: number
-    completedTasksCount: number
-  })[]
+  notifications: NotificationItem[]
+  members: MemberWithStats[]
   workspaceName: string
+  workspaceId: string
 }
 
 export function OverviewCharts({
   analytics,
-  notifications,
-  members,
+  notifications: initialNotifications,
+  members: initialMembers,
   workspaceName,
+  workspaceId,
 }: OverviewChartsProps) {
   const { tasksByStatus, projectTaskCounts, totalProjects, totalTasks } =
     analytics
 
-  const [mounted, setMounted] = React.useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [liveNotifications, setLiveNotifications] = useState<NotificationItem[]>(initialNotifications)
+  const [liveMembers, setLiveMembers] = useState<MemberWithStats[]>(initialMembers)
 
-  React.useEffect(() => {
+  // Keep local state in sync if server re-renders with new props
+  useEffect(() => { setLiveNotifications(initialNotifications) }, [initialNotifications])
+  useEffect(() => { setLiveMembers(initialMembers) }, [initialMembers])
+
+  useEffect(() => {
     setMounted(true)
   }, [])
 
+  // ── Real-time: workspace_members DELETE ──────────────────────
+  useEffect(() => {
+    if (!workspaceId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`overview-members:${workspaceId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "workspace_members",
+          filter: `workspace_id=eq.${workspaceId}`,
+        },
+        (payload) => {
+          const deletedUserId = (payload.old as any)?.user_id
+          if (!deletedUserId) return
+          setLiveMembers((prev) => prev.filter((m) => m.userId !== deletedUserId))
+        },
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [workspaceId])
+
+  // ── Real-time: notifications INSERT ─────────────────────────
+  useEffect(() => {
+    if (!workspaceId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`overview-notifications:${workspaceId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `workspace_id=eq.${workspaceId}`,
+        },
+        async (payload) => {
+          const row = payload.new as any
+          // Fetch actor profile so we can display name/avatar
+          let actor: NotificationItem["actor"] = null
+          if (row.actor_id) {
+            const { data } = await supabase
+              .from("profiles")
+              .select("full_name, email, avatar_url")
+              .eq("id", row.actor_id)
+              .maybeSingle()
+            if (data) {
+              actor = {
+                fullName: data.full_name,
+                email: data.email,
+                avatarUrl: data.avatar_url,
+              }
+            }
+          }
+          const newItem: NotificationItem = {
+            id: row.id,
+            title: row.title,
+            message: row.message,
+            type: row.type,
+            createdAt: row.created_at,
+            actor,
+          }
+          // Prepend and cap at 10 entries
+          setLiveNotifications((prev) => [newItem, ...prev].slice(0, 10))
+        },
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [workspaceId])
+
   const hasTaskData = tasksByStatus.some((d) => d.value > 0)
   const hasProjectData = projectTaskCounts.length > 0
+  const notifications = liveNotifications
+  const members = liveMembers
 
   return (
     <div className="flex flex-col gap-6">
