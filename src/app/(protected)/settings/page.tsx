@@ -22,11 +22,6 @@ export default async function SettingsPage() {
   const workspaceId = workspace ? workspace.id : null
   const workspaceName = workspace ? workspace.name : ""
 
-  console.log("=== DEBUG SETTINGS ===")
-  console.log("User ID:", user.id)
-  console.log("Active Workspace:", workspace)
-  console.log("Is Owner:", isWorkspaceOwner)
-  console.log("======================")
 
   return (
     <SettingsPanel
