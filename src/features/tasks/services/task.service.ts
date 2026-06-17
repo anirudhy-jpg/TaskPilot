@@ -274,5 +274,6 @@ export function mapTask(row: any, assigneeData: any): Task {
           avatarUrl: assigneeData.avatar_url,
         }
       : undefined,
+    subtasks: row.subtasks,
   }
 }

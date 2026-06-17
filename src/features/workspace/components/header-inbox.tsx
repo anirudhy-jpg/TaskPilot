@@ -463,6 +463,9 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   } else if (notif.type === "member_left") {
                     colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <UserMinus size={14} />
+                  } else if (notif.type === "mention") {
+                    colorClass = "bg-amber-500/10 text-amber-500"
+                    icon = <span className="text-sm font-black">@</span>
                   }
 
                   return (

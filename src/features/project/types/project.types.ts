@@ -42,6 +42,25 @@ export interface Task {
     fullName: string | null
     avatarUrl: string | null
   }
+  subtasks?: TaskSubtask[]
+}
+
+export interface TaskSubtask {
+  id: string
+  taskId: string
+  title: string
+  completed: boolean
+  status: string
+  priority: "low" | "medium" | "high"
+  assigneeId: string | null
+  position: number
+  createdAt: string
+  updatedAt: string
+  assignee?: {
+    email: string
+    fullName: string | null
+    avatarUrl: string | null
+  }
 }
 
 export interface WorkspaceAnalytics {
@@ -51,3 +70,71 @@ export interface WorkspaceAnalytics {
   projectTaskCounts: { name: string; total: number; completed: number }[]
 }
 
+export const TASK_ACTIVITY_TYPES = {
+  TASK_CREATED: "TASK_CREATED",
+  TASK_UPDATED: "TASK_UPDATED",
+  STATUS_CHANGED: "STATUS_CHANGED",
+  PRIORITY_CHANGED: "PRIORITY_CHANGED",
+  DUE_DATE_CHANGED: "DUE_DATE_CHANGED",
+  ASSIGNEE_ADDED: "ASSIGNEE_ADDED",
+  ASSIGNEE_REMOVED: "ASSIGNEE_REMOVED",
+  COLUMN_MOVED: "COLUMN_MOVED",
+  TASK_COMPLETED: "TASK_COMPLETED",
+  TASK_REOPENED: "TASK_REOPENED",
+  COMMENT_ADDED: "COMMENT_ADDED",
+  COMMENT_EDITED: "COMMENT_EDITED",
+  COMMENT_DELETED: "COMMENT_DELETED",
+  ATTACHMENT_ADDED: "ATTACHMENT_ADDED",
+  ATTACHMENT_REMOVED: "ATTACHMENT_REMOVED",
+  MEMBER_MENTIONED: "MEMBER_MENTIONED",
+} as const
+
+export type TaskActivityType = keyof typeof TASK_ACTIVITY_TYPES
+
+export interface TaskActivity {
+  id: string
+  taskId: string
+  actorId: string | null
+  actionType: TaskActivityType
+  oldValue: any | null
+  newValue: any | null
+  metadata: any | null
+  createdAt: string
+  actor?: {
+    email: string
+    fullName: string | null
+    avatarUrl: string | null
+  }
+}
+
+export interface TaskComment {
+  id: string
+  taskId: string
+  authorId: string
+  content: string
+  edited: boolean
+  createdAt: string
+  updatedAt: string
+  author?: {
+    email: string
+    fullName: string | null
+    avatarUrl: string | null
+  }
+  mentions?: TaskCommentMention[]
+}
+
+export interface TaskCommentMention {
+  id: string
+  commentId: string
+  mentionedUserId: string
+  createdAt: string
+  mentionedUser?: {
+    email: string
+    fullName: string | null
+    avatarUrl: string | null
+  }
+}
+
+export type TimelineItem = 
+  | ({ type: 'activity' } & TaskActivity)
+  | ({ type: 'comment' } & TaskComment)

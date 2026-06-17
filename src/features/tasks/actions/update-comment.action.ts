@@ -1,0 +1,25 @@
+"use server"
+
+import { revalidatePath } from "next/cache"
+import { TaskTimelineService } from "../services/task-timeline.service"
+
+export interface ActionResponse {
+  success: boolean
+  error?: string
+}
+
+export async function updateCommentAction(
+  commentId: string, 
+  content: string
+): Promise<ActionResponse> {
+  try {
+    await TaskTimelineService.editComment(commentId, content)
+    return { success: true }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update comment."
+    return {
+      success: false,
+      error: message,
+    }
+  }
+}

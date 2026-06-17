@@ -34,7 +34,8 @@ export default async function ProjectsPage() {
           .from("tasks")
           .select(`
             id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at,
-            assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
+            assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url),
+            subtasks:task_subtasks(id, completed, status)
           `)
           .in("project_id", projectIds)
           .order("position", { ascending: true }),

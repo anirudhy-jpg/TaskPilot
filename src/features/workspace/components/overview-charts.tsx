@@ -141,7 +141,7 @@ export function OverviewCharts({
 
   const hasTaskData = tasksByStatus.some((d) => d.value > 0)
   const hasProjectData = projectTaskCounts.length > 0
-  const notifications = liveNotifications
+  const notifications = liveNotifications.filter((n) => !n.type.includes("mention"))
   const members = liveMembers
 
   return (
@@ -336,6 +336,7 @@ export function OverviewCharts({
                 statusClass = "text-rose-400 bg-rose-500/10 border-rose-500/20"
               } else if (item.type === "member_left") {
                 statusText = "Left"
+                
                 statusClass = "text-slate-400 bg-slate-950 border border-slate-900"
               } else if (item.type === "member_removed") {
                 statusText = "Removed"
