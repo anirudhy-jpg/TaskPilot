@@ -213,26 +213,7 @@ export function SettingsPanel({
               </div>
             )}
 
-            {isWorkspaceOwner && workspaceId && (
-              <div className="p-6 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-2 text-red-400 mb-4">
-                  <Trash2 size={18} />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Workspace Actions</h3>
-                </div>
-                <p className="text-xs text-slate-400 mb-5">
-                  Workspace owners are not permitted to delete workspaces.
-                </p>
-                <Button
-                  disabled
-                  variant="destructive"
-                  size="sm"
-                  className="cursor-not-allowed opacity-50 rounded-xl font-bold text-xs px-4 h-9"
-                >
-                  <Trash2 size={14} />
-                  <span>Delete Workspace</span>
-                </Button>
-              </div>
-            )}
+          
           </div>
         </div>
 
