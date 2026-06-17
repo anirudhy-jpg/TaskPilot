@@ -158,20 +158,6 @@ export function AssigneeSelector({
             <span className="text-slate-350 font-bold">Unassigned</span>
           </button>
 
-          {/* Automatic */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange(task.id, null);
-              setIsOpen(false);
-            }}
-            className="w-full flex items-center gap-3 px-2.5 py-2 text-left rounded-lg text-xs font-semibold hover:bg-slate-800/80 transition-colors cursor-pointer"
-          >
-            <div className="w-6 h-6 rounded-full bg-slate-950 flex items-center justify-center text-slate-500">
-              <User size={12} />
-            </div>
-            <span className="text-slate-350 font-bold">Automatic</span>
-          </button>
 
           <div className="h-[1px] bg-slate-800 my-1" />
 
