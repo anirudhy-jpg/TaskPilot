@@ -177,6 +177,7 @@ export default async function WorkspaceOverviewPage() {
           notifications={serializedNotifications}
           members={membersWithStats}
           workspaceName={workspace.name}
+          workspaceId={workspace.id}
         />
       </div>
     </div>

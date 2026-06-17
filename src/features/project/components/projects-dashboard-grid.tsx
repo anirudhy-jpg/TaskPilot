@@ -89,7 +89,7 @@ export function ProjectsDashboardGrid({
           <div
             key={project.id}
             onClick={() => router.push(`/projects/${project.id}`)}
-            className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-sm hover:bg-slate-900/80 hover:-translate-y-1 hover:border-amber-500/25 transition-all duration-300 flex flex-col justify-between min-h-[380px] group cursor-pointer"
+            className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-sm hover:bg-slate-900/80 hover:-translate-y-1 hover:border-amber-500/25 transition-all duration-300 flex flex-col justify-between min-h-[220px] group cursor-pointer"
           >
             {/* Card Top Details */}
             <div>
@@ -240,15 +240,13 @@ export function ProjectsDashboardGrid({
             </div>
 
             {/* Card Footer Actions */}
-            <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between gap-2">
+            <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-center gap-2">
               <span className="text-[11px] font-extrabold text-amber-500 group-hover:text-amber-400 flex items-center gap-1">
                 Open Board{" "}
                 <span className="group-hover:translate-x-1 transition-transform">
                   &rarr;
                 </span>
               </span>
-
-              
             </div>
           </div>
         );

@@ -21,7 +21,8 @@ export default async function TeamsPage() {
     getCachedMembersByWorkspace(workspace.id),
   ])
 
-  // 2. Fetch all tasks assignees for these projects in a single query
+  // 2. Fetch all project_members rows for these projects in a single query
+  //    so we show every member added to a project, not just task assignees.
   const membersByProject: Record<string, WorkspaceMember[]> = {}
   projects.forEach((p) => {
     membersByProject[p.id] = []
@@ -31,30 +32,23 @@ export default async function TeamsPage() {
     try {
       const projectIds = projects.map((p) => p.id)
       const supabase = await createClient()
-      const { data: tasks } = await supabase
-        .from("tasks")
-        .select("project_id, assigned_to")
+      const { data: projectMemberRows } = await supabase
+        .from("project_members")
+        .select("project_id, user_id")
         .in("project_id", projectIds)
-        .not("assigned_to", "is", null)
 
-      // Map assignee userIds to projects
-      const assigneesByProject = new Map<string, Set<string>>()
-      ;(tasks || []).forEach((t: any) => {
-        const set = assigneesByProject.get(t.project_id) || new Set<string>()
-        if (t.assigned_to) {
-          set.add(t.assigned_to)
-        }
-        assigneesByProject.set(t.project_id, set)
+      // Group user_ids by project
+      const userIdsByProject = new Map<string, Set<string>>()
+      ;(projectMemberRows || []).forEach((row: any) => {
+        const set = userIdsByProject.get(row.project_id) || new Set<string>()
+        set.add(row.user_id)
+        userIdsByProject.set(row.project_id, set)
       })
 
-      // Map unique assignees to workspace member profiles in memory
+      // Map each project's user_ids to their full workspace member profiles
       projects.forEach((p) => {
-        const userIds = assigneesByProject.get(p.id) || new Set<string>()
-        if (userIds.size > 0) {
-          membersByProject[p.id] = allMembers.filter(
-            (m) => userIds.has(m.userId)
-          )
-        }
+        const userIds = userIdsByProject.get(p.id) || new Set<string>()
+        membersByProject[p.id] = allMembers.filter((m) => userIds.has(m.userId))
       })
     } catch (err) {
       console.error("Error batch fetching project members in TeamsPage:", err)

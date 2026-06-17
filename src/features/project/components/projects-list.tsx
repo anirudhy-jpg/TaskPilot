@@ -211,29 +211,31 @@ function BoardContent(props: ProjectsListProps) {
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */
-          <div className="space-y-6">
-            <ProjectsDashboardGrid
-              optimisticProjects={paginatedProjects}
-              statusConfig={statusConfig}
-              cycleTaskStatus={cycleTaskStatus}
-              setDeleteTarget={setDeleteTarget}
-              setNewTaskStatus={setNewTaskStatus}
-              setCreateTaskProjectId={setCreateTaskProjectId}
-              setIsCreateProjectOpen={setIsCreateProjectOpen}
-              isWorkspaceMember={isWorkspaceMember}
-              onEditProject={(project) => setProjectToEdit(project)}
-            />
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              itemName="projects"
-            />
-          </div>
+          <ProjectsDashboardGrid
+            optimisticProjects={paginatedProjects}
+            statusConfig={statusConfig}
+            cycleTaskStatus={cycleTaskStatus}
+            setDeleteTarget={setDeleteTarget}
+            setNewTaskStatus={setNewTaskStatus}
+            setCreateTaskProjectId={setCreateTaskProjectId}
+            setIsCreateProjectOpen={setIsCreateProjectOpen}
+            isWorkspaceMember={isWorkspaceMember}
+            onEditProject={(project) => setProjectToEdit(project)}
+          />
         )}
       </div>
+
+      {/* ─── Pagination (outside overflow-hidden so it is never clipped) ─── */}
+      {!activeProject && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          itemName="projects"
+        />
+      )}
 
       {/* ─── MODALS ─────────────────────────────────────────── */}
 

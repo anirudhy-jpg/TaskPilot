@@ -5,7 +5,6 @@ import {
   getCachedWorkspaceForUser,
   getCachedProjectsByWorkspace
 } from "@/lib/cached-requests"
-import { WorkspaceService } from "@/features/workspace/services/workspace.service"
 import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 import { WorkspaceShell } from "@/features/workspace/components/workspace-shell"
 
@@ -18,7 +17,10 @@ export default async function WorkspaceLayout({
 }) {
   const { user } = await requireUser()
 
-  // 1. Fetch profile and workspace in parallel (cached)
+  // 1. Fetch profile and workspace in parallel (cached).
+  //    Onboarding (profile/workspace/membership creation) is handled in
+  //    /callback/route.ts before any redirect into this layout, so by the
+  //    time we reach here the DB should already be consistent.
   let profile = null
   let workspace = null
   try {
@@ -28,14 +30,6 @@ export default async function WorkspaceLayout({
     ])
     profile = pRes
     workspace = wsRes
-
-    if (profile && !workspace) {
-      // Auto-create a default workspace for the user (not cached as it writes/mutates)
-      workspace = await WorkspaceService.createWorkspace(
-        `${profile.fullName || user.email?.split("@")[0] || "My"}'s Workspace`,
-        user.id
-      )
-    }
   } catch (err) {
     console.error("Error loading profile and workspace:", err)
   }

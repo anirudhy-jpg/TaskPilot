@@ -46,7 +46,7 @@ export function TeamsList({ projects, membersByProject }: TeamsListProps) {
             Teams
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Members assigned to tasks in each project.
+            All members in each project team.
           </p>
         </div>
       </div>
@@ -123,7 +123,7 @@ export function TeamsList({ projects, membersByProject }: TeamsListProps) {
                           </div>
                         ) : (
                           <div className="text-[10px] text-slate-500 italic py-1">
-                            No members assigned to tasks yet
+                            No members added to this project yet
                           </div>
                         )}
                       </div>

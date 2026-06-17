@@ -68,6 +68,8 @@ export class WorkspaceService {
 
   /**
    * Create a new workspace and add the creator as owner in workspace_members.
+   * Both operations must succeed — a workspace without an owner membership
+   * row is an orphan that breaks all workspace queries.
    */
   static async createWorkspace(
     name: string,
@@ -86,7 +88,9 @@ export class WorkspaceService {
       throw new Error(error.message)
     }
 
-    // Add creator as owner member
+    // Add creator as owner member — this MUST succeed.
+    // A workspace row without a corresponding workspace_members row is an
+    // orphan: the user will appear to have no workspace on every login.
     const { error: memberErr } = await supabase
       .from("workspace_members")
       .insert({
@@ -97,10 +101,37 @@ export class WorkspaceService {
 
     if (memberErr) {
       console.error("Error adding owner as member:", memberErr)
-      // Workspace was created, log but don't throw
+      throw new Error(
+        `Workspace created but failed to create owner membership: ${memberErr.message}`
+      )
     }
 
     return mapWorkspace(data, "owner")
+  }
+
+  /**
+   * Idempotent: ensures the owner has a workspace_members row for their workspace.
+   * Used by the onboarding repair path to fix orphan workspaces created before
+   * the membership-throw fix was in place.
+   * Safe to call multiple times — uses upsert with ignoreDuplicates.
+   */
+  static async ensureOwnerMembership(
+    workspaceId: string,
+    ownerId: string
+  ): Promise<void> {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from("workspace_members")
+      .upsert(
+        { workspace_id: workspaceId, user_id: ownerId, role: "owner" },
+        { onConflict: "workspace_id,user_id", ignoreDuplicates: true }
+      )
+
+    if (error) {
+      console.error("Error ensuring owner membership:", error)
+      throw new Error(error.message)
+    }
   }
 
   /**
