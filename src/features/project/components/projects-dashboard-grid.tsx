@@ -248,19 +248,7 @@ export function ProjectsDashboardGrid({
                 </span>
               </span>
 
-              <Button
-                size="xs"
-                variant="outline"
-                className="border-amber-500/30 hover:bg-amber-500/10 text-amber-500 hover:text-amber-400 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setNewTaskStatus("todo");
-                  setCreateTaskProjectId(project.id);
-                }}
-              >
-                <Plus size={10} className="mr-1" />
-                <span>Add Task</span>
-              </Button>
+              
             </div>
           </div>
         );
