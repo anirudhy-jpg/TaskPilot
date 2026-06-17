@@ -188,39 +188,39 @@ export function WorkspacesClient({
       <div
         key={ws.id}
         onClick={() => handleSwitch(ws.id)}
-        className={`relative bg-white/70 backdrop-blur-md border rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_16px_32px_-8px_rgba(245,158,11,0.1)] hover:-translate-y-1 hover:border-amber-500/20 transition-all duration-300 flex items-center justify-between group cursor-pointer ${
-          isActive ? "border-amber-500 ring-2 ring-amber-500/10" : "border-amber-900/5"
+        className={`relative bg-slate-900/60 backdrop-blur-md border rounded-2xl p-5 shadow-sm hover:-translate-y-1 hover:border-amber-500/30 transition-all duration-300 flex items-center justify-between group cursor-pointer ${
+          isActive ? "border-amber-500 ring-2 ring-amber-500/20" : "border-slate-800"
         }`}
       >
         <div className="flex items-center gap-4 min-w-0">
           {/* Workspace Initials Avatar */}
-          <div className={`flex items-center justify-center w-12 h-12 rounded-xl text-base font-black border shrink-0 shadow-3xs transition-transform duration-300 group-hover:scale-105 ${
+          <div className={`flex items-center justify-center w-12 h-12 rounded-xl text-base font-black border shrink-0 transition-transform duration-300 group-hover:scale-105 ${
             isActive
-              ? "bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 border-amber-500/20"
-              : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+              ? "bg-amber-500 text-slate-950 border-amber-500/20"
+              : "bg-slate-800 text-amber-500 border-slate-700"
           }`}>
             {ws.name.slice(0, 2).toUpperCase()}
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-sm font-extrabold text-slate-800 truncate pr-2">
+            <h3 className="text-sm font-extrabold text-slate-200 truncate pr-2">
               {ws.name}
             </h3>
             <div className="flex items-center gap-1.5 mt-1">
               {isOwner ? (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-600/10 px-2 py-0.5 rounded-full border border-amber-600/10">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                   <ShieldCheck size={10} />
                   Owner
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
                   <User size={10} />
                   Member
                 </span>
               )}
 
               {isActive && (
-                <span className="inline-flex items-center text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-500/15">
+                <span className="inline-flex items-center text-[9px] font-black text-rose-455 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
                   Active
                 </span>
               )}
@@ -236,43 +236,29 @@ export function WorkspacesClient({
               variant="outline"
               disabled={isPending}
               onClick={(e) => handleLeave(e, ws.id, ws.name)}
-              className="border-red-200 hover:bg-red-50 text-red-650 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg h-7"
+              className="border-red-900/50 hover:bg-red-500/10 text-red-400 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg h-7"
             >
               {leavingId === ws.id ? (
-                <Loader2 size={12} className="animate-spin text-red-650" />
+                <Loader2 size={12} className="animate-spin text-red-400" />
               ) : (
                 "Leave"
               )}
             </Button>
           )}
 
-          {isOwner && (
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={isPending}
-              onClick={(e) => handleDelete(e, ws.id, ws.name)}
-              className="border-red-200 hover:bg-red-50 text-red-650 hover:text-red-750 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg h-7 animate-in fade-in duration-200"
-            >
-              {deletingId === ws.id ? (
-                <Loader2 size={12} className="animate-spin text-red-650" />
-              ) : (
-                "Delete"
-              )}
-            </Button>
-          )}
+
 
           {isSwitching ? (
-            <Loader2 size={16} className="animate-spin text-amber-600" />
+            <Loader2 size={16} className="animate-spin text-amber-500" />
           ) : isActive ? (
-            <span className="text-[11px] font-extrabold text-slate-400 group-hover:text-amber-600 flex items-center gap-1 transition-colors">
+            <span className="text-[11px] font-extrabold text-slate-400 group-hover:text-amber-400 flex items-center gap-1 transition-colors">
               Open Board <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
             </span>
           ) : (
             <Button
               size="xs"
               variant="outline"
-              className="border-amber-500/20 hover:bg-amber-500/5 text-amber-600 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg h-7"
+              className="border-amber-500/30 hover:bg-amber-500/10 text-amber-400 cursor-pointer text-[10px] font-bold px-2.5 py-1 rounded-lg h-7"
             >
               Switch
             </Button>
@@ -283,116 +269,120 @@ export function WorkspacesClient({
   }
 
   return (
-    <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
-      {/* Premium top linear loading bar showing sync state */}
-      {isPending && typeof window !== "undefined" && createPortal(
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
-          <div className="h-full bg-amber-450 animate-pulse w-full" />
-        </div>,
-        document.body
-      )}
-
-      {/* Page Header */}
-      <div className="flex flex-col gap-1 border-b border-amber-900/10 pb-5">
-        <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl flex items-center gap-2">
-          <Briefcase size={22} className="text-amber-600" />
-          <span>Workspaces Hub</span>
-        </h1>
-        <p className="text-xs text-slate-500 font-medium">
-          Manage, create, or switch between all workspaces you own or are part of.
-        </p>
-      </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-xs text-red-650 flex items-center justify-between">
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      {/* Owned Workspaces */}
-      <div className="space-y-4">
-        <h2 className="text-[11px] font-black text-slate-450 uppercase tracking-widest pl-1">
-          Workspaces You Own
-        </h2>
-        {ownedWorkspaces.length === 0 ? (
-          <p className="text-xs text-slate-400 italic pl-1">You don&apos;t own any workspaces yet.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {ownedWorkspaces.map(renderWorkspaceCard)}
-          </div>
+    <div className="flex-1 flex flex-col overflow-y-auto pr-1 scrollbar-thin">
+      <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none relative transition-all duration-300 pb-10 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+        {/* Premium top linear loading bar showing sync state */}
+        {isPending && typeof window !== "undefined" && createPortal(
+          <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
+            <div className="h-full bg-amber-450 animate-pulse w-full" />
+          </div>,
+          document.body
         )}
-      </div>
 
-      {/* Member Workspaces */}
-      <div className="space-y-4 pt-2">
-        <h2 className="text-[11px] font-black text-slate-455 uppercase tracking-widest pl-1">
-          Workspaces You Joined (as Member)
-        </h2>
-        {memberWorkspaces.length === 0 ? (
-          <p className="text-xs text-slate-400 italic pl-1">No shared workspaces joined.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {memberWorkspaces.map(renderWorkspaceCard)}
-          </div>
-        )}
-      </div>
-
-      {/* Create Workspace Section */}
-      <div className="border-t border-amber-955/10 pt-6 mt-4">
-        <div className="bg-white/50 backdrop-blur-md border border-amber-900/5 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)]">
-          <h3 className="text-sm font-extrabold text-slate-800 mb-1">
-            Create a New Workspace
-          </h3>
-          <p className="text-xs text-slate-500 mb-4 font-medium">
-            Start a new dashboard for project tracking, board management, and team collaboration.
+        {/* Page Header */}
+        <div className="flex flex-col gap-1 border-b border-slate-800 pb-5">
+          <h1 className="text-xl font-extrabold text-white tracking-tight sm:text-2xl flex items-center gap-2">
+            <Briefcase size={22} className="text-amber-500" />
+            <span>Workspaces Hub</span>
+          </h1>
+          <p className="text-xs text-slate-400 font-medium">
+            Manage, create, or switch between all workspaces you own or are part of.
           </p>
-
-          <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-3 max-w-xl">
-            <Input
-              type="text"
-              placeholder="e.g. Acme Marketing, Alpha Team"
-              value={newWorkspaceName}
-              onChange={(e) => setNewWorkspaceName(e.target.value)}
-              disabled={isPending}
-              className="flex-1 bg-white border-amber-900/10 focus-visible:ring-amber-500 focus-visible:border-amber-500 text-xs font-medium rounded-xl h-10 px-3.5"
-            />
-            <Button
-              type="submit"
-              disabled={isPending || !newWorkspaceName.trim()}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black cursor-pointer shadow-3xs text-xs rounded-xl h-10 px-5 flex items-center justify-center gap-1.5"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 size={14} className="animate-spin text-slate-950" />
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={14} />
-                  <span>Create Workspace</span>
-                </>
-              )}
-            </Button>
-          </form>
         </div>
+
+        {errorMsg && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Owned Workspaces */}
+        <div className="space-y-4">
+          <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Workspaces You Own
+          </h2>
+          {ownedWorkspaces.length === 0 ? (
+            <p className="text-xs text-slate-500 italic pl-1">You don&apos;t own any workspaces yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ownedWorkspaces.map(renderWorkspaceCard)}
+            </div>
+          )}
+        </div>
+
+        {/* Member Workspaces */}
+        <div className="space-y-4 pt-2">
+          <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Workspaces You Joined (as Member)
+          </h2>
+          {memberWorkspaces.length === 0 ? (
+            <p className="text-xs text-slate-500 italic pl-1">No shared workspaces joined.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {memberWorkspaces.map(renderWorkspaceCard)}
+            </div>
+          )}
+        </div>
+
+        {/* Create Workspace Section */}
+        {ownedWorkspaces.length === 0 && (
+          <div className="border-t border-slate-800 pt-6 mt-4">
+            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-extrabold text-slate-200 mb-1">
+                Create a New Workspace
+              </h3>
+              <p className="text-xs text-slate-400 mb-4 font-medium">
+                Start a new dashboard for project tracking, board management, and team collaboration.
+              </p>
+
+              <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-3 max-w-xl">
+                <Input
+                  type="text"
+                  placeholder="e.g. Acme Marketing, Alpha Team"
+                  value={newWorkspaceName}
+                  onChange={(e) => setNewWorkspaceName(e.target.value)}
+                  disabled={isPending}
+                  className="flex-1 bg-slate-955 border-slate-800 focus-visible:ring-amber-500 focus-visible:border-amber-500 text-slate-200 text-xs font-medium rounded-xl h-10 px-3.5"
+                />
+                <Button
+                  type="submit"
+                  disabled={isPending || !newWorkspaceName.trim()}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black cursor-pointer shadow-3xs text-xs rounded-xl h-10 px-5 flex items-center justify-center gap-1.5"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin text-slate-950" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} />
+                      <span>Create Workspace</span>
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+        <DeleteConfirmModal
+          isOpen={leaveWorkspaceId !== null}
+          onClose={() => setLeaveWorkspaceId(null)}
+          type="leave_workspace"
+          name={leaveWorkspaceName}
+          isPending={leavingId !== null}
+          onConfirm={handleLeaveConfirm}
+        />
+        <DeleteConfirmModal
+          isOpen={deleteWorkspaceId !== null}
+          onClose={() => setDeleteWorkspaceId(null)}
+          type="delete_workspace"
+          name={deleteWorkspaceName}
+          isPending={deletingId !== null}
+          onConfirm={handleDeleteConfirm}
+        />
+        {switchingId !== null && <SwitchingWorkspaceLoading />}
       </div>
-      <DeleteConfirmModal
-        isOpen={leaveWorkspaceId !== null}
-        onClose={() => setLeaveWorkspaceId(null)}
-        type="leave_workspace"
-        name={leaveWorkspaceName}
-        isPending={leavingId !== null}
-        onConfirm={handleLeaveConfirm}
-      />
-      <DeleteConfirmModal
-        isOpen={deleteWorkspaceId !== null}
-        onClose={() => setDeleteWorkspaceId(null)}
-        type="delete_workspace"
-        name={deleteWorkspaceName}
-        isPending={deletingId !== null}
-        onConfirm={handleDeleteConfirm}
-      />
-      {switchingId !== null && <SwitchingWorkspaceLoading />}
     </div>
   )
 }

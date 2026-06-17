@@ -2,9 +2,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function MembersLoading() {
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-8 w-full animate-skeleton-fade">
       {/* Header Panel */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-sm">
         <div className="space-y-2">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-80 max-w-full" />
@@ -19,7 +19,7 @@ export default function MembersLoading() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-slate-200/60 shadow-sm flex flex-col justify-between h-[124px]"
+              className="p-5 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm flex flex-col justify-between h-[124px]"
             >
               <div className="flex items-start gap-3">
                 <Skeleton className="w-10 h-10 rounded-full shrink-0" />
@@ -28,7 +28,7 @@ export default function MembersLoading() {
                   <Skeleton className="h-3 w-4/5" />
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 mt-auto">
                 <Skeleton className="h-5 w-16 rounded-full" />
                 <Skeleton className="h-3 w-24" />
               </div>
@@ -40,7 +40,7 @@ export default function MembersLoading() {
       {/* Pending Invitations */}
       <div className="space-y-4 pt-4">
         <Skeleton className="h-4 w-52" />
-        <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+        <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-800">
           {Array.from({ length: 2 }).map((_, i) => (
             <div
               key={i}

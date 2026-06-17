@@ -5,11 +5,12 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { SignupForm } from "@/features/auth/components/signup-form"
 
 interface SignupPageProps {
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; redirect?: string }>
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
-  const { next } = await searchParams
+  const params = await searchParams
+  const next = params.next || params.redirect
   const { user } = await getSession()
 
   if (user) {

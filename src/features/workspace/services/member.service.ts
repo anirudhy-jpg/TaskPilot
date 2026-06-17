@@ -92,7 +92,6 @@ export class MemberService {
         profile:profiles(email, full_name, avatar_url)
       `)
       .in("user_id", uniqueUserIds)
-      .neq("role", "owner")
 
     if (workspaceId) {
       query = query.eq("workspace_id", workspaceId)
@@ -106,7 +105,6 @@ export class MemberService {
         .from("workspace_members")
         .select("*")
         .in("user_id", uniqueUserIds)
-        .neq("role", "owner")
 
       if (workspaceId) {
         fallbackQuery = fallbackQuery.eq("workspace_id", workspaceId)
@@ -120,20 +118,85 @@ export class MemberService {
       }
 
       const members = await fetchProfilesForMembers(supabase, fallbackData || [])
-      return members.filter((m) => m.role !== "owner")
+      return members
     }
 
     return (data || [])
       .map((row) => mapMember(row, row.profile))
-      .filter((m) => m.role !== "owner")
   }
 
-  /**
-   * Remove a member from a workspace.
-   */
-  static async removeMember(workspaceId: string, memberId: string): Promise<void> {
+  static async removeMember(workspaceId: string, memberId: string, actorId?: string | null): Promise<void> {
     const supabase = await createClient()
 
+    // 1. Get the user_id and profile of the member being removed
+    const { data: memberRow } = await supabase
+      .from("workspace_members")
+      .select(`
+        user_id,
+        profile:profiles(email, full_name)
+      `)
+      .eq("id", memberId)
+      .single()
+
+    let removedMemberName = "A member"
+    if (memberRow) {
+      const profile: any = Array.isArray(memberRow.profile) ? memberRow.profile[0] : memberRow.profile
+      removedMemberName = profile?.full_name || profile?.email || "A member"
+    }
+
+    if (memberRow?.user_id) {
+      const userId = memberRow.user_id
+
+      // 2. Fetch projects in this workspace
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+
+      if (projects && projects.length > 0) {
+        const projectIds = projects.map((p) => p.id)
+
+        // Remove project memberships for projects in this workspace
+        await supabase
+          .from("project_members")
+          .delete()
+          .in("project_id", projectIds)
+          .eq("user_id", userId)
+
+        // Unassign the user from tasks in this workspace's projects
+        await supabase
+          .from("tasks")
+          .update({ assigned_to: null })
+          .in("project_id", projectIds)
+          .eq("assigned_to", userId)
+      }
+    }
+
+    // 3. Create member_removed notification for the owner before we delete the membership
+    const { data: ws } = await supabase
+      .from("workspaces")
+      .select("owner_id, name")
+      .eq("id", workspaceId)
+      .single()
+
+    if (ws?.owner_id && memberRow?.user_id) {
+      const { error: notifErr } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: ws.owner_id,
+          workspace_id: workspaceId,
+          title: "Member Removed",
+          message: `${removedMemberName} was removed from the workspace.`,
+          type: "member_removed",
+          actor_id: actorId || null,
+        })
+
+      if (notifErr) {
+        console.error("Error creating member_removed notification:", notifErr)
+      }
+    }
+
+    // 4. Delete from workspace_members
     const { error } = await supabase
       .from("workspace_members")
       .delete()
@@ -145,6 +208,7 @@ export class MemberService {
       throw new Error(error.message)
     }
   }
+
 }
 
 // ─── Helpers ─────────────────────────────────────────────────

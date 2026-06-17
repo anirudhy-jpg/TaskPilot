@@ -3,6 +3,7 @@ export interface Workspace {
   name: string
   ownerId: string
   createdAt: string
+  currentUserRole?: string
 }
 
 export type MemberRole = "owner" | "admin" | "member"

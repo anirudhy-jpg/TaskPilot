@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { requireUser } from "@/lib/supabase/server"
 import { WorkspaceService } from "../services/workspace.service"
+import { WorkspaceHubService } from "../services/workspace-hub.service"
 
 export interface ActionResponse {
   success: boolean
@@ -17,6 +18,13 @@ export async function createWorkspaceAction(
     const { user } = await requireUser()
     if (!user) {
       return { success: false, error: "You must be logged in to create a workspace." }
+    }
+
+    // Block workspace owners from creating new workspaces
+    const workspaces = await WorkspaceHubService.getWorkspacesForUser(user.id)
+    const isOwnerOfAny = workspaces.some((w) => w.ownerId === user.id)
+    if (isOwnerOfAny) {
+      return { success: false, error: "Workspace owners are not allowed to create additional workspaces." }
     }
 
     const ws = await WorkspaceService.createWorkspace(name, user.id)

@@ -38,18 +38,15 @@ const FEATURES = [
 
 export function Features() {
   return (
-    <section id="features" className="py-20 bg-[#f8fafc] border-t border-slate-200 relative">
-      <div className="absolute top-0 bottom-0 left-12 w-[1px] bg-slate-200/50 pointer-events-none hidden lg:block" />
-      <div className="absolute top-0 bottom-0 right-12 w-[1px] bg-slate-200/50 pointer-events-none hidden lg:block" />
-
+    <section id="features" className="py-20 bg-[#0b0f19] relative">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
         {/* Section Header */}
         <div className="max-w-3xl mb-16">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Capabilities</h2>
-          <p className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Capabilities</h2>
+          <p className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Engineered for speed and clarity.
           </p>
-          <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-xl">
+          <p className="text-sm text-slate-400 mt-2 leading-relaxed max-w-xl">
             Features tailored for developer workflows, keeping you focused on writing code and shipping features.
           </p>
         </div>
@@ -61,18 +58,18 @@ export function Features() {
             return (
               <div
                 key={index}
-                className="group relative rounded-lg border border-slate-200 bg-white p-6 hover:border-amber-500/40 transition-all duration-150 shadow-sm"
+                className="group relative rounded-lg border border-slate-800 bg-[#111827]/40 p-6 hover:border-amber-500/40 hover:bg-[#111827]/60 transition-all duration-150 shadow-sm"
               >
                 {/* Feature Icon */}
-                <div className="w-9 h-9 rounded bg-[#f8fafc] border border-slate-200 text-amber-600 flex items-center justify-center mb-5 group-hover:text-amber-500 transition-colors">
+                <div className="w-9 h-9 rounded bg-[#0b0f19] border border-slate-800 text-amber-500 flex items-center justify-center mb-5 group-hover:text-amber-400 transition-colors">
                   <Icon className="w-4 h-4" />
                 </div>
 
                 {/* Content */}
-                <h3 className="text-sm font-bold text-slate-900 mb-2">
+                <h3 className="text-sm font-bold text-white mb-2">
                   {feat.title}
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   {feat.description}
                 </p>
               </div>

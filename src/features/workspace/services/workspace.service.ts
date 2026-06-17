@@ -14,64 +14,43 @@ export class WorkspaceService {
       const cookieStore = await cookies()
       const activeWorkspaceId = cookieStore.get("active_workspace_id")?.value
       if (activeWorkspaceId) {
-        // Verify user is owner or member of this workspace
-        const { data: isOwner } = await supabase
+        // Fetch workspace details and verify user membership in a single query
+        const { data: ws } = await supabase
           .from("workspaces")
-          .select("id")
+          .select(`
+            id,
+            name,
+            owner_id,
+            created_at,
+            workspace_members!inner(user_id, role)
+          `)
           .eq("id", activeWorkspaceId)
-          .eq("owner_id", userId)
+          .eq("workspace_members.user_id", userId)
           .maybeSingle()
 
-        if (isOwner) {
-          const { data: ws } = await supabase
-            .from("workspaces")
-            .select("*")
-            .eq("id", activeWorkspaceId)
-            .single()
-          if (ws) return mapWorkspace(ws)
-        }
-
-        const { data: isMember } = await supabase
-          .from("workspace_members")
-          .select("id")
-          .eq("workspace_id", activeWorkspaceId)
-          .eq("user_id", userId)
-          .maybeSingle()
-
-        if (isMember) {
-          const { data: ws } = await supabase
-            .from("workspaces")
-            .select("*")
-            .eq("id", activeWorkspaceId)
-            .single()
-          if (ws) return mapWorkspace(ws)
+        if (ws) {
+          const members = ws.workspace_members
+          const role = Array.isArray(members) ? members[0]?.role : (members as any)?.role
+          return mapWorkspace(ws, role)
         }
       }
     } catch (err) {
       console.warn("Could not retrieve active_workspace_id from cookies:", err)
     }
 
-    // 2. Default: First try as owner
-    const { data: ownedWs, error: ownErr } = await supabase
-      .from("workspaces")
-      .select("*")
-      .eq("owner_id", userId)
-      .limit(1)
-      .maybeSingle()
-
-    if (ownErr) {
-      console.error("Error fetching owned workspace:", ownErr)
-      throw new Error(ownErr.message)
-    }
-
-    if (ownedWs) {
-      return mapWorkspace(ownedWs)
-    }
-
-    // 3. Then try as member
+    // 2. Default: Fetch user's first workspace membership (either owner or member role) and join workspace details
     const { data: memberRow, error: memErr } = await supabase
       .from("workspace_members")
-      .select("workspace_id")
+      .select(`
+        workspace_id,
+        role,
+        workspaces (
+          id,
+          name,
+          owner_id,
+          created_at
+        )
+      `)
       .eq("user_id", userId)
       .limit(1)
       .maybeSingle()
@@ -83,18 +62,8 @@ export class WorkspaceService {
 
     if (!memberRow) return null
 
-    const { data: ws, error: wsErr } = await supabase
-      .from("workspaces")
-      .select("*")
-      .eq("id", memberRow.workspace_id)
-      .single()
-
-    if (wsErr) {
-      console.error("Error fetching workspace:", wsErr)
-      throw new Error(wsErr.message)
-    }
-
-    return mapWorkspace(ws)
+    const ws = Array.isArray(memberRow.workspaces) ? memberRow.workspaces[0] : memberRow.workspaces
+    return ws ? mapWorkspace(ws, memberRow.role) : null
   }
 
   /**
@@ -131,7 +100,7 @@ export class WorkspaceService {
       // Workspace was created, log but don't throw
     }
 
-    return mapWorkspace(data)
+    return mapWorkspace(data, "owner")
   }
 
   /**
@@ -216,11 +185,13 @@ export class WorkspaceService {
 
 // ─── Helpers ─────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapWorkspace(row: any): Workspace {
+function mapWorkspace(row: any, userRole?: string): Workspace {
   return {
     id: row.id,
     name: row.name,
     ownerId: row.owner_id,
     createdAt: row.created_at,
+    currentUserRole: userRole,
   }
 }
+

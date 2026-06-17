@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Shield, Crown, User, UserPlus, Trash2, Clock, Loader2, MoreVertical } from "lucide-react"
+import { Shield, Crown, User, UserPlus, Trash2, Clock, Loader2, MoreVertical, MoreHorizontal } from "lucide-react"
 import type { WorkspaceMember, MemberRole } from "../types/workspace.types"
 import type { Project } from "@/features/project/types/project.types"
 import type { Invitation } from "../services/invite.service"
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button"
 import { useMembersRealtime } from "../hooks/use-members-realtime"
 import { useInvitationsRealtime } from "../hooks/use-invitations-realtime"
 import { createClient } from "@/lib/supabase/client"
+import { Pagination } from "@/components/ui/pagination"
+import { MemberDetailsModal } from "./modals/member-details-modal"
 
 function ClientDate({ dateString }: { dateString: string }) {
   const [mounted, setMounted] = useState(false)
@@ -41,27 +43,30 @@ interface MembersListProps {
   projects?: Project[]
 }
 
+function getInitials(name: string) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 const roleConfig: Record<
   MemberRole,
-  { label: string; color: string; bgColor: string; icon: typeof Shield }
+  { label: string; className: string }
 > = {
   owner: {
     label: "Owner",
-    color: "text-amber-700",
-    bgColor: "bg-amber-50 border-amber-100",
-    icon: Crown,
+    className: "bg-amber-500/10 text-amber-500 border border-amber-500/25",
   },
   admin: {
     label: "Admin",
-    color: "text-slate-800",
-    bgColor: "bg-slate-100 border-slate-200",
-    icon: Shield,
+    className: "bg-amber-500/10 text-amber-500 border border-amber-500/25",
   },
   member: {
     label: "Member",
-    color: "text-slate-655",
-    bgColor: "bg-slate-50 border-slate-100",
-    icon: User,
+    className: "bg-slate-800 text-slate-300 border border-slate-700",
   },
 }
 
@@ -76,6 +81,7 @@ export function MembersList({
 }: MembersListProps) {
   const [localMembers, setLocalMembers] = useState(members)
   const [localInvitations, setLocalInvitations] = useState(pendingInvitations)
+  const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null)
 
   useEffect(() => {
     setLocalMembers(members)
@@ -105,6 +111,18 @@ export function MembersList({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
   const [removingMember, setRemovingMember] = useState<{ id: string; userId: string; name: string } | null>(null)
 
+  // Pagination state and logic
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6
+  const totalItems = localMembers.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages)
+    }
+  }, [totalPages, currentPage])
+
   // Click outside to close options dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -123,15 +141,18 @@ export function MembersList({
     return (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2)
   })
 
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedMembers = sortedMembers.slice(startIndex, startIndex + itemsPerPage)
+
   const handleInviteSubmit = async (
     email: string,
     role: "admin" | "member",
-    projectId?: string | null
+    projectIds: string[]
   ): Promise<string | null> => {
     return new Promise((resolve, reject) => {
       startTransition(async () => {
         try {
-          const res = await createInvitationAction(workspaceId, email, role, projectId)
+          const res = await createInvitationAction(workspaceId, email, role, projectIds)
           if (res.success && res.data) {
             resolve(res.data)
           } else {
@@ -198,22 +219,22 @@ export function MembersList({
   }
 
   return (
-    <div className={`space-y-8 relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
+    <div className={`flex flex-col h-full min-h-0 w-full relative transition-all duration-300 ${isPending ? "opacity-75 pointer-events-none filter blur-[0.3px]" : ""}`}>
       {/* Premium top linear loading bar showing sync state */}
       {isPending && typeof window !== "undefined" && createPortal(
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-600 to-yellow-500 z-40 overflow-hidden">
-          <div className="h-full bg-amber-450 animate-pulse w-full" />
+        <div className="fixed top-14 left-0 right-0 h-1 bg-slate-950 z-40 overflow-hidden">
+          <div className="h-full bg-amber-500 animate-pulse w-full" />
         </div>,
         document.body
       )}
 
       {/* Header Panel */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-900/10 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 shrink-0">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight sm:text-2xl">
+          <h1 className="text-xl font-extrabold text-slate-100 tracking-tight sm:text-2xl">
             Workspace Members
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Manage your workspace members, roles, and pending invitations.
           </p>
         </div>
@@ -221,7 +242,7 @@ export function MembersList({
           <div className="flex items-center gap-2 shrink-0">
             <Button
               onClick={() => setIsInviteOpen(true)}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-955 text-xs font-black py-2 px-4 rounded-xl flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-3xs transition-all active:scale-[0.98] h-10 border-0"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-sm transition-all active:scale-[0.98] h-10 border-0"
             >
               <UserPlus size={15} />
               Invite Member
@@ -230,123 +251,169 @@ export function MembersList({
         )}
       </div>
 
-      {/* Active Members Grid */}
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto min-h-0 py-6 pr-1 space-y-8 scrollbar-thin">
+        {/* Active Members Card Container */}
       <div className="space-y-4">
-        <div>
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
-            Active Members ({localMembers.length})
-          </h3>
-        </div>
-
-        {sortedMembers.length === 0 ? (
-          <div className="p-12 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 text-center">
-            <div className="text-3xl mb-3">👤</div>
-            <p className="text-sm text-slate-500 font-medium">No members found</p>
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-800/80 bg-slate-950/20 rounded-t-xl">
+            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+              Active Members ({localMembers.length})
+            </h3>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedMembers.map((member) => {
-              const cfg = roleConfig[member.role] || roleConfig.member
-              const RoleIcon = cfg.icon
-              return (
-                <div
-                  key={member.id}
-                  className="p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-900/5 shadow-[0_4px_20px_-4px_rgba(245,158,11,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(245,158,11,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-[124px]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
+
+          {sortedMembers.length === 0 ? (
+            <div className="p-12 text-center bg-slate-900/40 rounded-b-xl">
+              <div className="text-3xl mb-3">👤</div>
+              <p className="text-sm text-slate-400 font-medium">No members found</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-800/60">
+              {paginatedMembers.map((member, index) => {
+                const cfg = roleConfig[member.role] || roleConfig.member
+                const initials = member.profile?.fullName 
+                  ? getInitials(member.profile.fullName) 
+                  : getInitials(member.profile?.email || "?")
+                const isLast = index === paginatedMembers.length - 1
+                return (
+                  <div
+                    key={member.id}
+                    onClick={() => setSelectedMember(member)}
+                    className={`p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-900/40 transition-all duration-300 cursor-pointer ${
+                      isLast ? "rounded-b-xl" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
                       {/* Avatar */}
-                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-700 text-sm font-extrabold uppercase shrink-0">
-                        {member.profile?.fullName?.[0] ||
-                          member.profile?.email?.[0] ||
-                          "?"}
+                      <div className="w-10 h-10 rounded-full bg-slate-955 text-slate-200 border border-slate-800 flex items-center justify-center text-sm font-extrabold uppercase shrink-0">
+                        {initials}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-800 truncate">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-200 truncate">
                           {member.profile?.fullName || "Active User"}
                         </p>
-                        <p className="text-xs text-slate-450 truncate mt-0.5">
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
                           {member.profile?.email || member.userId}
                         </p>
                       </div>
                     </div>
 
-                    {currentUserRole === "owner" && member.userId !== currentUserId && (
-                      <div className="relative member-menu-container shrink-0">
-                        <button
-                          onClick={() => setActiveMenuId(activeMenuId === member.id ? null : member.id)}
-                          className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                        {activeMenuId === member.id && (
-                          <div className="absolute right-0 mt-1 w-40 bg-white border border-amber-900/10 rounded-xl shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
-                            <button
-                              onClick={() => handleRemoveMember(member.id, member.userId, member.profile?.fullName || member.profile?.email || "this member")}
-                              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-650 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-2"
-                            >
-                              <Trash2 size={13} />
-                              Remove member
-                            </button>
-                          </div>
+                    <div className="flex items-center gap-6 shrink-0 self-end sm:self-auto">
+                      <span
+                        className={`inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-full ${cfg.className}`}
+                      >
+                        {cfg.label}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
+                        Joined{" "}
+                        {member.joinedAt ? (
+                          <ClientDate dateString={member.joinedAt} />
+                        ) : (
+                          "N/A"
                         )}
-                      </div>
-                    )}
-                  </div>
+                      </span>
 
-                  {/* Role badge + join date */}
-                  <div className="mt-3 flex items-center justify-between pt-3 border-t border-amber-955/10">
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bgColor} ${cfg.color}`}
-                    >
-                      <RoleIcon size={10} />
-                      {cfg.label}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      Joined{" "}
-                      {member.joinedAt ? (
-                        <ClientDate dateString={member.joinedAt} />
-                      ) : (
-                        "N/A"
+                      {currentUserRole === "owner" && member.userId !== currentUserId && (
+                        <div className="relative member-menu-container shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setActiveMenuId(activeMenuId === member.id ? null : member.id)
+                            }}
+                            className="p-1 rounded-lg hover:bg-slate-850 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+                          {activeMenuId === member.id && (
+                            <div className="absolute right-0 mt-1 w-40 bg-slate-950 border border-slate-800 rounded-lg shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRemoveMember(member.id, member.userId, member.profile?.fullName || member.profile?.email || "this member")
+                                }}
+                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                              >
+                                <Trash2 size={13} />
+                                Remove member
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </span>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="pt-2">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              itemName="members"
+            />
           </div>
         )}
       </div>
 
-      {/* Pending Invitations Section */}
-      {localInvitations.length > 0 && (
-        <div className="space-y-4 pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div>
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
-              Pending Invitations ({localInvitations.length})
+      {/* Pending Invitations Card Container */}
+      <div className="space-y-4 pt-4">
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-800/80 bg-slate-955/20 flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+              Pending Invitations
             </h3>
+            {canInvite && (
+              <button
+                onClick={() => setIsInviteOpen(true)}
+                className="text-xs text-slate-400 hover:text-slate-200 font-semibold transition-colors cursor-pointer"
+              >
+                + Send new
+              </button>
+            )}
           </div>
 
-          <div className="bg-white/70 backdrop-blur-md border border-amber-900/5 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <div className="divide-y divide-amber-955/10">
+          {localInvitations.length === 0 ? (
+            <div className="p-10 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 border border-slate-800 mb-3">
+                <Clock size={16} />
+              </div>
+              <p className="text-xs text-slate-400 font-medium">No pending invitations.</p>
+              {canInvite && (
+                <button
+                  onClick={() => setIsInviteOpen(true)}
+                  className="text-xs text-amber-500 font-bold hover:underline mt-1 cursor-pointer flex items-center gap-1"
+                >
+                  Invite a teammate &rarr;
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-800/60">
               {localInvitations.map((invite) => (
                 <div
                   key={invite.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-white/50 transition-colors"
+                  className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900/40 transition-colors"
                 >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
-                      <Clock size={16} />
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-slate-900 text-slate-400 border border-slate-800 flex items-center justify-center shrink-0">
+                      <Clock size={15} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">
+                      <p className="text-sm font-bold text-slate-200 truncate">
                         {invite.email}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 capitalize px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100">
+                        <span className="inline-flex items-center text-[10px] font-bold text-slate-400 capitalize px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800">
                           {invite.role}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                           Pending
                         </span>
@@ -362,7 +429,7 @@ export function MembersList({
                       variant="ghost"
                       onClick={() => handleRevoke(invite.id)}
                       disabled={revokingId === invite.id}
-                      className="text-xs text-red-650 hover:text-red-800 hover:bg-red-50 font-bold self-start sm:self-auto cursor-pointer flex items-center gap-1.5 h-9 rounded-lg border-0"
+                      className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 font-bold self-start sm:self-auto cursor-pointer flex items-center gap-1.5 h-9 rounded-lg border-0"
                     >
                       {revokingId === invite.id ? (
                         <Loader2 size={13} className="animate-spin" />
@@ -375,9 +442,11 @@ export function MembersList({
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
+
+      </div>
 
       {/* Modal */}
       {canInvite && (
@@ -398,6 +467,14 @@ export function MembersList({
         name={removingMember?.name || ""}
         isPending={isPending}
         onConfirm={confirmRemoveMember}
+      />
+
+      {/* Member Details Modal */}
+      <MemberDetailsModal
+        isOpen={!!selectedMember}
+        onClose={() => setSelectedMember(null)}
+        member={selectedMember}
+        workspaceId={workspaceId}
       />
     </div>
   )

@@ -20,22 +20,22 @@ export function EvictedModal({ isOpen }: EvictedModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 select-none"
     >
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 flex flex-col items-center text-center">
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-50 text-rose-500 shrink-0">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 flex flex-col items-center text-center">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 shrink-0">
           <X size={24} className="stroke-[2.5]" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-base font-extrabold text-slate-900">
+          <h3 className="text-base font-extrabold text-slate-100">
             Removed from Workspace
           </h3>
-          <p className="text-xs text-slate-505 leading-relaxed">
+          <p className="text-xs text-slate-400 leading-relaxed">
             The owner has removed you from this workspace.
           </p>
         </div>
 
-        <div className="bg-amber-50/50 border border-amber-900/5 text-slate-655 text-xs rounded-xl p-3 leading-relaxed w-full">
+        <div className="bg-slate-950 border border-slate-850 text-slate-400 text-xs rounded-xl p-3 leading-relaxed w-full">
           You no longer have access to this workspace's projects and tasks. Click the button below to return to your workspaces.
         </div>
 
@@ -51,7 +51,7 @@ export function EvictedModal({ isOpen }: EvictedModalProps) {
         >
           {isPending ? (
             <>
-              <Loader2 size={14} className="animate-spin text-slate-950" />
+              <Loader2 size={14} className="animate-spin text-slate-955" />
               <span>Redirecting...</span>
             </>
           ) : (

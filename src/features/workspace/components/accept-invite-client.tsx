@@ -17,6 +17,7 @@ interface AcceptInviteClientProps {
   email: string
   currentUserEmail: string | null
   projectName?: string | null
+  projectNames?: string[] | null
 }
 
 export function AcceptInviteClient({
@@ -27,6 +28,7 @@ export function AcceptInviteClient({
   email,
   currentUserEmail,
   projectName = null,
+  projectNames = null,
 }: AcceptInviteClientProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -185,7 +187,21 @@ export function AcceptInviteClient({
         </span>
       </div>
 
-      {projectName && (
+      {projectNames && projectNames.length > 0 ? (
+        <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex flex-col gap-2.5">
+          <div className="flex items-center gap-2">
+            <FolderKanban size={16} className="text-amber-600" />
+            <span className="text-xs font-semibold text-slate-655">Assigned Projects</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-0.5">
+            {projectNames.map((name) => (
+              <span key={name} className="text-[10px] font-bold text-slate-800 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : projectName ? (
         <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FolderKanban size={16} className="text-amber-600" />
@@ -195,7 +211,7 @@ export function AcceptInviteClient({
             {projectName}
           </span>
         </div>
-      )}
+      ) : null}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg p-3 text-center font-medium">

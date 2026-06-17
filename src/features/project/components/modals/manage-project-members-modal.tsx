@@ -69,33 +69,33 @@ export function ManageProjectMembersModal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Manage Project Members</h3>
-            <p className="text-xs text-slate-550 mt-0.5">Project: <span className="font-semibold text-slate-800">{projectName}</span></p>
+            <h3 className="text-base font-bold text-slate-100">Manage Project Members</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Project: <span className="font-semibold text-slate-200">{projectName}</span></p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
+            className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {errorMsg && (
-          <div className="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg p-3 text-center font-medium">
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg p-3 text-center font-medium animate-in fade-in">
             {errorMsg}
           </div>
         )}
 
         {/* Add Member Section */}
-        <div className="space-y-2 bg-slate-50 border border-slate-200 p-4 rounded-xl">
-          <label className="text-xs font-bold text-slate-700 block">
+        <div className="space-y-2 bg-slate-950 border border-slate-850 p-4 rounded-xl">
+          <label className="text-xs font-bold text-slate-400 block">
             Add Existing Workspace Member
           </label>
           <div className="flex gap-2">
@@ -132,37 +132,37 @@ export function ManageProjectMembersModal({
 
         {/* Members List */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-750 block">
+          <label className="text-xs font-bold text-slate-300 block">
             Assigned Project Members ({currentMembers.length})
           </label>
           
           {currentMembers.length === 0 ? (
-            <p className="text-[11px] text-slate-450 italic py-2 text-center">
+            <p className="text-[11px] text-slate-500 italic py-2 text-center">
               No members assigned to this project yet.
             </p>
           ) : (
-            <div className="max-h-[200px] overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-100 scrollbar-thin">
+            <div className="max-h-[200px] overflow-y-auto border border-slate-850 rounded-xl divide-y divide-slate-850 scrollbar-thin">
               {currentMembers.map((member) => {
                 const displayName = member.profile?.fullName || member.profile?.email || "?"
                 const email = member.profile?.email || "No email"
                 const isOwner = member.role === "owner"
 
                 return (
-                  <div key={member.userId} className="flex items-center justify-between p-3 hover:bg-slate-50/50 transition-colors">
+                  <div key={member.userId} className="flex items-center justify-between p-3 hover:bg-slate-950/40 transition-colors">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-extrabold text-xs shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center font-extrabold text-xs shrink-0">
                         {displayName[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                        <div className="text-xs font-semibold text-slate-200 truncate flex items-center gap-1.5">
                           <span>{displayName}</span>
                           {isOwner && (
-                            <span className="bg-amber-50 text-amber-700 border border-amber-100 text-[9px] px-1 rounded font-bold shrink-0">
+                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 rounded font-bold shrink-0">
                               Workspace Owner
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-450 truncate">
+                        <div className="text-[10px] text-slate-500 truncate">
                           {email}
                         </div>
                       </div>
@@ -171,7 +171,7 @@ export function ManageProjectMembersModal({
                     <button
                       onClick={() => handleRemove(member.userId)}
                       disabled={removingUserId !== null || isAdding}
-                      className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
+                      className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
                       title="Remove member from project"
                     >
                       {removingUserId === member.userId ? (
@@ -188,7 +188,7 @@ export function ManageProjectMembersModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-end pt-2 border-t border-slate-800">
           <Button
             size="sm"
             onClick={onClose}

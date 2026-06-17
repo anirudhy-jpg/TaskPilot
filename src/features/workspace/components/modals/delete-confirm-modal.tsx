@@ -36,19 +36,19 @@ export function DeleteConfirmModal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-3 text-red-650">
-          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
             {isLeave ? (
-              <DoorOpen size={20} className="text-red-500" />
+              <DoorOpen size={20} className="text-rose-500" />
             ) : (
-              <Trash2 size={20} className="text-red-500" />
+              <Trash2 size={20} className="text-rose-500" />
             )}
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">
+            <h3 className="text-base font-bold text-slate-100">
               {type === "member"
                 ? "Remove Member"
                 : type === "leave_workspace" || type === "workspace"
@@ -57,14 +57,14 @@ export function DeleteConfirmModal({
                     ? "Delete Workspace"
                     : `Delete ${type === "project" ? "Project" : "Task"}`}
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to proceed?</p>
+            <p className="text-xs text-slate-400 mt-0.5">Are you sure you want to proceed?</p>
           </div>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+        <p className="text-xs text-slate-400 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-850">
           {type === "member" ? (
             <>You are about to remove <strong>&ldquo;{name}&rdquo;</strong> from this workspace. They will lose access to all projects and tasks.</>
           ) : type === "leave_workspace" || type === "workspace" ? (
-            <>You are about to leave the workspace <strong>&ldquo;{name}&rdquo;</strong>. You will lose access to all of its projects, boards, and tasks.</>
+             <>You are about to leave the workspace <strong>&ldquo;{name}&rdquo;</strong>. You will lose access to all of its projects, boards, and tasks.</>
           ) : type === "delete_workspace" ? (
             <>You are about to permanently delete the workspace <strong>&ldquo;{name}&rdquo;</strong>. This action is irreversible and will delete all associated projects, tasks, and members.</>
           ) : (
@@ -78,7 +78,7 @@ export function DeleteConfirmModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-xs font-medium cursor-pointer"
+            className="text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
             Cancel
           </Button>
@@ -86,7 +86,7 @@ export function DeleteConfirmModal({
             size="sm"
             onClick={onConfirm}
             disabled={isPending}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
+            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
           >
             {isPending
               ? (type === "member" ? "Removing..." : type === "delete_workspace" ? "Deleting..." : type === "leave_workspace" || type === "workspace" ? "Leaving..." : "Deleting...")
