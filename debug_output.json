@@ -1,0 +1,10 @@
+{
+  "env": {
+    "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
+    "PORT": "3001",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://zhvblqkewzvfvuwslwkw.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_aJz_gp_RBhAz1Wi39IIWdw_vUbVIpHm",
+    "NEXT_PUBLIC_APP_URL": "https://task-pilot-opal.vercel.app",
+    "SENDGRID_API_KEY": "SG.hsqX4hM5R3W3F593jscp1A.f5whWIKf8S4SMax4jO-al4gLZ_LS-LMVfplxlW321hk"
+  }
+}

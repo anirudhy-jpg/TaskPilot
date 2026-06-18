@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function TeamsLoading() {
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full animate-skeleton-fade">
       {/* Header */}
       <div className="space-y-1">
         <Skeleton className="h-6 w-24" />
@@ -14,7 +14,7 @@ export default function TeamsLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-slate-200/60 shadow-sm"
+            className="p-5 rounded-xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 shadow-sm"
           >
             {/* Project header */}
             <div className="flex items-center gap-2 mb-4">
@@ -30,7 +30,7 @@ export default function TeamsLoading() {
               {Array.from({ length: 3 }).map((_, j) => (
                 <div
                   key={j}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50/80"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950/60 border border-slate-800/50"
                 >
                   <Skeleton className="w-7 h-7 rounded-full shrink-0" />
                   <div className="flex-1 space-y-1.5 min-w-0">

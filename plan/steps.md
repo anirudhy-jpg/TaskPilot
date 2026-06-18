@@ -11,11 +11,11 @@ The following table summarizes the current state of TaskPilot modules:
 | Module / Feature | Current State | Missing Requirements / Gaps | Priority |
 | :--- | :--- | :--- | :--- |
 | **Authentication** | Completed | Social Auth configuration (GitHub credentials config) | Low |
-| **Workspace Onboarding** | Broken / Partial | Redirects to `/workspace` when no workspace exists, causing a circular loop. No workspace creation action/form exists. | **Critical** |
-| **Projects CRUD** | Partial | Create and Delete actions work. Edit project (name, description, status) is missing. | Medium |
-| **Task CRUD** | Partial | Create and Delete actions work. Edit task details (assignee, priority, due date, description) is missing. | **High** |
-| **Kanban Board** | Partial | Status changes are driven by button clicks (Arrow buttons) rather than visual drag-and-drop. | Medium |
-| **Team Collaboration** | Pending | Workspace member invitation system, task assignment frontend controls, and role management. | **High** |
+| **Workspace Onboarding** | Completed | Clean onboarding flow and guards implemented. | None |
+| **Projects CRUD** | Completed | Create and Delete actions work. | None |
+| **Task CRUD** | Completed | Task creation, deletion, details modal, assignees, priorities. | None |
+| **Kanban Board** | Completed | Smooth drag-and-drop powered by `@dnd-kit` with pointer-first collision detection. | None |
+| **Team Collaboration** | Completed | Workspace member invitation system (SSE notifications inbox), roles, and task assignment. | None |
 | **Realtime Sync** | Pending | Board changes are server-rendered on page refresh/action revalidation. Needs instant realtime updates. | Medium |
 | **File Attachments** | Pending | Supabase Storage bucket uploads and listing attachments on task cards. | Low |
 | **Search & Filtering** | Pending | Dashboard-wide query searches and sidebar filters (e.g. filter by assignee or priority). | Low |
@@ -39,13 +39,13 @@ graph TD
 ### Module 1: Workspace Onboarding & Onboarding Guard
 **Goal:** Fix the infinite redirect loop on `/workspace` when a user has no workspace, and allow workspace creation.
 
-*   [ ] **Step 1.1: Create Workspace Setup Page**
+*   [x] **Step 1.1: Create Workspace Setup Page**
     *   Create a route: `src/app/(protected)/workspace/new/page.tsx`
     *   Implement a clean, simple onboarding form requesting "Workspace Name" (e.g., "Acme Team", "My Project Space").
-*   [ ] **Step 1.2: Add Workspace Server Action**
+*   [x] **Step 1.2: Add Workspace Server Action**
     *   Define `createWorkspaceAction` in `src/actions/workspace/workspace.actions.ts`.
     *   Connect to `WorkspaceService.createWorkspace`.
-*   [ ] **Step 1.3: Update Guards & Redirects**
+*   [x] **Step 1.3: Update Guards & Redirects**
     *   Modify `/workspace` redirects. In `src/app/(protected)/workspace/page.tsx` and all page hooks, change:
         ```typescript
         if (!workspace) redirect("/workspace/new")
@@ -76,13 +76,14 @@ graph TD
 ### Module 3: Drag-and-Drop Board
 **Goal:** Convert status changes from action buttons to a smooth drag-and-drop experience.
 
-*   [ ] **Step 3.1: Setup Native HTML5 Drag and Drop**
-    *   Set up native HTML5 drag events or install a lightweight utility library.
-*   [ ] **Step 3.2: Implement Draggable Cards & Droppable Columns**
-    *   Update `KanbanBoard.tsx` task items to have `draggable="true"` and handle `onDragStart`.
-    *   Update columns (To Do, In Progress, Done) to handle `onDragOver` and `onDrop`.
-*   [ ] **Step 3.3: Link Drops to Server Actions**
-    *   On a successful drop, trigger `updateTaskStatusAction` in a transition to update the database and revalidate the layout.
+*   [x] **Step 3.1: Setup Native HTML5 Drag and Drop**
+    *   Set up native HTML5 drag events or install a lightweight utility library (`@dnd-kit`).
+*   [x] **Step 3.2: Implement Draggable Cards & Droppable Columns**
+    *   Update `KanbanBoard.tsx` task items to use `@dnd-kit/sortable` and wrap them with `SortableContext`.
+    *   Implement `pointerWithin` and `closestCorners` hybrid collision detection strategy to ensure empty columns behave as valid drop targets.
+*   [x] **Step 3.3: Link Drops to Server Actions**
+    *   On a successful drop, trigger `batchUpdateTaskPositionsAction` in a transition to update the database and revalidate the layout.
+    *   Implement defensive recovery check on drop to ensure cross-column drops persist even if drag-over updates are missed by the cursor.
 
 ---
 

@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr"
+import { createProxyClient } from "@/lib/supabase/proxy"
 import { NextResponse, type NextRequest } from "next/server"
 import type { User } from "@supabase/supabase-js"
 
@@ -6,34 +6,27 @@ export async function getSessionAndResponse(request: NextRequest): Promise<{
   user: User | null
   supabaseResponse: NextResponse
 }> {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  const { client: supabase, supabaseResponse } = createProxyClient(request)
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
+  let user: User | null = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      // Clear Supabase auth cookies if the refresh token is invalid/not found to stop the loop
+      if (error.status === 400 || error.message?.toLowerCase().includes("refresh token")) {
+        const allCookies = request.cookies.getAll()
+        allCookies.forEach((c) => {
+          if (c.name.startsWith("sb-") || c.name.includes("-auth-token")) {
+            supabaseResponse.cookies.delete(c.name)
+          }
+        })
+      }
+    } else {
+      user = data.user
     }
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  } catch (err) {
+    // Ignore background auth verification errors
+  }
 
   return { user, supabaseResponse }
 }

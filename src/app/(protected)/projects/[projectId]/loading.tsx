@@ -2,9 +2,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ProjectDetailLoading() {
   return (
-    <div className="space-y-6 w-full h-full flex flex-col select-none">
+    <div className="space-y-6 w-full h-full flex flex-col select-none animate-skeleton-fade">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
             <Skeleton className="h-7 w-44" />
@@ -20,10 +20,10 @@ export default function ProjectDetailLoading() {
         {(["To Do", "In Progress", "Done"] as const).map((col, colIdx) => (
           <div
             key={col}
-            className="bg-slate-50/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-4 flex flex-col gap-3 min-h-[450px]"
+            className="bg-slate-900/60 backdrop-blur-sm border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-3 min-h-[450px]"
           >
             {/* Column header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
               <div className="flex items-center gap-2">
                 <Skeleton className="w-2.5 h-2.5 rounded-full" />
                 <Skeleton className="h-4 w-20" />
@@ -38,7 +38,7 @@ export default function ProjectDetailLoading() {
                 (_, cardIdx) => (
                   <div
                     key={cardIdx}
-                    className="bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-xl p-4 shadow-sm flex flex-col gap-2.5"
+                    className="bg-slate-900 backdrop-blur-sm border border-slate-800/80 rounded-xl p-4 shadow-sm flex flex-col gap-2.5"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <Skeleton className="h-4 w-3/4" />
@@ -46,7 +46,7 @@ export default function ProjectDetailLoading() {
                     </div>
                     <Skeleton className="h-3 w-full" />
                     <Skeleton className="h-3 w-5/6" />
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-1">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 mt-1">
                       <div className="flex items-center gap-1.5">
                         <Skeleton className="w-3.5 h-3.5 rounded" />
                         <Skeleton className="h-3 w-14" />

@@ -1,8 +1,22 @@
 import React, { Suspense } from "react"
-import { AuthLayout } from "@/components/auth/AuthLayout"
-import { LoginForm } from "@/components/auth/LoginForm"
+import { redirect } from "next/navigation"
+import { getSession } from "@/lib/supabase/server"
+import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { LoginForm } from "@/features/auth/components/login-form"
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ next?: string; redirect?: string }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams
+  const next = params.next || params.redirect
+  const { user } = await getSession()
+
+  if (user) {
+    redirect(next || "/workspace")
+  }
+
   return (
     <AuthLayout>
       <Suspense fallback={
