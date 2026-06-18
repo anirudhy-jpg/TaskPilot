@@ -60,13 +60,13 @@ export function useTasksRealtime({
       } else if (payload.eventType === "UPDATE") {
         if (payload.new.project_id !== projectId) {
           // If task moved to a different project, remove it from current
-          onDelete(payload.new.id)
+          onDelete(payload.new.id as string)
           return
         }
         const updatedTask = mapRealtimeTask(payload.new, members)
         onUpdate(updatedTask)
       } else if (payload.eventType === "DELETE") {
-        const deletedTaskId = payload.old.id
+        const deletedTaskId = payload.old.id as string
         onDelete(deletedTaskId)
       }
     },

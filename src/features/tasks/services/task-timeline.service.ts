@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { TaskComment, TimelineItem } from "@/features/project/types/project.types"
+import type { TaskComment, TimelineItem, TaskActivityType } from "@/features/project/types/project.types"
 
 export class TaskTimelineService {
   /**
@@ -56,7 +56,7 @@ export class TaskTimelineService {
         id: row.id,
         taskId: row.task_id,
         actorId: row.actor_id,
-        actionType: row.action_type,
+        actionType: row.action_type as TaskActivityType,
         oldValue: row.old_value,
         newValue: row.new_value,
         metadata: row.metadata,
