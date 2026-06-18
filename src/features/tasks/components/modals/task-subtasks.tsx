@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { ChevronDown, Plus, AlertCircle, AlertTriangle, Info, Pencil, Trash2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import type { TaskSubtask, Task } from "@/features/project/types/project.types"
+import type { TaskSubtask } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getSubtasks, addSubtask, updateSubtaskDetails, deleteSubtask } from "../../services/task-subtasks.service"
 import { AssigneeSelector } from "../assignee-selector"
@@ -14,9 +14,10 @@ interface TaskSubtasksProps {
   members: WorkspaceMember[]
   projectPrefix: string
   parentTaskNumber: number
+  onChange?: (subtasks: TaskSubtask[]) => void
 }
 
-export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber }: TaskSubtasksProps) {
+export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber, onChange }: TaskSubtasksProps) {
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
@@ -46,6 +47,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
         const data = await getSubtasks(taskId)
         if (mounted) {
           setSubtasks(data)
+          onChange?.(data)
           setIsLoading(false)
         }
       } catch (e) {
@@ -71,6 +73,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
       mounted = false
       supabase.removeChannel(channel)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId])
 
   // Focus input when editing
@@ -83,11 +86,35 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
   const handleAdd = async () => {
     if (!newTitle.trim() || isAdding) return
     setIsAdding(true)
+    const titleToUse = newTitle.trim()
+    setNewTitle("")
+
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`
+    const tempSubtask: TaskSubtask = {
+      id: tempId,
+      taskId,
+      title: titleToUse,
+      completed: false,
+      status: "todo",
+      priority: "medium",
+      assigneeId: null,
+      position: (subtasks.length > 0 ? Math.max(...subtasks.map(s => s.position)) : 0) + 1000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    
+    const newSubtasks = [...subtasks, tempSubtask]
+    setSubtasks(newSubtasks)
+    onChange?.(newSubtasks)
+
     try {
-      await addSubtask(taskId, newTitle.trim())
-      setNewTitle("")
+      await addSubtask(taskId, titleToUse)
     } catch (e) {
       console.error(e)
+      // Revert optimistic update on error
+      setSubtasks(subtasks)
+      onChange?.(subtasks)
     } finally {
       setIsAdding(false)
     }
@@ -95,7 +122,9 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
 
   const handleUpdate = async (id: string, updates: Partial<TaskSubtask>) => {
     // Optimistic
-    setSubtasks(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))
+    const newSubtasks = subtasks.map(s => s.id === id ? { ...s, ...updates } : s)
+    setSubtasks(newSubtasks)
+    onChange?.(newSubtasks)
     try {
       await updateSubtaskDetails(id, updates)
     } catch (e) {
@@ -104,7 +133,9 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
   }
 
   const handleDelete = async (id: string) => {
-    setSubtasks(prev => prev.filter(s => s.id !== id))
+    const newSubtasks = subtasks.filter(s => s.id !== id)
+    setSubtasks(newSubtasks)
+    onChange?.(newSubtasks)
     try {
       await deleteSubtask(id)
     } catch (e) {

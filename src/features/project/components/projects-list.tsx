@@ -123,6 +123,7 @@ function BoardContent(props: ProjectsListProps) {
     handleAssigneeChange,
     handleMoveTask,
     handleUpdateTask,
+    handleLocalTaskUpdate,
     cycleTaskStatus,
     handleCreateColumn,
     handleRenameColumn,
@@ -205,6 +206,7 @@ function BoardContent(props: ProjectsListProps) {
             }
             onMoveTask={handleMoveTask}
             onUpdateTask={handleUpdateTask}
+            onLocalTaskUpdate={handleLocalTaskUpdate}
             onCreateColumn={handleCreateColumn}
             onRenameColumn={handleRenameColumn}
             onMoveColumn={handleMoveColumn}
@@ -306,8 +308,7 @@ function BoardContent(props: ProjectsListProps) {
         onClose={() => setIsCreateColumnOpen(false)}
         isPending={isPending}
         onCreate={(name) => {
-          handleCreateColumn(name);
-          setIsCreateColumnOpen(false);
+          handleCreateColumn(name, () => setIsCreateColumnOpen(false));
         }}
       />
     </div>

@@ -27,9 +27,7 @@ The following table summarizes the current state of all TaskPilot modules:
 | **Workspace Settings** | ✅ Completed | Rename workspace, delete workspace (owner-only), leave workspace (members). | — |
 | **Workspace Switcher Hub** | ✅ Completed | `/workspaces` page showing owned + member workspaces, cookie-based switching. | — |
 | **Pagination** | ✅ Completed | Client-side pagination on the project dashboard grid (6 projects per page). | — |
-| **File Attachments** | 🔲 Pending | Supabase Storage bucket uploads and listing on task cards. | Low |
 | **Search & Filtering** | 🔲 Pending | Global Command-K search, sidebar filters by assignee/priority/status. | Low |
-| **AI Enhancements** | 🔲 Pending | AI-generated subtasks and descriptions via OpenAI/Gemini. | Future |
 
 ---
 
@@ -45,8 +43,7 @@ graph TD
     M5 --> M6[✅ Module 6: Analytics Dashboard]
     M6 --> M7[✅ Module 7: UI Polish]
     M7 --> M8[🔲 Module 8: Global Search]
-    M8 --> M9[🔲 Module 9: File Storage]
-    M9 --> M10[🔲 Module 10: AI Enhancements]
+
 ```
 
 ---
@@ -135,7 +132,7 @@ graph TD
 
 ---
 
-### 🔲 Module 8: Global Search & Custom Filters — PENDING
+### 🔲 Module 8: Global Search & Custom Filters -FUTURE
 **Goal:** Help users find projects, tasks, or members quickly.
 
 *   [ ] **Step 8.1:** Build Command Menu (Command-K) using `cmdk`.
@@ -148,18 +145,4 @@ graph TD
 
 ---
 
-### 🔲 Module 9: File Attachments — PENDING
-**Goal:** Allow file uploads on task cards.
 
-*   [ ] **Step 9.1:** Configure Supabase Storage bucket with RLS policies.
-*   [ ] **Step 9.2:** Add upload UI to task details modal.
-*   [ ] **Step 9.3:** Display attachment thumbnails/links on task cards.
-
----
-
-### 🔲 Module 10: AI-Powered Productivity — FUTURE
-**Goal:** Automate description writing, subtask generation, deadline estimation.
-
-*   [ ] **Step 10.1:** Server action / route handler connecting to OpenAI or Gemini API.
-*   [ ] **Step 10.2:** "Generate Subtasks" button in task details panel.
-*   [ ] **Step 10.3:** AI-assisted project description generator on project creation modal.

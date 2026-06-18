@@ -35,7 +35,7 @@ export function DeleteConfirmModal({
   return createPortal(
     <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && !isPending) onClose()
       }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
@@ -78,7 +78,8 @@ export function DeleteConfirmModal({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onClose}
+            onClick={() => !isPending && onClose()}
+            disabled={isPending}
             className="text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
             Cancel

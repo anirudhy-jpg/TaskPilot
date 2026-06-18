@@ -26,6 +26,7 @@ interface TaskDetailsModalProps {
     taskId: string,
     updates: { title?: string; description?: string | null; priority?: TaskPriority }
   ) => void;
+  onLocalTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 const statusConfig = {
@@ -47,6 +48,7 @@ export function TaskDetailsModal({
   onDeleteTask,
   columns = [],
   onUpdateTask,
+  onLocalTaskUpdate,
 }: TaskDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const initialTaskRef = useRef<Task | null>(null);
@@ -409,6 +411,7 @@ export function TaskDetailsModal({
                 members={members}
                 projectPrefix={projectPrefix}
                 parentTaskNumber={taskNumber || 1}
+                onChange={(subtasks) => onLocalTaskUpdate?.(task.id, { subtasks })}
               />
             </div>
           </div>

@@ -42,6 +42,7 @@ interface KanbanBoardProps {
   onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
   onUpdateTask?: (taskId: string, updates: { title?: string; description?: string | null; priority?: TaskPriority }) => void;
+  onLocalTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 export function KanbanBoard({
@@ -57,6 +58,7 @@ export function KanbanBoard({
   onDeleteColumn,
   onDeleteTask,
   onUpdateTask,
+  onLocalTaskUpdate,
 }: KanbanBoardProps) {
   const lastOverRef = useRef<Over | null>(null);
   
@@ -277,8 +279,7 @@ export function KanbanBoard({
         setActiveColumnId(data.columnId);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [tasks]
   );
 
   const handleDragOver = useCallback(
@@ -490,6 +491,7 @@ export function KanbanBoard({
         onDeleteTask={onDeleteTask}
         columns={project.columns}
         onUpdateTask={onUpdateTask}
+        onLocalTaskUpdate={onLocalTaskUpdate}
       />
 
       {columnToDelete && (

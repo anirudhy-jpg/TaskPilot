@@ -68,7 +68,6 @@ export function WorkspacesClient({
     const workspaceId = leaveWorkspaceId
     setLeavingId(workspaceId)
     setErrorMsg(null)
-    setLeaveWorkspaceId(null)
     if (typeof window !== "undefined") {
       (window as unknown as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = true
     }
@@ -94,6 +93,7 @@ export function WorkspacesClient({
     startTransition(async () => {
       const res = await leaveWorkspaceAction(workspaceId)
       if (res.success) {
+        setLeaveWorkspaceId(null)
         router.push("/workspaces")
         router.refresh()
       } else {
@@ -103,6 +103,7 @@ export function WorkspacesClient({
         setErrorMsg(res.error || "Failed to leave workspace.")
         setLeavingId(null)
       }
+      setLeaveWorkspaceId(null)
     })
   }
 

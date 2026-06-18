@@ -4,7 +4,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { User } from "lucide-react";
-import type { Task } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getUserInitials, getAvatarBgColor } from "@/features/project/utils/avatar";
 

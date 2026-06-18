@@ -43,7 +43,6 @@ export function SettingsPanel({
   const handleLeaveConfirm = () => {
     if (!workspaceId) return
     setErrorMsg(null)
-    setIsLeaveModalOpen(false)
     startTransition(async () => {
       const res = await leaveWorkspaceAction(workspaceId)
       if (res.success) {
@@ -52,13 +51,13 @@ export function SettingsPanel({
       } else {
         setErrorMsg(res.error || "Failed to leave workspace.")
       }
+      setIsLeaveModalOpen(false)
     })
   }
 
   const handleDeleteConfirm = () => {
     if (!workspaceId) return
     setErrorMsg(null)
-    setIsDeleteModalOpen(false)
     startTransition(async () => {
       const res = await deleteWorkspaceAction(workspaceId)
       if (res.success) {
@@ -67,6 +66,7 @@ export function SettingsPanel({
       } else {
         setErrorMsg(res.error || "Failed to delete workspace.")
       }
+      setIsDeleteModalOpen(false)
     })
   }
 

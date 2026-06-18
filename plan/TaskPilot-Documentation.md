@@ -12,7 +12,8 @@ The purpose of TaskPilot is to provide an adaptable workspace for managing tasks
 
 ## Project Goals
 
-- **Task Management** ✅: Create, update, organize, and track tasks across projects with priority, due dates, descriptions, and assignees.
+- **Task Management** ✅: Create, update, organize, and track tasks across projects with priority, due dates, descriptions, assignees, subtasks, and rich interaction elements.
+- **Task Collaboration** ✅: Task-level comments, interactive activity timelines, and progress tracking via subtasks.
 - **Project Management** ✅: Project creation, editing, deletion, and lifecycle tracking with kanban boards and custom columns.
 - **Workflow Tracking** ✅: Board-based workflow view with drag-and-drop task management and custom column workflows.
 - **Team Collaboration** ✅: Shared workspaces, member roles, email invitations, task assignments, and activity notifications.
@@ -85,11 +86,13 @@ Next.js Frontend
 │   (WebSockets)                   ├── workspace_members
 │                                  ├── projects
 └── SendGrid API ◄──── Invitations ├── tasks
-    (Email delivery)               ├── columns
+    (Email delivery)               ├── task_activities
+                                   ├── task_comments
+                                   ├── task_subtasks
+                                   ├── columns
                                    ├── workspace_invitations
                                    ├── project_members
-                                   ├── notifications
-                                   └── task_activities (future)
+                                   └── notifications
 ```
 
 ---
@@ -145,6 +148,38 @@ tasks
   ├─ assigned_to (FK → profiles, nullable)
   └─ created_at
 
+task_subtasks
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ title
+  ├─ completed (BOOLEAN)
+  ├─ position (INTEGER)
+  └─ created_at
+
+task_activities
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ actor_id (FK → profiles)
+  ├─ action_type (TEXT)
+  ├─ old_value (JSONB)
+  ├─ new_value (JSONB)
+  ├─ metadata (JSONB)
+  └─ created_at
+
+task_comments
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ author_id (FK → profiles)
+  ├─ content
+  ├─ edited (BOOLEAN)
+  └─ created_at
+
+task_comment_mentions
+  ├─ id
+  ├─ comment_id (FK → task_comments)
+  ├─ mentioned_user_id (FK → profiles)
+  └─ created_at
+
 project_members
   ├─ id
   ├─ project_id (FK → projects)
@@ -168,9 +203,11 @@ notifications
   ├─ id
   ├─ user_id (FK → profiles)
   ├─ workspace_id (FK → workspaces, nullable)
+  ├─ task_id (FK → tasks, nullable)
+  ├─ comment_id (FK → task_comments, nullable)
   ├─ title
   ├─ message
-  ├─ type ('invitation_accepted' | 'invitation_rejected' | 'member_left')
+  ├─ type
   ├─ read (BOOLEAN)
   ├─ actor_id (FK → profiles, nullable)
   └─ created_at
@@ -208,6 +245,9 @@ notifications
 - [x] Assignee selector on task cards and detail modal
 - [x] Task details modal (full edit UI)
 - [x] Task status cycling on dashboard grid
+- [x] Task subtasks tracking with UI and database integration
+- [x] Real-time task comments with user mentions
+- [x] Automatically tracked chronological activity feeds via database triggers
 
 ### ✅ Phase 4: Realtime Collaboration — COMPLETE
 
@@ -238,22 +278,11 @@ notifications
 - [x] React `memo` optimizations on Kanban card components
 - [x] Column add button conditionally hidden when 5-column limit is reached
 
-### 🔲 Phase 7: Search & Productivity — PENDING
+### 🔲 Phase 7: Search & Productivity — FUTURE
 
 - [ ] Global search dialog (Command-K / `cmdk`)
 - [ ] Sidebar filter toggles (by assignee, priority, status)
 - [ ] Task search within a project
-
-### 🔲 Phase 8: AI-Powered Enhancements — FUTURE
-
-- [ ] AI subtask generation from task title/description (OpenAI/Gemini)
-- [ ] AI-assisted project description writing
-
-### 🔲 Phase 9: File Attachments — FUTURE
-
-- [ ] Supabase Storage bucket upload
-- [ ] File attachment display on task cards
-- [ ] Attachment listing in task detail modal
 
 ---
 
@@ -261,4 +290,4 @@ notifications
 
 TaskPilot has evolved from a planned two-week MVP into a fully-featured, production-ready collaborative project management platform. All core phases (authentication, workspace management, project/task CRUD, kanban board, team collaboration, realtime sync, analytics, and UI polish) are now **complete and functional**.
 
-The architecture maintains a clean separation between the Next.js App Router (routing only), feature modules (business logic), server actions (mutations), and Supabase services (data layer). The codebase is fully type-safe, follows feature-based colocation conventions, and is ready for the next phase of AI and search enhancements.
+The architecture maintains a clean separation between the Next.js App Router (routing only), feature modules (business logic), server actions (mutations), and Supabase services (data layer). The codebase is fully type-safe, follows feature-based colocation conventions, and is ready for the next phase of search enhancements.

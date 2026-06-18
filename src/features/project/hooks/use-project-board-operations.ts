@@ -149,8 +149,8 @@ export function useProjectBoardOperations({
         memberUserIds: [currentUserId || ""],
       };
       setOptimisticProjects({ type: "create_project", project: tempProject });
-      setIsCreateProjectOpen(false);
       const res = await createProjectAction(workspaceId, name, description);
+      setIsCreateProjectOpen(false);
       if (res.success) {
         router.refresh();
         router.push("/projects");
@@ -207,7 +207,6 @@ export function useProjectBoardOperations({
         projectId: createTaskProjectId,
         task: tempTask,
       });
-      setCreateTaskProjectId(null);
 
       const res = await createTaskAction({
         projectId: tempTask.projectId,
@@ -232,6 +231,7 @@ export function useProjectBoardOperations({
       } else if (!res.success) {
         setErrorMsg(res.error || "Failed to create task.");
       }
+      setCreateTaskProjectId(null);
     });
   };
 
@@ -306,6 +306,20 @@ export function useProjectBoardOperations({
     });
   };
 
+  const handleLocalTaskUpdate = (taskId: string, updates: Partial<Task>) => {
+    setCurrentProjects((prev) =>
+      prev.map((p) => {
+        if (p.id !== activeProjectId) return p;
+        return {
+          ...p,
+          tasks: p.tasks.map((t) =>
+            t.id === taskId ? { ...t, ...updates } : t,
+          ),
+        };
+      }),
+    );
+  };
+
   const handleUpdateTask = (
     taskId: string,
     updates: {
@@ -334,7 +348,7 @@ export function useProjectBoardOperations({
     });
   };
 
-  const handleCreateColumn = (name: string) => {
+  const handleCreateColumn = (name: string, onSuccess?: () => void) => {
     if (!activeProjectId) return;
     setErrorMsg(null);
     const activeProj = currentProjects.find((p) => p.id === activeProjectId);
@@ -379,6 +393,7 @@ export function useProjectBoardOperations({
             };
           }),
         );
+        onSuccess?.();
       } else if (!res.success) {
         setErrorMsg(res.error || "Failed to create column.");
       }
@@ -499,7 +514,6 @@ export function useProjectBoardOperations({
         name,
         description,
       });
-      setProjectToEdit(null);
       const { updateProjectAction } = await import(
         "../actions/update-project.action"
       );
@@ -515,6 +529,7 @@ export function useProjectBoardOperations({
       } else {
         setErrorMsg(res.error || "Failed to update project.");
       }
+      setProjectToEdit(null);
     });
   };
 
@@ -542,7 +557,6 @@ export function useProjectBoardOperations({
     if (!deleteTarget) return;
     setErrorMsg(null);
     const target = deleteTarget;
-    setDeleteTarget(null);
     startTransition(async () => {
       let res;
       if (target.type === "project") {
@@ -573,6 +587,7 @@ export function useProjectBoardOperations({
       } else {
         setErrorMsg(res.error || "Failed to execute delete action.");
       }
+      setDeleteTarget(null);
     });
   };
 
@@ -584,6 +599,7 @@ export function useProjectBoardOperations({
     handleAssigneeChange,
     handleMoveTask,
     handleUpdateTask,
+    handleLocalTaskUpdate,
     handleCreateColumn,
     handleRenameColumn,
     handleMoveColumn,

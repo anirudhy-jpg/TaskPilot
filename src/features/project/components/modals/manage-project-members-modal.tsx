@@ -68,7 +68,8 @@ export function ManageProjectMembersModal({
   return createPortal(
     <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        const isPending = isAdding || removingUserId !== null;
+        if (e.target === e.currentTarget && !isPending) onClose()
       }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
@@ -81,7 +82,11 @@ export function ManageProjectMembersModal({
             <p className="text-xs text-slate-400 mt-0.5">Project: <span className="font-semibold text-slate-200">{projectName}</span></p>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              const isPending = isAdding || removingUserId !== null;
+              if (!isPending) onClose();
+            }}
+            disabled={isAdding || removingUserId !== null}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X size={18} />
@@ -192,7 +197,11 @@ export function ManageProjectMembersModal({
         <div className="flex items-center justify-end pt-2 border-t border-slate-800">
           <Button
             size="sm"
-            onClick={onClose}
+            onClick={() => {
+              const isPending = isAdding || removingUserId !== null;
+              if (!isPending) onClose();
+            }}
+            disabled={isAdding || removingUserId !== null}
             className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black cursor-pointer w-full"
           >
             Done

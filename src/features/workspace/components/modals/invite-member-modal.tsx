@@ -78,7 +78,8 @@ export function InviteMemberModal({
             {isSuccess ? "Success!" : "Invite New Member"}
           </h3>
           <button
-            onClick={handleReset}
+            onClick={() => !isPending && handleReset()}
+            disabled={isPending}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer border-0"
           >
             <X size={18} />
