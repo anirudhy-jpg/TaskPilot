@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Shield, Crown, User, UserPlus, Trash2, Clock, Loader2, MoreVertical, MoreHorizontal } from "lucide-react"
+import { UserPlus, Trash2, Clock, Loader2, MoreHorizontal } from "lucide-react"
 import type { WorkspaceMember, MemberRole } from "../types/workspace.types"
 import type { Project } from "@/features/project/types/project.types"
 import type { Invitation } from "../services/invite.service"
@@ -83,25 +83,28 @@ export function MembersList({
   const [localInvitations, setLocalInvitations] = useState(pendingInvitations)
   const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null)
 
-  useEffect(() => {
-    setLocalMembers(members)
-  }, [members])
+  const [prevMembers, setPrevMembers] = useState(members);
+  const [prevInvitations, setPrevInvitations] = useState(pendingInvitations);
 
-  useEffect(() => {
-    setLocalInvitations(pendingInvitations)
-  }, [pendingInvitations])
+  if (members !== prevMembers) {
+    setPrevMembers(members);
+    setLocalMembers(members);
+  }
+
+  if (pendingInvitations !== prevInvitations) {
+    setPrevInvitations(pendingInvitations);
+    setLocalInvitations(pendingInvitations);
+  }
 
   // Realtime subscriptions
   useMembersRealtime({
     workspaceId,
-    members: localMembers,
     setMembers: setLocalMembers,
     currentUserId,
   })
 
   useInvitationsRealtime({
     workspaceId,
-    invitations: localInvitations,
     setInvitations: setLocalInvitations,
   })
 
@@ -117,11 +120,14 @@ export function MembersList({
   const totalItems = localMembers.length
   const totalPages = Math.ceil(totalItems / itemsPerPage)
 
-  useEffect(() => {
+  const [prevTotalPages, setPrevTotalPages] = useState(totalPages);
+
+  if (totalPages !== prevTotalPages) {
+    setPrevTotalPages(totalPages);
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages)
+      setCurrentPage(totalPages);
     }
-  }, [totalPages, currentPage])
+  }
 
   // Click outside to close options dropdown
   useEffect(() => {

@@ -7,6 +7,7 @@ import {
   getCachedMembersByWorkspace,
 } from "@/lib/cached-requests"
 import { ProjectsList } from "@/features/project/components/projects-list"
+import { Project, Task, Column } from "@/features/project/types/project.types"
 
 export const dynamic = "force-dynamic"
 
@@ -23,7 +24,7 @@ export default async function ProjectsPage() {
   ])
 
   // Batch query tasks, columns, and project member IDs to eliminate N+1 queries
-  let projectsWithTasks: any[] = []
+  let projectsWithTasks: (Project & { tasks: Task[], columns: Column[], memberUserIds: string[] })[] = []
   if (projects.length > 0) {
     try {
       const projectIds = projects.map((p) => p.id)
@@ -34,7 +35,8 @@ export default async function ProjectsPage() {
           .from("tasks")
           .select(`
             id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at,
-            assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
+            assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url),
+            subtasks:task_subtasks(id, completed, status)
           `)
           .in("project_id", projectIds)
           .order("position", { ascending: true }),
@@ -49,34 +51,34 @@ export default async function ProjectsPage() {
           .in("project_id", projectIds),
       ])
 
-      const tasksByProj = new Map<string, any[]>()
-      const colsByProj = new Map<string, any[]>()
+      const tasksByProj = new Map<string, Task[]>()
+      const colsByProj = new Map<string, Column[]>()
       const membersByProj = new Map<string, string[]>()
 
       const { mapTask } = await import("@/features/tasks/services/task.service")
 
-      ;(tasksRes.data || []).forEach((row: any) => {
-        const list = tasksByProj.get(row.project_id) || []
-        list.push(mapTask(row, row.assignee))
-        tasksByProj.set(row.project_id, list)
+      ;(tasksRes.data || []).forEach((row: Record<string, unknown>) => {
+        const list = tasksByProj.get(row.project_id as string) || []
+        list.push(mapTask(row, row.assignee as Record<string, unknown>))
+        tasksByProj.set(row.project_id as string, list)
       })
 
-      ;(colsRes.data || []).forEach((row: any) => {
-        const list = colsByProj.get(row.board_id) || []
+      ;(colsRes.data || []).forEach((row: Record<string, unknown>) => {
+        const list = colsByProj.get(row.board_id as string) || []
         list.push({
-          id: row.id,
-          boardId: row.board_id,
-          name: row.name,
-          position: row.position,
-          createdAt: row.created_at,
+          id: row.id as string,
+          boardId: row.board_id as string,
+          name: row.name as string,
+          position: row.position as number,
+          createdAt: row.created_at as string,
         })
-        colsByProj.set(row.board_id, list)
+        colsByProj.set(row.board_id as string, list)
       })
 
-      ;(membersRes.data || []).forEach((row: any) => {
-        const list = membersByProj.get(row.project_id) || []
-        list.push(row.user_id)
-        membersByProj.set(row.project_id, list)
+      ;(membersRes.data || []).forEach((row: Record<string, unknown>) => {
+        const list = membersByProj.get(row.project_id as string) || []
+        list.push(row.user_id as string)
+        membersByProj.set(row.project_id as string, list)
       })
 
       projectsWithTasks = projects.map((project) => {

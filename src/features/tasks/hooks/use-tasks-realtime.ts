@@ -5,20 +5,20 @@ import type { WorkspaceMember } from "@/features/workspace/types/workspace.types
 /**
  * Maps a raw Supabase Realtime tasks row to the Task type model, connecting profile info.
  */
-export function mapRealtimeTask(row: Record<string, any>, members: WorkspaceMember[]): Task {
-  const assigneeId = row.assigned_to || row.assignee_id || null
+export function mapRealtimeTask(row: Record<string, unknown>, members: WorkspaceMember[]): Task {
+  const assigneeId = (row.assigned_to || row.assignee_id || null) as string | null
   const member = assigneeId ? members.find((m) => m.userId === assigneeId) : null
   return {
-    id: row.id,
-    projectId: row.project_id,
-    title: row.title,
-    description: row.description || null,
+    id: row.id as string,
+    projectId: row.project_id as string,
+    title: row.title as string,
+    description: (row.description as string | null) || null,
     status: (row.status as TaskStatus) || "todo",
-    columnId: row.column_id,
+    columnId: row.column_id as string,
     priority: (row.priority as TaskPriority) || "medium",
-    position: row.position ?? 0,
+    position: (row.position as number) ?? 0,
     assigneeId,
-    createdAt: row.created_at || new Date().toISOString(),
+    createdAt: (row.created_at as string) || new Date().toISOString(),
     assignee: member
       ? {
           email: member.profile?.email || "",
@@ -60,13 +60,13 @@ export function useTasksRealtime({
       } else if (payload.eventType === "UPDATE") {
         if (payload.new.project_id !== projectId) {
           // If task moved to a different project, remove it from current
-          onDelete(payload.new.id)
+          onDelete(payload.new.id as string)
           return
         }
         const updatedTask = mapRealtimeTask(payload.new, members)
         onUpdate(updatedTask)
       } else if (payload.eventType === "DELETE") {
-        const deletedTaskId = payload.old.id
+        const deletedTaskId = payload.old.id as string
         onDelete(deletedTaskId)
       }
     },

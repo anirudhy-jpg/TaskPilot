@@ -30,7 +30,7 @@ export function CreateProjectModal({
   return (
     <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && !isPending) onClose()
       }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
@@ -38,7 +38,8 @@ export function CreateProjectModal({
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-100">Create New Project</h3>
           <button
-            onClick={onClose}
+            onClick={() => !isPending && onClose()}
+            disabled={isPending}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X size={18} />
@@ -75,7 +76,8 @@ export function CreateProjectModal({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onClose}
+            onClick={() => !isPending && onClose()}
+            disabled={isPending}
             className="text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
             Cancel

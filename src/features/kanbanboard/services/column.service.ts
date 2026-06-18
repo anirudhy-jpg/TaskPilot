@@ -168,8 +168,8 @@ export class ColumnService {
         console.error("Error deleting column safely via RPC:", error)
         throw new Error(error.message)
       }
-    } catch (err: any) {
-      if (err.message?.includes("Could not find the function")) {
+    } catch (err: unknown) {
+      if ((err as Error).message?.includes("Could not find the function")) {
         console.warn("RPC function missing in catch. Falling back to JS client-side deletion.")
         await ColumnService.deleteColumnFallback(columnId, action, targetColumnId)
         return

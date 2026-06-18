@@ -254,25 +254,49 @@ export class TaskService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapTask(row: any, assigneeData: any): Task {
+export type TaskRow = {
+  id?: string | null;
+  project_id?: string | null;
+  title?: string | null;
+  description?: string | null;
+  status?: string | null;
+  column_id?: string | null;
+  priority?: string | null;
+  position?: number | null;
+  assignee_id?: string | null;
+  assigned_to?: string | null;
+  created_at?: string | null;
+  subtasks?: unknown;
+  [key: string]: unknown;
+};
+
+export type AssigneeRow = {
+  email?: string | null;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  [key: string]: unknown;
+};
+
+export function mapTask(row: TaskRow, assigneeDataRaw: AssigneeRow | AssigneeRow[] | null | undefined): Task {
+  const assigneeData = Array.isArray(assigneeDataRaw) ? assigneeDataRaw[0] : assigneeDataRaw;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    title: row.title,
-    description: row.description,
-    status: row.status || "todo",
-    columnId: row.column_id,
-    priority: row.priority || "medium",
-    position: row.position ?? 0,
-    assigneeId: row.assignee_id || row.assigned_to || null,
-    createdAt: row.created_at,
+    id: row.id as string,
+    projectId: row.project_id as string,
+    title: row.title as string,
+    description: (row.description as string | null) || null,
+    status: (row.status as TaskStatus) || "todo",
+    columnId: row.column_id as string,
+    priority: (row.priority as TaskPriority) || "medium",
+    position: (row.position as number) ?? 0,
+    assigneeId: (row.assignee_id as string) || (row.assigned_to as string) || null,
+    createdAt: row.created_at as string,
     assignee: assigneeData
       ? {
-          email: assigneeData.email,
-          fullName: assigneeData.full_name,
-          avatarUrl: assigneeData.avatar_url,
+          email: assigneeData.email as string,
+          fullName: (assigneeData.full_name as string | null) || null,
+          avatarUrl: (assigneeData.avatar_url as string | null) || null,
         }
       : undefined,
+    subtasks: row.subtasks as Task['subtasks'],
   }
 }

@@ -80,11 +80,11 @@ export async function addProjectMemberAction(
     revalidatePath("/projects", "layout");
     revalidatePath("/workspace");
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in addProjectMemberAction:", error);
     const message =
-      error?.message ||
-      error?.details ||
+      (error as { message?: string })?.message ||
+      (error as { details?: string })?.details ||
       (error instanceof Error ? error.message : "Failed to add member to project.");
     return { success: false, error: message };
   }

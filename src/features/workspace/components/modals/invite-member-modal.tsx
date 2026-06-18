@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { X, Check, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
+
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Project } from "@/features/project/types/project.types"
 
@@ -30,6 +30,7 @@ export function InviteMemberModal({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
@@ -77,7 +78,8 @@ export function InviteMemberModal({
             {isSuccess ? "Success!" : "Invite New Member"}
           </h3>
           <button
-            onClick={handleReset}
+            onClick={() => !isPending && handleReset()}
+            disabled={isPending}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer border-0"
           >
             <X size={18} />

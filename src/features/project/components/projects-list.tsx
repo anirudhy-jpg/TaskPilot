@@ -123,6 +123,7 @@ function BoardContent(props: ProjectsListProps) {
     handleAssigneeChange,
     handleMoveTask,
     handleUpdateTask,
+    handleLocalTaskUpdate,
     cycleTaskStatus,
     handleCreateColumn,
     handleRenameColumn,
@@ -140,11 +141,13 @@ function BoardContent(props: ProjectsListProps) {
   const totalItems = optimisticProjects.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  React.useEffect(() => {
+  const [prevTotalPages, setPrevTotalPages] = React.useState(totalPages);
+  if (totalPages !== prevTotalPages) {
+    setPrevTotalPages(totalPages);
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
-  }, [totalPages, currentPage]);
+  }
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProjects = optimisticProjects.slice(startIndex, startIndex + itemsPerPage);
@@ -203,6 +206,7 @@ function BoardContent(props: ProjectsListProps) {
             }
             onMoveTask={handleMoveTask}
             onUpdateTask={handleUpdateTask}
+            onLocalTaskUpdate={handleLocalTaskUpdate}
             onCreateColumn={handleCreateColumn}
             onRenameColumn={handleRenameColumn}
             onMoveColumn={handleMoveColumn}
@@ -304,8 +308,7 @@ function BoardContent(props: ProjectsListProps) {
         onClose={() => setIsCreateColumnOpen(false)}
         isPending={isPending}
         onCreate={(name) => {
-          handleCreateColumn(name);
-          setIsCreateColumnOpen(false);
+          handleCreateColumn(name, () => setIsCreateColumnOpen(false));
         }}
       />
     </div>

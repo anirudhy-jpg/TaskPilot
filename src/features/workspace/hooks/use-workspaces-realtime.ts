@@ -4,12 +4,18 @@ import type { Workspace } from "../types/workspace.types"
 /**
  * Maps a raw Supabase workspaces row to the Workspace type.
  */
-export function mapRealtimeWorkspace(row: Record<string, any>): Workspace {
+export function mapRealtimeWorkspace(row: {
+  id?: string;
+  name?: string;
+  owner_id?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}): Workspace {
   return {
-    id: row.id,
-    name: row.name,
-    ownerId: row.owner_id,
-    createdAt: row.created_at,
+    id: row.id as string,
+    name: row.name as string,
+    ownerId: row.owner_id as string,
+    createdAt: row.created_at as string,
   }
 }
 

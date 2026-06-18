@@ -48,7 +48,6 @@ interface SidebarProps {
 function SidebarContent({
   workspaceName,
   projects = [],
-  ownerEmail = null,
   variant = "desktop",
   onClose,
 }: SidebarProps) {

@@ -8,7 +8,6 @@ import {
   pointerWithin,
   getFirstCollision,
   type Over,
-  type Collision,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -43,6 +42,7 @@ interface KanbanBoardProps {
   onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
   onUpdateTask?: (taskId: string, updates: { title?: string; description?: string | null; priority?: TaskPriority }) => void;
+  onLocalTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 export function KanbanBoard({
@@ -52,12 +52,13 @@ export function KanbanBoard({
   onAddTask,
   onAssigneeChange,
   onMoveTask,
-  onCreateColumn,
+  // Removed _onCreateColumn
   onRenameColumn,
   onMoveColumn,
   onDeleteColumn,
   onDeleteTask,
   onUpdateTask,
+  onLocalTaskUpdate,
 }: KanbanBoardProps) {
   const lastOverRef = useRef<Over | null>(null);
   
@@ -390,7 +391,7 @@ export function KanbanBoard({
       setLocalTasks(null);
       lastOverRef.current = null;
     },
-    [project.columns, localTasks, tasks, columnDefs, onMoveColumn, onMoveTask]
+    [project.columns, localTasks, columnDefs, onMoveColumn, onMoveTask]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -490,6 +491,7 @@ export function KanbanBoard({
         onDeleteTask={onDeleteTask}
         columns={project.columns}
         onUpdateTask={onUpdateTask}
+        onLocalTaskUpdate={onLocalTaskUpdate}
       />
 
       {columnToDelete && (

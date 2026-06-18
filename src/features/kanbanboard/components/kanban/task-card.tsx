@@ -29,7 +29,7 @@ function formatTaskDate(dateStr: string): string {
 export const TaskCard = React.memo(
   function TaskCard({
     task,
-    status,
+    // Removed _status
     members,
     currentUserId,
     projectPrefix,
@@ -110,6 +110,14 @@ export const TaskCard = React.memo(
               <Calendar size={9} />
               {formatTaskDate(task.createdAt)}
             </span>
+
+            {/* Subtasks Indicator */}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full" title={`${task.subtasks.filter((st: { completed: boolean; status: string }) => st.completed || st.status === 'done').length}/${task.subtasks.length} Subtasks completed`}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v18"/><path d="M18 3v18"/><path d="M3 15h18"/><path d="M3 9h18"/></svg>
+                {task.subtasks.filter((st: { completed: boolean; status: string }) => st.completed || st.status === 'done').length}/{task.subtasks.length}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

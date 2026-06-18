@@ -13,6 +13,7 @@ export function EvictedModal({ isOpen }: EvictedModalProps) {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
@@ -36,7 +37,7 @@ export function EvictedModal({ isOpen }: EvictedModalProps) {
         </div>
 
         <div className="bg-slate-950 border border-slate-850 text-slate-400 text-xs rounded-xl p-3 leading-relaxed w-full">
-          You no longer have access to this workspace's projects and tasks. Click the button below to return to your workspaces.
+          You no longer have access to this workspace&apos;s projects and tasks. Click the button below to return to your workspaces.
         </div>
 
         <button

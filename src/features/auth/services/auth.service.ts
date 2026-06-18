@@ -42,6 +42,7 @@ export class AuthService {
     // 3. Create profile in the database
     try {
       await ProfileService.createProfile(user.id, email, name)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (profileError: any) {
       console.error(
         "Failed to create user profile, but auth user was created:",

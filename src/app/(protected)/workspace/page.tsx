@@ -45,6 +45,7 @@ export default async function WorkspaceOverviewPage() {
 
   // 3. Batch fetch tasks and columns in parallel using projectIds
   const projectIds = projects.map((p) => p.id)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let allTasks: any[] = []
   let allColumns: { id: string; board_id: string; name: string }[] = []
 
@@ -143,6 +144,7 @@ export default async function WorkspaceOverviewPage() {
   })
 
   // Serialize notifications cleanly
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const serializedNotifications = (notificationsRes.data || []).map((n: any) => ({
     id: n.id,
     title: n.title,

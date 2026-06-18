@@ -11,7 +11,7 @@ interface CreateChannelOptions {
   schema?: string;
   event?: RealtimeEvent;
   onPayload: (
-    payload: RealtimePostgresChangesPayload<Record<string, any>>,
+    payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>,
   ) => void;
 }
 

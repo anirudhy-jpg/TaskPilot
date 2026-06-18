@@ -39,7 +39,7 @@ export default function NotFound() {
             Lost in Space
           </h2>
           <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
-            The page you are looking for doesn't exist, has been moved, or is temporarily unavailable.
+            The page you are looking for doesn&apos;t exist, has been moved, or is temporarily unavailable.
           </p>
         </div>
 
