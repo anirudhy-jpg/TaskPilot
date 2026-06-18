@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, createClient } from "@/lib/supabase/server";
+import { AddProjectMemberSchema } from "@/lib/validations/project.schema";
 
 export interface ActionResponse {
   success: boolean;
@@ -13,6 +14,12 @@ export async function addProjectMemberAction(
   userId: string,
 ): Promise<ActionResponse> {
   try {
+    const result = AddProjectMemberSchema.safeParse({ userId })
+    if (!result.success) {
+      return { success: false, error: result.error.issues[0]?.message }
+    }
+    const validatedUserId = result.data.userId;
+
     const { user } = await requireUser();
     if (!user) {
       return { success: false, error: "Unauthorized" };
@@ -51,7 +58,7 @@ export async function addProjectMemberAction(
       .from("workspace_members")
       .select("id")
       .eq("workspace_id", project.workspace_id)
-      .eq("user_id", userId)
+      .eq("user_id", validatedUserId)
       .maybeSingle();
 
     if (!isMember) {
@@ -64,7 +71,7 @@ export async function addProjectMemberAction(
     // 4. Insert project member
     const { error: insertErr } = await supabase.from("project_members").insert({
       project_id: projectId,
-      user_id: userId,
+      user_id: validatedUserId,
     });
 
     if (insertErr) {

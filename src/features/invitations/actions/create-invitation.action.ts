@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { InviteService } from "../services/invite.service";
 import { requireUser } from "@/lib/supabase/server";
+import { CreateInvitationSchema } from "@/lib/validations/workspace.schema";
 
 export interface CreateInvitationResponse {
   success: boolean;
@@ -21,21 +22,27 @@ export async function createInvitationAction(
   projectIds: string[]
 ): Promise<CreateInvitationResponse> {
   try {
+    const result = CreateInvitationSchema.safeParse({ workspaceId, email, role, projectIds })
+    if (!result.success) {
+      return { success: false, error: result.error.issues[0]?.message }
+    }
+    const { workspaceId: vWorkspaceId, email: vEmail, role: vRole, projectIds: vProjectIds } = result.data;
+
     const { user } = await requireUser();
     if (!user) {
       return { success: false, error: "You must be logged in to invite members." };
     }
 
-    if (role === "member" && (!projectIds || projectIds.length === 0)) {
+    if (vRole === "member" && (!vProjectIds || vProjectIds.length === 0)) {
       return { success: false, error: "Project assignment is required for workspace members." };
     }
 
     const res = await InviteService.createInvitation(
-      workspaceId,
-      email,
-      role,
+      vWorkspaceId,
+      vEmail,
+      vRole,
       user.id,
-      projectIds || []
+      vProjectIds || []
     );
 
     revalidatePath("/members");

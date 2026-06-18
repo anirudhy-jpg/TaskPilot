@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { ProjectService } from "../services/project.service"
+import { UpdateProjectSchema } from "@/lib/validations/project.schema"
 
 export interface ActionResponse {
   success: boolean
@@ -14,7 +15,12 @@ export async function updateProjectAction(
   description?: string
 ): Promise<ActionResponse> {
   try {
-    await ProjectService.updateProject(projectId, name, description)
+    const result = UpdateProjectSchema.safeParse({ name, description })
+    if (!result.success) {
+      return { success: false, error: result.error.issues[0]?.message }
+    }
+
+    await ProjectService.updateProject(projectId, result.data.name, result.data.description)
     revalidatePath("/workspace")
     revalidatePath("/projects", "layout")
     return { success: true }
