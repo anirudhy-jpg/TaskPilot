@@ -23,7 +23,7 @@ export interface Project {
   memberUserIds?: string[]
 }
 
-export type TaskStatus = string
+export type TaskStatus = string // @deprecated
 export type TaskPriority = "low" | "medium" | "high"
 
 export interface Task {
@@ -31,7 +31,8 @@ export interface Task {
   projectId: string
   title: string
   description: string | null
-  status: TaskStatus // mapped client-side to columnId/status representation
+  /** @deprecated Board placement is now exclusively determined by columnId */
+  status?: string | null 
   columnId: string
   priority: TaskPriority
   position: number // double precision fractional index

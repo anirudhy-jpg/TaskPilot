@@ -3,7 +3,6 @@ import type {
   Project,
   Task,
   Column,
-  TaskStatus,
   TaskPriority,
 } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
@@ -163,7 +162,7 @@ export function useProjectBoardOperations({
   const handleCreateTask = (
     title: string,
     description?: string,
-    status?: TaskStatus,
+    status?: string,
     assigneeId?: string,
     priority?: TaskPriority,
   ) => {
@@ -188,7 +187,6 @@ export function useProjectBoardOperations({
         projectId: createTaskProjectId,
         title,
         description: description || null,
-        status: columnId,
         columnId,
         priority: priority || "medium",
         position: nextPosition,
@@ -295,7 +293,7 @@ export function useProjectBoardOperations({
             ...p,
             tasks: p.tasks.map((t) =>
               t.id === taskId
-                ? { ...t, columnId, status: columnId, position }
+                ? { ...t, columnId, position }
                 : t,
             ),
           })),
@@ -482,7 +480,7 @@ export function useProjectBoardOperations({
               } else if (action === "move" && targetColumnId) {
                 newTasks = p.tasks.map((t) =>
                   t.columnId === columnId
-                    ? { ...t, columnId: targetColumnId, status: targetColumnId }
+                    ? { ...t, columnId: targetColumnId }
                     : t,
                 );
               }

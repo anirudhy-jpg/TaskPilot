@@ -212,7 +212,6 @@ export function WorkspaceShell({
               project_id: string;
               title: string;
               description?: string | null;
-              status?: string;
               column_id?: string;
               priority?: string;
               position?: number;
@@ -226,8 +225,7 @@ export function WorkspaceShell({
               projectId: r.project_id,
               title: r.title,
               description: r.description || null,
-              status: r.status || "todo",
-              columnId: r.column_id || r.status || "",
+              columnId: r.column_id || "",
               priority: (r.priority as "low" | "medium" | "high") || "medium",
               position: typeof r.position === "number" ? r.position : 0,
               assigneeId: r.assigned_to || null,
@@ -244,7 +242,6 @@ export function WorkspaceShell({
               id: string;
               title?: string;
               description?: string | null;
-              status?: string;
               column_id?: string;
               priority?: string;
               position?: number;
@@ -259,8 +256,7 @@ export function WorkspaceShell({
                   ? {
                       ...t,
                       title: r.title || t.title,
-                      status: r.status || t.status,
-                      columnId: r.column_id || r.status || t.columnId,
+                      columnId: r.column_id || t.columnId,
                       priority: (r.priority as "low" | "medium" | "high") || t.priority,
                       assigneeId: r.assigned_to || t.assigneeId,
                       dueDate: r.due_date || (t as { dueDate?: string | null }).dueDate,

@@ -69,7 +69,7 @@ export default async function WorkspaceLayout({
       // Fetch all tasks for these projects in one query
       const { data: allTasks, error: tasksErr } = await supabase
         .from("tasks")
-        .select("id, project_id, title, status")
+        .select("id, project_id, title, column_id")
         .in("project_id", projectIds)
         .order("position", { ascending: true })
 
@@ -83,9 +83,8 @@ export default async function WorkspaceLayout({
           id: t.id,
           projectId: t.project_id,
           title: t.title,
-          status: t.status,
           description: null,
-          columnId: t.status || "",
+          columnId: t.column_id || "",
           priority: "medium" as const,
           position: 0,
           assigneeId: null,
