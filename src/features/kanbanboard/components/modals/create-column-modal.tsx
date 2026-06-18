@@ -28,7 +28,7 @@ export function CreateColumnModal({
   return (
     <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && !isPending) onClose()
       }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
     >
@@ -36,7 +36,8 @@ export function CreateColumnModal({
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-100">Create New Column</h3>
           <button
-            onClick={onClose}
+            onClick={() => !isPending && onClose()}
+            disabled={isPending}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X size={18} />
@@ -56,7 +57,7 @@ export function CreateColumnModal({
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit()
-                if (e.key === "Escape") onClose()
+                if (e.key === "Escape" && !isPending) onClose()
               }}
             />
           </div>
@@ -65,7 +66,8 @@ export function CreateColumnModal({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onClose}
+            onClick={() => !isPending && onClose()}
+            disabled={isPending}
             className="text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
             Cancel

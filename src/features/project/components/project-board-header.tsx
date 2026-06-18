@@ -1,6 +1,6 @@
 import React from "react"
 import Link from "next/link"
-import { UserPlus, Trash2, Plus, MoreVertical, Edit2, ArrowLeft } from "lucide-react"
+import { UserPlus, Trash2, Plus, MoreVertical, Edit2, ArrowLeft, Filter, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Project } from "../types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
@@ -17,6 +17,8 @@ interface ProjectBoardHeaderProps {
   onNewProject: () => void
   onAddColumn?: () => void
   onAddTask?: () => void
+  taskTypeFilter?: string[]
+  setTaskTypeFilter?: React.Dispatch<React.SetStateAction<string[]>>
 }
 
 export function ProjectBoardHeader({
@@ -29,22 +31,28 @@ export function ProjectBoardHeader({
   onEditProject,
   onNewProject,
   onAddColumn,
-  onAddTask,
+  taskTypeFilter = [],
+  setTaskTypeFilter,
 }: ProjectBoardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)
+  const filterMenuRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (isMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false)
       }
+      if (isFilterMenuOpen && filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+        setIsFilterMenuOpen(false)
+      }
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
-  }, [isMenuOpen])
+  }, [isMenuOpen, isFilterMenuOpen])
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
@@ -161,6 +169,54 @@ export function ProjectBoardHeader({
       <div className="flex items-center gap-4 shrink-0">
         {activeProject ? (
           <>
+            {/* Filter Dropdown */}
+            {setTaskTypeFilter && (
+              <div ref={filterMenuRef} className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                  className={`text-xs font-semibold px-3 h-10 transition-colors ${taskTypeFilter.length > 0 ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+                >
+                  <Filter size={14} className="mr-1.5" />
+                  Filter {taskTypeFilter.length > 0 && `(${taskTypeFilter.length})`}
+                </Button>
+                {isFilterMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
+                    <div className="px-3 py-2 border-b border-slate-800">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter by Type</span>
+                    </div>
+                    {[{ id: "task", label: "Task", icon: "📋" }, { id: "feature", label: "Feature", icon: "🚀" }, { id: "bug", label: "Bug", icon: "🐛" }, { id: "enhancement", label: "Enhancement", icon: "✨" }].map((type) => {
+                      const isActive = taskTypeFilter.includes(type.id);
+                      return (
+                        <button
+                          key={type.id}
+                          onClick={() => setTaskTypeFilter(prev => prev.includes(type.id) ? prev.filter(t => t !== type.id) : [...prev, type.id])}
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{type.icon}</span>
+                            <span>{type.label}</span>
+                          </div>
+                          {isActive && <Check size={14} className="text-amber-500" />}
+                        </button>
+                      )
+                    })}
+                    {taskTypeFilter.length > 0 && (
+                      <div className="px-2 py-1 mt-1 border-t border-slate-800">
+                        <button
+                          onClick={() => setTaskTypeFilter([])}
+                          className="w-full px-2 py-1.5 text-center text-[10px] font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                        >
+                          Clear all filters
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {onAddColumn && (
               <Button
                 onClick={onAddColumn}

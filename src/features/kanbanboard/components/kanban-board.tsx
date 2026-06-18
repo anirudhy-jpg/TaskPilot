@@ -8,7 +8,6 @@ import {
   pointerWithin,
   getFirstCollision,
   type Over,
-  type Collision,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -21,7 +20,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import { Circle, Clock, CheckCircle2 } from "lucide-react";
-import type { Project, Task, Column, TaskPriority } from "@/features/project/types/project.types";
+import type { Project, Task, Column, TaskPriority, TaskType } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { TaskDetailsModal } from "@/features/tasks/components/modals/task-details-modal";
 import { KanbanColumn } from "./kanban/kanban-column";
@@ -42,7 +41,9 @@ interface KanbanBoardProps {
   onMoveColumn: (columnId: string, position: number) => void;
   onDeleteColumn: (columnId: string, action: "move" | "delete", targetColumnId?: string) => void;
   onAssigneeChange: (taskId: string, assigneeId: string | null) => void;
-  onUpdateTask?: (taskId: string, updates: { title?: string; description?: string | null; priority?: TaskPriority }) => void;
+  onUpdateTask?: (taskId: string, updates: { title?: string; description?: string | null; priority?: TaskPriority; type?: TaskType }) => void;
+  onLocalTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  taskTypeFilter?: string[];
 }
 
 export function KanbanBoard({
@@ -52,12 +53,14 @@ export function KanbanBoard({
   onAddTask,
   onAssigneeChange,
   onMoveTask,
-  onCreateColumn,
+  // Removed _onCreateColumn
   onRenameColumn,
   onMoveColumn,
   onDeleteColumn,
   onDeleteTask,
   onUpdateTask,
+  onLocalTaskUpdate,
+  taskTypeFilter = [],
 }: KanbanBoardProps) {
   const lastOverRef = useRef<Over | null>(null);
   
@@ -119,11 +122,17 @@ export function KanbanBoard({
     });
   }, [project.columns]);
 
+  // Filter tasks by type before grouping
+  const filteredTasks = useMemo(() => {
+    if (taskTypeFilter.length === 0) return tasks;
+    return tasks.filter(t => taskTypeFilter.includes(t.type || "task"));
+  }, [tasks, taskTypeFilter]);
+
   // Group tasks into columns
   const tasksByColumn = useMemo(() => {
     const colIds = columnDefs.map((c) => c.id);
-    return groupTasksByColumn(tasks, colIds);
-  }, [tasks, columnDefs]);
+    return groupTasksByColumn(filteredTasks, colIds);
+  }, [filteredTasks, columnDefs]);
 
   const selectedTask = useMemo(() => {
     return tasks.find((t) => t.id === selectedTaskId) || null;
@@ -170,13 +179,14 @@ export function KanbanBoard({
       const assigneeChanged = localTask.assigneeId !== serverTask.assigneeId ||
                               localTask.assignee?.email !== serverTask.assignee?.email;
       const priorityChanged = localTask.priority !== serverTask.priority;
+      const typeChanged = localTask.type !== serverTask.type;
 
       const statusOrPosChanged = !activeTaskId && (
         localTask.columnId !== serverTask.columnId ||
         localTask.position !== serverTask.position
       );
 
-      if (titleChanged || descChanged || assigneeChanged || priorityChanged || statusOrPosChanged) {
+      if (titleChanged || descChanged || assigneeChanged || priorityChanged || typeChanged || statusOrPosChanged) {
         changed = true;
         return {
           ...localTask,
@@ -185,6 +195,7 @@ export function KanbanBoard({
           assigneeId: serverTask.assigneeId,
           assignee: serverTask.assignee,
           priority: serverTask.priority,
+          type: serverTask.type,
           columnId: activeTaskId ? localTask.columnId : serverTask.columnId,
           status: activeTaskId ? localTask.columnId : serverTask.columnId,
           position: activeTaskId ? localTask.position : serverTask.position,
@@ -390,7 +401,7 @@ export function KanbanBoard({
       setLocalTasks(null);
       lastOverRef.current = null;
     },
-    [project.columns, localTasks, tasks, columnDefs, onMoveColumn, onMoveTask]
+    [project.columns, localTasks, columnDefs, onMoveColumn, onMoveTask]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -490,6 +501,7 @@ export function KanbanBoard({
         onDeleteTask={onDeleteTask}
         columns={project.columns}
         onUpdateTask={onUpdateTask}
+        onLocalTaskUpdate={onLocalTaskUpdate}
       />
 
       {columnToDelete && (

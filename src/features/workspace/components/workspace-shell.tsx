@@ -8,20 +8,29 @@ import { X } from "lucide-react";
 import { useProjectsRealtime } from "../../project/hooks/use-projects-realtime";
 import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime";
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable";
-import { useRouter } from "next/navigation";
-import type { Project, Task } from "../../project/types/project.types";
+import { useRouter, usePathname } from "next/navigation";
+import type { Project, Task, TaskType } from "../../project/types/project.types";
 import { EvictedModal } from "./modals/evicted-modal";
+import type { Workspace } from "../types/workspace.types";
+import type { UserProfile } from "@/features/auth/types/profile.types";
 
 interface WorkspaceShellProps {
   children: React.ReactNode;
-  profile: any;
-  user: any;
+  profile: UserProfile | null;
+  user: {
+    id: string;
+    email?: string;
+    user_metadata?: {
+      full_name?: string;
+      name?: string;
+    };
+  };
   isWorkspaceOwner: boolean;
   workspaceId: string | null;
   workspaceName: string;
-  workspaces: any[];
+  workspaces: Workspace[];
   currentUserId: string;
-  projectsWithTasks: any[];
+  projectsWithTasks: (Project & { tasks: Task[] })[];
   ownerEmail: string;
 }
 
@@ -39,31 +48,44 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const router = useRouter();
   const [localWorkspaceName, setLocalWorkspaceName] = useState(workspaceName);
+  const [prevWorkspaceName, setPrevWorkspaceName] = useState(workspaceName);
+
+  if (workspaceName !== prevWorkspaceName) {
+    setPrevWorkspaceName(workspaceName);
+    setLocalWorkspaceName(workspaceName);
+  }
+
   const [localProjects, setLocalProjects] =
     useState<(Project & { tasks: Task[] })[]>(projectsWithTasks);
-  const [localWorkspaces, setLocalWorkspaces] = useState(workspaces);
-  const [currentUserMemberId, setCurrentUserMemberId] = useState<string | null>(
-    null,
-  );
-  const [isEvicted, setIsEvicted] = useState(false);
+  const [prevProjectsWithTasks, setPrevProjectsWithTasks] = useState(projectsWithTasks);
 
-  useEffect(() => {
-    setLocalWorkspaceName(workspaceName);
-  }, [workspaceName]);
-
-  useEffect(() => {
+  if (projectsWithTasks !== prevProjectsWithTasks) {
+    setPrevProjectsWithTasks(projectsWithTasks);
     setLocalProjects(projectsWithTasks);
-  }, [projectsWithTasks]);
+  }
 
-  useEffect(() => {
+  const [localWorkspaces, setLocalWorkspaces] = useState(workspaces);
+  const [prevWorkspaces, setPrevWorkspaces] = useState(workspaces);
+
+  if (workspaces !== prevWorkspaces) {
+    setPrevWorkspaces(workspaces);
     setLocalWorkspaces(workspaces);
-  }, [workspaces]);
+  }
+
+  const [isEvicted, setIsEvicted] = useState(false);
+  const [currentUserMemberId, setCurrentUserMemberId] = useState<string | null>(null);
+
+  const [prevWorkspaceId, setPrevWorkspaceId] = useState(workspaceId);
+
+  if (workspaceId !== prevWorkspaceId) {
+    setPrevWorkspaceId(workspaceId);
+    setIsEvicted(false);
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      (window as any).isLeavingWorkspace = false;
+      (window as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = false;
     }
-    setIsEvicted(false);
   }, [workspaceId]);
 
   // Get current user's membership row ID to detect eviction via DELETE payload IDs
@@ -116,11 +138,11 @@ export function WorkspaceShell({
     onPayload: (payload) => {
       const { eventType, old: oldRow } = payload;
       if (eventType === "DELETE" && oldRow) {
-        const deletedId = (oldRow as any).id;
+        const deletedId = (oldRow as { id?: string }).id;
         if (currentUserMemberId && deletedId === currentUserMemberId) {
           if (
             typeof window !== "undefined" &&
-            (window as any).isLeavingWorkspace
+            (window as { isLeavingWorkspace?: boolean }).isLeavingWorkspace
           ) {
             // Voluntary leave, ignore eviction modal
             return;
@@ -146,7 +168,7 @@ export function WorkspaceShell({
         ) {
           if (
             typeof window !== "undefined" &&
-            (window as any).isLeavingWorkspace
+            (window as { isLeavingWorkspace?: boolean }).isLeavingWorkspace
           ) {
             // Voluntary leave, ignore eviction modal
             return;
@@ -167,7 +189,7 @@ export function WorkspaceShell({
       const { eventType, new: newRow, old: oldRow } = payload;
 
       if (eventType === "DELETE" && oldRow) {
-        const deletedTaskId = (oldRow as any).id;
+        const deletedTaskId = (oldRow as { id?: string }).id;
         setLocalProjects((prev) =>
           prev.map((proj) => ({
             ...proj,
@@ -177,7 +199,7 @@ export function WorkspaceShell({
         return;
       }
 
-      const projectId = (newRow as any)?.project_id;
+      const projectId = (newRow as { project_id?: string })?.project_id;
       if (!projectId) return;
 
       setLocalProjects((prev) =>
@@ -185,15 +207,28 @@ export function WorkspaceShell({
           if (proj.id !== projectId) return proj;
 
           if (eventType === "INSERT" && newRow) {
-            const r = newRow as any;
+            type RealtimeTaskRow = {
+              id: string;
+              project_id: string;
+              title: string;
+              description?: string | null;
+              column_id?: string;
+              priority?: string;
+              position?: number;
+              assigned_to?: string | null;
+              type?: string;
+              created_at?: string;
+              due_date?: string | null;
+            };
+            const r = newRow as RealtimeTaskRow;
             const newTask: Task = {
               id: r.id,
               projectId: r.project_id,
               title: r.title,
               description: r.description || null,
-              status: r.status || "todo",
-              columnId: r.column_id || r.status || "",
-              priority: r.priority || "medium",
+              columnId: r.column_id || "",
+              priority: (r.priority as "low" | "medium" | "high") || "medium",
+              type: (r.type as TaskType) || "task",
               position: typeof r.position === "number" ? r.position : 0,
               assigneeId: r.assigned_to || null,
               createdAt: r.created_at || new Date().toISOString(),
@@ -205,19 +240,30 @@ export function WorkspaceShell({
               tasks: [...proj.tasks, newTask],
             };
           } else if (eventType === "UPDATE" && newRow) {
-            const r = newRow as any;
+            type RealtimeTaskRow = {
+              id: string;
+              title?: string;
+              description?: string | null;
+              column_id?: string;
+              priority?: string;
+              position?: number;
+              assigned_to?: string | null;
+              type?: string;
+              due_date?: string | null;
+            };
+            const r = newRow as RealtimeTaskRow;
             return {
               ...proj,
               tasks: proj.tasks.map((t) =>
                 t.id === r.id
                   ? {
                       ...t,
-                      title: r.title,
-                      status: r.status,
-                      columnId: r.column_id || r.status || t.columnId,
-                      priority: r.priority || t.priority,
+                      title: r.title || t.title,
+                      columnId: r.column_id || t.columnId,
+                      priority: (r.priority as "low" | "medium" | "high") || t.priority,
+                      type: (r.type as TaskType) || t.type || "task",
                       assigneeId: r.assigned_to || t.assigneeId,
-                      dueDate: r.due_date || (t as any).dueDate,
+                      dueDate: r.due_date || (t as { dueDate?: string | null }).dueDate,
                       description: r.description || t.description,
                       position:
                         typeof r.position === "number"
@@ -236,10 +282,14 @@ export function WorkspaceShell({
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
   // Automatically close sidebar when navigation/content changes
-  useEffect(() => {
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setIsMobileSidebarOpen(false);
-  }, [children]);
+  }
 
   return (
     <div className="h-screen bg-[#0b0f19] text-white flex flex-col font-sans w-full relative overflow-hidden">

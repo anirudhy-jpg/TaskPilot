@@ -27,7 +27,7 @@ export class WorkspaceHubService {
       throw new Error(error.message)
     }
 
-    return (memberedRows || [])
+    const formattedWorkspaces = (memberedRows || [])
       .map((row) => {
         const ws = Array.isArray(row.workspaces) ? row.workspaces[0] : row.workspaces
         return ws ? {
@@ -38,6 +38,14 @@ export class WorkspaceHubService {
         } : null
       })
       .filter((ws): ws is NonNullable<typeof ws> => ws !== null)
+
+    return formattedWorkspaces.sort((a, b) => {
+      // Prioritize workspaces owned by the user
+      if (a.ownerId === userId && b.ownerId !== userId) return -1;
+      if (b.ownerId === userId && a.ownerId !== userId) return 1;
+      // Then sort alphabetically by name
+      return a.name.localeCompare(b.name);
+    })
   }
 
   /**

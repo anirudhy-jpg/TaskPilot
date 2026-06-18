@@ -1,0 +1,13 @@
+import fs from 'fs';
+
+
+const svg = `
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="#f59e0b" />
+  <svg x="8" y="8" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 2L11 13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+</svg>`;
+
+fs.writeFileSync('temp-icon.svg', svg);

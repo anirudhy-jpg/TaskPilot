@@ -8,7 +8,7 @@ import { Logo } from "@/components/ui/logo"
 import { logoutAction } from "@/features/auth/actions/logout.action"
 
 interface HeaderProps {
-  user: any // Current authenticated user, if any
+  user: { id: string } | null // Current authenticated user, if any
 }
 
 export function Header({ user }: HeaderProps) {

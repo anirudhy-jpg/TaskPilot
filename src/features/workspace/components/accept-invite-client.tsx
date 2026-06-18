@@ -39,6 +39,7 @@ export function AcceptInviteClient({
 
   // Reset switching loading screen on route changes
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsSwitching(false)
   }, [pathname])
 

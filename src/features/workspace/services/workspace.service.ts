@@ -30,16 +30,16 @@ export class WorkspaceService {
 
         if (ws) {
           const members = ws.workspace_members
-          const role = Array.isArray(members) ? members[0]?.role : (members as any)?.role
-          return mapWorkspace(ws, role)
+          const role = Array.isArray(members) ? members[0]?.role : (members as Record<string, unknown>)?.role
+          return mapWorkspace(ws, role as string | undefined)
         }
       }
     } catch (err) {
       console.warn("Could not retrieve active_workspace_id from cookies:", err)
     }
 
-    // 2. Default: Fetch user's first workspace membership (either owner or member role) and join workspace details
-    const { data: memberRow, error: memErr } = await supabase
+    // 2. Default: Fetch user's workspace memberships and prefer the one where they are the owner
+    const { data: memberRows, error: memErr } = await supabase
       .from("workspace_members")
       .select(`
         workspace_id,
@@ -52,15 +52,19 @@ export class WorkspaceService {
         )
       `)
       .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle()
 
     if (memErr) {
       console.error("Error fetching workspace membership:", memErr)
       throw new Error(memErr.message)
     }
 
-    if (!memberRow) return null
+    if (!memberRows || memberRows.length === 0) return null
+
+    // Prefer the workspace where the user is an owner
+    let memberRow = memberRows.find((row) => row.role === "owner")
+    if (!memberRow) {
+      memberRow = memberRows[0]
+    }
 
     const ws = Array.isArray(memberRow.workspaces) ? memberRow.workspaces[0] : memberRow.workspaces
     return ws ? mapWorkspace(ws, memberRow.role) : null
@@ -215,13 +219,12 @@ export class WorkspaceService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapWorkspace(row: any, userRole?: string): Workspace {
+function mapWorkspace(row: Record<string, unknown>, userRole?: string): Workspace {
   return {
-    id: row.id,
-    name: row.name,
-    ownerId: row.owner_id,
-    createdAt: row.created_at,
+    id: row.id as string,
+    name: row.name as string,
+    ownerId: row.owner_id as string,
+    createdAt: row.created_at as string,
     currentUserRole: userRole,
   }
 }

@@ -61,7 +61,7 @@ export function Pagination({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] transition-all duration-300",
+        "flex flex-col sm:flex-row items-center justify-between gap-8 py-3 px-5 mx-auto w-fit rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] transition-all duration-300",
         className
       )}
     >

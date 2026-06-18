@@ -6,7 +6,7 @@ import { ArrowRight, CheckCircle2, Shield, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface HeroProps {
-  user: any
+  user: { id: string } | null
 }
 
 export function Hero({ user }: HeroProps) {

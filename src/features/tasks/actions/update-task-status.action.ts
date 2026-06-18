@@ -1,7 +1,7 @@
 "use server"
 
 import { TaskService } from "../services/task.service"
-import type { TaskStatus } from "@/features/project/types/project.types"
+
 
 export interface ActionResponse {
   success: boolean
@@ -10,10 +10,10 @@ export interface ActionResponse {
 
 export async function updateTaskStatusAction(
   taskId: string,
-  status: TaskStatus
+  columnId: string
 ): Promise<ActionResponse> {
   try {
-    await TaskService.updateTaskStatus(taskId, status)
+    await TaskService.updateTaskStatus(taskId, columnId)
     return { success: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update task status."

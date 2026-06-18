@@ -2,11 +2,11 @@ import { useEffect } from "react"
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
 import { createClient } from "@/lib/supabase/client"
 import type { WorkspaceMember, MemberRole } from "../types/workspace.types"
-import { useRouter } from "next/navigation"
+
 
 interface UseMembersRealtimeProps {
   workspaceId: string
-  members: WorkspaceMember[]
+
   setMembers: React.Dispatch<React.SetStateAction<WorkspaceMember[]>>
   currentUserId: string
 }
@@ -17,11 +17,11 @@ interface UseMembersRealtimeProps {
  */
 export function useMembersRealtime({
   workspaceId,
-  members,
+
   setMembers,
   currentUserId,
 }: UseMembersRealtimeProps) {
-  const router = useRouter()
+
 
   useRealtimeSubscription({
     table: "workspace_members",
@@ -39,11 +39,11 @@ export function useMembersRealtime({
           .maybeSingle()
 
         const newMember: WorkspaceMember = {
-          id: newRow.id,
-          workspaceId: newRow.workspace_id,
-          userId: newRow.user_id,
+          id: newRow.id as string,
+          workspaceId: newRow.workspace_id as string,
+          userId: newRow.user_id as string,
           role: newRow.role as MemberRole,
-          joinedAt: newRow.joined_at,
+          joinedAt: newRow.joined_at as string,
           profile: profile
             ? {
                 email: profile.email,

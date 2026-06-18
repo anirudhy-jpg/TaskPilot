@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { X, Check, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
+import { z } from "zod"
+
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Project } from "@/features/project/types/project.types"
+import { getAllEmailsAction } from "@/features/auth/actions/get-all-emails.action"
 
 interface InviteMemberModalProps {
   isOpen: boolean
@@ -28,8 +30,19 @@ export function InviteMemberModal({
   const [showErrors, setShowErrors] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dbEmails, setDbEmails] = useState<string[]>([])
 
   useEffect(() => {
+    getAllEmailsAction().then(setDbEmails).catch(console.error)
+  }, [])
+
+  const getEmailSuggestions = (input: string) => {
+    if (!input.trim()) return []
+    return dbEmails.filter((e) => e.toLowerCase().includes(input.toLowerCase()))
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
@@ -37,13 +50,20 @@ export function InviteMemberModal({
 
   const handleSubmit = async () => {
     if (!email.trim()) return
+    
+    const emailResult = z.string().trim().min(1, "Email is required").email("Invalid email address").safeParse(email)
+    if (!emailResult.success) {
+      setError(emailResult.error.issues[0]?.message || "Invalid email address.")
+      return
+    }
+
     if (role === "member" && projects.length > 0 && selectedProjectIds.length === 0) {
       setShowErrors(true)
       return
     }
     setError(null)
     try {
-      const url = await onInvite(email.trim(), role, selectedProjectIds)
+      const url = await onInvite(emailResult.data, role, selectedProjectIds)
       if (url) {
         setIsSuccess(true)
       } else {
@@ -77,7 +97,8 @@ export function InviteMemberModal({
             {isSuccess ? "Success!" : "Invite New Member"}
           </h3>
           <button
-            onClick={handleReset}
+            onClick={() => !isPending && handleReset()}
+            disabled={isPending}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer border-0"
           >
             <X size={18} />
@@ -105,7 +126,13 @@ export function InviteMemberModal({
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-800 bg-slate-955 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                 autoFocus
                 disabled={isPending}
+                list="email-suggestions"
               />
+              <datalist id="email-suggestions">
+                {getEmailSuggestions(email).map((suggestion) => (
+                  <option key={suggestion} value={suggestion} />
+                ))}
+              </datalist>
             </div>
 
             <div>
@@ -201,7 +228,7 @@ export function InviteMemberModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isPending || !email.trim() || !email.includes("@") || (role === "member" && projects.length > 0 && selectedProjectIds.length === 0)}
+                disabled={isPending || !email.trim() || (role === "member" && projects.length > 0 && selectedProjectIds.length === 0)}
                 className={`text-xs font-bold px-4 h-9 rounded-xl transition-all duration-200 cursor-pointer border-0 ${
                   isPending
                     ? "bg-amber-500 text-slate-950 opacity-90 cursor-wait"

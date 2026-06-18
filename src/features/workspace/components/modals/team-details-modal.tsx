@@ -30,7 +30,7 @@ export function TeamDetailsModal({ isOpen, onClose, project, members }: TeamDeta
   // Fetch project tasks & columns on mount/open
   useEffect(() => {
     if (isOpen && project?.id) {
-      setIsLoading(true)
+      setIsLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
       setError(null)
       setActiveTab("all")
       getProjectTasksAction(project.id)

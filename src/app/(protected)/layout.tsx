@@ -7,6 +7,8 @@ import {
 } from "@/lib/cached-requests"
 import { WorkspaceHubService } from "@/features/workspace/services/workspace-hub.service"
 import { WorkspaceShell } from "@/features/workspace/components/workspace-shell"
+import type { Project, Task } from "@/features/project/types/project.types"
+import type { Workspace } from "@/features/workspace/types/workspace.types"
 
 export const dynamic = "force-dynamic"
 
@@ -38,8 +40,8 @@ export default async function WorkspaceLayout({
 
   // 2. Parallel fetch Owner profile, Projects, Workspaces list (cached)
   let ownerEmail = ""
-  let projects: any[] = []
-  let workspaces: any[] = []
+  let projects: Project[] = []
+  let workspaces: Workspace[] = []
 
   if (workspace) {
     try {
@@ -58,7 +60,7 @@ export default async function WorkspaceLayout({
   }
 
   // 3. Batch fetch tasks for all projects to avoid N+1 sidebar lookups
-  let projectsWithTasks: any[] = []
+  let projectsWithTasks: (Project & { tasks: Task[] })[] = []
   if (workspace && projects.length > 0) {
     try {
       const projectIds = projects.map((p) => p.id)
@@ -67,21 +69,27 @@ export default async function WorkspaceLayout({
       // Fetch all tasks for these projects in one query
       const { data: allTasks, error: tasksErr } = await supabase
         .from("tasks")
-        .select("id, project_id, title, status")
+        .select("id, project_id, title, column_id")
         .in("project_id", projectIds)
         .order("position", { ascending: true })
 
       if (tasksErr) throw new Error(tasksErr.message)
 
       // Map tasks to their corresponding projects
-      const tasksByProject = new Map<string, any[]>()
+      const tasksByProject = new Map<string, Task[]>()
       ;(allTasks || []).forEach((t) => {
         const list = tasksByProject.get(t.project_id) || []
         list.push({
           id: t.id,
           projectId: t.project_id,
           title: t.title,
-          status: t.status,
+          description: null,
+          columnId: t.column_id || "",
+          priority: "medium" as const,
+          type: "task" as const,
+          position: 0,
+          assigneeId: null,
+          createdAt: "",
         })
         tasksByProject.set(t.project_id, list)
       })

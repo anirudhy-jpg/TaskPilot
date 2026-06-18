@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loginAction } from "../actions/login.action"
 import { loginSchema } from "../schemas/auth.schema"
-
+import { getAllEmailsAction } from "../actions/get-all-emails.action"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
@@ -23,6 +23,17 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<{ email?: string; password?: string }>({})
 
+  const [dbEmails, setDbEmails] = useState<string[]>([])
+
+  useEffect(() => {
+    getAllEmailsAction().then(setDbEmails).catch(console.error)
+  }, [])
+
+  const getEmailSuggestions = (input: string) => {
+    if (!input.trim()) return []
+    return dbEmails.filter((e) => e.toLowerCase().includes(input.toLowerCase()))
+  }
+
   const handleGithubLogin = async () => {
     setLoading(true)
     setError(null)
@@ -35,8 +46,8 @@ export function LoginForm() {
         },
       })
       if (error) throw error
-    } catch (err: any) {
-      setError(err.message || "Failed to initiate GitHub login.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to initiate GitHub login.")
       setLoading(false)
     }
   }
@@ -72,11 +83,14 @@ export function LoginForm() {
           setError(errMsg)
         }
       }
-    } catch (err: any) {
-      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+    } catch (err: unknown) {
+      if (
+        err instanceof Error && 
+        (err.message.includes("NEXT_REDIRECT") || ('digest' in err && typeof err.digest === 'string' && err.digest.includes("NEXT_REDIRECT")))
+      ) {
         throw err
       }
-      setError(err.message || "An unexpected error occurred.")
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.")
     } finally {
       setLoading(false)
     }
@@ -113,12 +127,18 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
+            list="login-email-suggestions"
             className={`bg-[#111827]/60 text-white placeholder-slate-500 rounded-lg h-10 w-full transition-all border-slate-800 ${
               validationErrors.email
                 ? "border-red-550 focus-visible:border-red-550 focus-visible:ring-red-550/20"
                 : "focus-visible:ring-amber-500/10 focus-visible:border-amber-500"
             }`}
           />
+          <datalist id="login-email-suggestions">
+            {getEmailSuggestions(email).map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
           {validationErrors.email && (
             <p className="text-red-500 text-xs mt-1 font-medium">{validationErrors.email}</p>
           )}
@@ -202,7 +222,7 @@ export function LoginForm() {
 
       {/* Footer link */}
       <div className="mt-6 text-center text-xs text-slate-400">
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-amber-500 hover:text-amber-400 hover:underline font-semibold ml-1">
           Sign up
         </Link>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { X, User, Calendar, FolderKanban, CheckSquare, Clock, Circle, CheckCircle2, AlertCircle, AlertTriangle, Info, Shield } from "lucide-react"
+import { X, Calendar, FolderKanban, CheckSquare, AlertCircle, AlertTriangle, Info, Shield } from "lucide-react"
 import type { Project, Task, TaskPriority } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getMemberDetailsAction } from "@/features/workspace/actions/get-member-details.action"
@@ -16,32 +16,19 @@ interface MemberDetailsModalProps {
 
 type ExtendedTask = Task & { projectName?: string }
 
-const defaultStatusConfig = {
-  todo: { label: "To Do", color: "text-slate-300 bg-slate-950 border-slate-800", icon: Circle },
-  in_progress: { label: "In Progress", color: "text-amber-400 bg-amber-500/10 border-amber-500/20", icon: Clock },
-  done: { label: "Done", color: "text-rose-455 bg-rose-500/10 border-rose-500/20", icon: CheckCircle2 },
-}
 
-const statusTabs = [
-  { id: "all", label: "All" },
-  { id: "todo", label: "To Do" },
-  { id: "in_progress", label: "In Progress" },
-  { id: "done", label: "Done" },
-]
 
 export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: MemberDetailsModalProps) {
   const [projects, setProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<ExtendedTask[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<string>("all")
 
   // Fetch member project and task assignments on open
   useEffect(() => {
     if (isOpen && member?.userId) {
-      setIsLoading(true)
+      setIsLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
       setError(null)
-      setActiveTab("all")
       getMemberDetailsAction(workspaceId, member.userId)
         .then((res) => {
           if (res.success) {
@@ -78,7 +65,7 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
 
   if (!isOpen || !member) return null
 
-  const filteredTasks = activeTab === "all" ? tasks : tasks.filter((t) => t.status === activeTab)
+  const filteredTasks = tasks
 
   const getPriorityStyle = (priority: TaskPriority) => {
     return {
@@ -169,11 +156,7 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
             <CheckSquare size={13} className="text-slate-500" />
             <span>Total Tasks: <strong className="text-slate-200 text-xs font-black">{tasks.length}</strong></span>
           </div>
-          <div className="w-1 h-1 rounded-full bg-slate-800" />
-          <div className="flex items-center gap-1.5 font-bold text-slate-400">
-            <CheckCircle2 size={13} className="text-emerald-500" />
-            <span>Tasks Completed: <strong className="text-emerald-450 text-xs font-black">{tasks.filter(t => t.status === "done").length}</strong></span>
-          </div>
+
         </div>
 
         {/* Body Split */}
@@ -259,24 +242,11 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
               </div>
             </div>
 
-            {/* Status Tabs */}
-            <div className="flex items-center gap-1 pb-1 overflow-x-auto border-b border-slate-800 shrink-0 select-none">
-              {statusTabs.map((tab) => {
-                const count = tab.id === "all" ? tasks.length : tasks.filter((t) => t.status === tab.id).length
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-3 py-1.5 text-[10px] font-black rounded-lg border transition-all cursor-pointer whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-200 border-transparent"
-                    }`}
-                  >
-                    {tab.label} ({count})
-                  </button>
-                )
-              })}
+            {/* Tasks count label */}
+            <div className="pb-1 border-b border-slate-800 shrink-0 select-none">
+              <span className="px-3 py-1.5 text-[10px] font-black rounded-lg border bg-amber-500/10 text-amber-400 border-amber-500/20">
+                All ({tasks.length})
+              </span>
             </div>
 
             {/* Tasks Scrollable List */}
@@ -303,18 +273,13 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
                   <div className="text-2xl mb-2">📋</div>
                   <p className="text-xs text-slate-400 font-bold">No tasks found</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    {activeTab === "all"
-                      ? "This member has no tasks assigned in this workspace."
-                      : `No tasks are currently in "${statusTabs.find((t) => t.id === activeTab)?.label}".`}
+                    This member has no tasks assigned in this workspace.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
                   {filteredTasks.map((task) => {
                     const priorityStyle = getPriorityStyle(task.priority)
-                    const fallbackConfig = defaultStatusConfig[task.status as keyof typeof defaultStatusConfig]
-                    const statusLabel = fallbackConfig?.label || "Unknown"
-                    const statusColor = fallbackConfig?.color || "text-slate-300 bg-slate-950 border-slate-800"
 
                     return (
                       <div
@@ -343,9 +308,7 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
                             <span className="text-slate-400 max-w-[120px] truncate">{task.projectName}</span>
                           </div>
 
-                          <span className={`text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${statusColor}`}>
-                            {statusLabel}
-                          </span>
+
                         </div>
                       </div>
                     )

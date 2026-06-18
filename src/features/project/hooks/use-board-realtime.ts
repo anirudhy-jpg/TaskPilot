@@ -65,7 +65,7 @@ export function useBoardRealtime({
               createdAt: newRow.created_at,
             });
           } else if (eventType === "DELETE" && oldRow) {
-            onColumnDelete((oldRow as any).id);
+            onColumnDelete((oldRow as { id: string }).id);
           }
         },
       )
@@ -86,7 +86,7 @@ export function useBoardRealtime({
             const updatedTask = mapRealtimeTask(newRow, members);
             onTaskUpdate(updatedTask);
           } else if (eventType === "DELETE" && oldRow) {
-            onTaskDelete((oldRow as any).id);
+            onTaskDelete((oldRow as { id: string }).id);
           }
         },
       )

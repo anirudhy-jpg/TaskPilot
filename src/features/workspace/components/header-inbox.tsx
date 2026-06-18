@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { Bell, MailOpen, Check, X, Loader2, UserPlus, Shield, UserMinus } from "lucide-react"
+import { Bell, MailOpen, Check, X, Loader2, UserPlus, Shield, UserMinus, ClipboardList, FolderPlus } from "lucide-react"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { createClient } from "@/lib/supabase/client"
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
@@ -47,10 +47,12 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
   const [isSwitching, setIsSwitching] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Reset switching loading screen on route or workspace changes
-  useEffect(() => {
-    setIsSwitching(false)
-  }, [pathname, workspaceId])
+  const [prevRouteKey, setPrevRouteKey] = useState(`${pathname}:${workspaceId}`);
+
+  if (`${pathname}:${workspaceId}` !== prevRouteKey) {
+    setPrevRouteKey(`${pathname}:${workspaceId}`);
+    setIsSwitching(false);
+  }
 
   // Fetch initial invitations & notifications client-side
   useEffect(() => {
@@ -82,7 +84,13 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
       }
 
       if (data) {
-        const mapped = data.map((invite: any) => {
+        type InviteRow = {
+          id: string; token: string; workspace_id: string; role: "admin" | "member";
+          projects: { name: string } | { name: string }[] | null;
+          workspaces: { name: string } | { name: string }[] | null;
+          profiles: { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null;
+        };
+        const mapped = data.map((invite: InviteRow) => {
           const inviteProj = invite.projects
           const inviteWs = invite.workspaces
           const inviteProfile = invite.profiles
@@ -124,7 +132,8 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
       }
 
       if (data) {
-        const mapped = data.map((item: any) => ({
+        type NotifRow = { id: string; title: string; message: string; type: string; created_at: string; workspace_id?: string; actor_id?: string | null };
+        const mapped = data.map((item: NotifRow) => ({
           id: item.id,
           title: item.title,
           message: item.message,
@@ -170,7 +179,13 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
           .maybeSingle()
 
         if (invite) {
-          const rawInvite = invite as any
+          type RawInvite = {
+            id: string; token: string; workspace_id: string; role: "admin" | "member";
+            projects: { name: string } | { name: string }[] | null;
+            workspaces: { name: string } | { name: string }[] | null;
+            profiles: { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null;
+          };
+          const rawInvite = invite as RawInvite
           const inviteProj = rawInvite.projects
           const inviteWs = rawInvite.workspaces
           const inviteProfile = rawInvite.profiles
@@ -217,13 +232,13 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
       if (eventType === "INSERT") {
         if (newRow.read === false && (!userId || newRow.user_id === userId)) {
           const newNotif: NotificationItem = {
-            id: newRow.id,
-            title: newRow.title,
-            message: newRow.message,
-            type: newRow.type,
-            createdAt: newRow.created_at,
-            workspaceId: newRow.workspace_id,
-            actorId: newRow.actor_id,
+            id: newRow.id as string,
+            title: newRow.title as string,
+            message: newRow.message as string,
+            type: newRow.type as string,
+            createdAt: newRow.created_at as string,
+            workspaceId: newRow.workspace_id as string | undefined,
+            actorId: newRow.actor_id as string | null | undefined,
           }
           setNotifications((prev) => {
             if (prev.some((n) => n.id === newNotif.id)) return prev
@@ -451,6 +466,8 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   // - invitation_accepted: green (Accept)
                   // - invitation_rejected: red (Reject)
                   // - member_left: red (Leave)
+                  // - project_member_added: blue (FolderPlus)
+                  // - task_assigned: indigo (ClipboardList)
                   let colorClass = "bg-amber-500/10 text-amber-500"
                   let icon = <Bell size={14} />
 
@@ -463,6 +480,15 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   } else if (notif.type === "member_left") {
                     colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <UserMinus size={14} />
+                  } else if (notif.type === "project_member_added") {
+                    colorClass = "bg-blue-500/10 text-blue-400"
+                    icon = <FolderPlus size={14} />
+                  } else if (notif.type === "task_assigned") {
+                    colorClass = "bg-indigo-500/10 text-indigo-400"
+                    icon = <ClipboardList size={14} />
+                  } else if (notif.type === "mention") {
+                    colorClass = "bg-amber-500/10 text-amber-500"
+                    icon = <span className="text-sm font-black">@</span>
                   }
 
                   return (
