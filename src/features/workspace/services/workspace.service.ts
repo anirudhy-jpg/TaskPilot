@@ -38,8 +38,8 @@ export class WorkspaceService {
       console.warn("Could not retrieve active_workspace_id from cookies:", err)
     }
 
-    // 2. Default: Fetch user's first workspace membership (either owner or member role) and join workspace details
-    const { data: memberRow, error: memErr } = await supabase
+    // 2. Default: Fetch user's workspace memberships and prefer the one where they are the owner
+    const { data: memberRows, error: memErr } = await supabase
       .from("workspace_members")
       .select(`
         workspace_id,
@@ -52,15 +52,19 @@ export class WorkspaceService {
         )
       `)
       .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle()
 
     if (memErr) {
       console.error("Error fetching workspace membership:", memErr)
       throw new Error(memErr.message)
     }
 
-    if (!memberRow) return null
+    if (!memberRows || memberRows.length === 0) return null
+
+    // Prefer the workspace where the user is an owner
+    let memberRow = memberRows.find((row) => row.role === "owner")
+    if (!memberRow) {
+      memberRow = memberRows[0]
+    }
 
     const ws = Array.isArray(memberRow.workspaces) ? memberRow.workspaces[0] : memberRow.workspaces
     return ws ? mapWorkspace(ws, memberRow.role) : null

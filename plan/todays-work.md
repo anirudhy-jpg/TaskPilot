@@ -1,43 +1,137 @@
-# Today's Work Summary
+Project: TaskPilot (Next.js + Supabase)
 
-## Overview
-Today has been highly productive with significant enhancements made to **TaskPilot**. The primary focus was on solidifying core application logic, improving UI/UX across several components, finalizing real-time implementations, fixing various bugs, adding crucial documentation, and introducing new features like task comments, subtasks, activity timelines, and an AI-driven email autocomplete.
+✅ What I Did Today
 
-## Key Features & Enhancements
+1. 🔧 Fixed TypeScript Build Error
+There was a missing Project type in projects/page.tsx that was breaking the production build.
+Found and added the correct import so the build passed cleanly.
 
-### 1. Task Comments, Subtasks, & Activity Timeline
-- **Comments System**: Built and integrated a robust commenting feature for tasks with real-time updates and persistence in the backend.
-- **Subtasks & Timeline**: Implemented subtasks and an activity timeline for tasks. Documented their implementation details, focusing on database design, Optimistic UI, and real-time syncing.
-- **Refinement**: Cleaned up the task card UI on the Kanban board (removed creation date) and ensured real-time tracking/rendering of `TYPE_CHANGED` activity events.
+2. 🎨 Updated App Favicon
+Replaced the default generic favicon with the actual TaskPilot brand icon.
+The icon now shows correctly in the browser tab.
 
-### 2. Kanban Board Improvements
-- **Task Type Filter**: Migrated the task type filter to the `ProjectBoardHeader` for a cleaner UI layout and easier board navigation.
-- **Column Sizing**: Fixed column sizing to use consistent fixed widths.
-- **State Management**: Resolved state duplication by removing hardcoded legacy references to the `status` column, making task grouping purely rely on `column_id`.
-- **Drag-And-Drop**: Fixed issues with drag-and-drop constraints. Verified that data persistence accurately synchronizes task positions with the database.
+3. 🧹 Cleaned Up Unused Imports
+Removed unused TaskPriority type imports from two server action files:
+create-task.action.ts
+update-task.action.ts
+This cleared linting warnings and kept the codebase clean.
 
-### 3. Application Security & Validation (Zod + Vitest)
-- **Centralized Zod Validation**: Built strict Zod validation schemas (`src/lib/validations/`) for Tasks, Projects, Workspaces, Kanban, and Invitations. Ensured server action boundaries use `safeParse()` to safely process data.
-- **Business Validation Tests**: Introduced a lightweight Vitest testing framework specifically targeting critical validation logic, securing business rules without mocking infrastructure.
+4. 📏 Made Pagination UI Smaller
+The pagination bar on the projects dashboard was too wide and looked off.
+Adjusted the styling to make it more compact and visually balanced.
 
-### 4. User Experience (UI/UX) & Notifications
-- **AI-Driven Email Autocomplete**: Integrated dynamic database-driven email suggestions using `<datalist>` to boost input speed in `SignupForm` and `InviteMemberModal`.
-- **Project & Task Notifications**: Created a `NotificationService` to push inbox notifications when a user is added to a project or assigned to a task. Updated the `HeaderInbox` UI to differentiate between `project_member_added` and `task_assigned` notifications.
-- **Pagination**: Shortened the pagination UI width to ensure visual balance across screen sizes.
-- **Favicon**: Added the official TaskPilot favicon to the application.
-- **Modals**: Locked primary modals (backdrop, close button, escape key disabled) when asynchronous operations are pending (`isPending = true`), preventing concurrent unwanted actions.
+5. 🛡️ Added Zod Validation to All Server Actions
+This was the biggest task of the day.
+Created a centralized validation layer under src/lib/validations/ with Zod schemas for:
+Tasks — title length, priority enum, status, UUID checks
+Projects — name, description, workspace ID
+Workspaces — name limits
+Kanban — column names, position values
+Invitations — email format, role enum, workspace ID
+Updated all server actions to run safeParse() before touching the database.
+No more raw/unvalidated data entering the backend.
+Exported inferred types from schemas so actions stay fully type-safe.
 
-### 5. Bug Fixes & Codebase Health
-- **Build Errors**: Fixed several TypeScript build errors (e.g., missing `Project` type, Kanban Board props mismatch with `TaskType`).
-- **Database Query Errors**: Removed referencing to non-existent columns (e.g., `status` in `tasks` table query) preventing member details fetching.
-- **Syntax/Linting**: Eliminated unused type imports, addressed ESLint warnings (e.g., replaced `any` with strict typing, fixed exhaustive-deps in hooks), and ensured `npm run build` and `npm run lint` execute cleanly with no warnings or errors.
-- **SendGrid Emails**: Troubleshot and confirmed the SendGrid API setup for invitation emails.
+6. 🧪 Wrote Business Validation Tests (Vitest)
+Set up Vitest as the testing framework (was previously missing from the project).
+Wrote focused test files for each schema:
+tests/task.schema.test.ts
+tests/project.schema.test.ts
+tests/workspace.schema.test.ts
+tests/kanban.schema.test.ts
+tests/invitation.schema.test.ts
+Tests cover both valid inputs (should pass) and invalid inputs (should fail with correct errors).
+No mocking — pure business logic validation only.
 
-### 6. Documentation Updates
-- Updated `TaskPilot-Documentation.md` and `steps.md` to reflect the completion of the major phases (Phases 1-7).
-- Updated `supabase_schema.md` to map new table relationships (`task_subtasks`, `task_activities`, `task_comments`).
-- Generated standalone `task-subtasks-implementation.md` detailing the technical deep-dive into subtasks.
+7. 🐛 Fixed Kanban Board Task Visibility
+Tasks were not showing up correctly on the Kanban board after drag-and-drop.
+Root cause: old code was still using the deprecated status column instead of column_id.
+Fixed the task-grouping logic to rely only on column_id.
+Drag-and-drop now persists correctly to Supabase and re-renders the board properly.
 
-## Next Steps / Pending
-- Continued monitoring of real-time member updates and data synchronization.
-- Any further refinements to the UI/UX based on future testing and user feedback.
+8. 💬 Implemented Task Comments System
+Added a full commenting feature inside the Task Details Modal:
+View all comments
+Add a new comment
+Delete your own comment
+Comments update in real-time using Supabase subscriptions.
+Followed existing design system — monochrome, clean, and consistent.
+
+9. 🔄 Fixed Real-Time Member Updates
+When a member left a workspace, the UI wasn't updating without a page refresh.
+Added Supabase real-time subscription on workspace_members table.
+Now the member list updates instantly when someone leaves.
+
+10. 🧼 Full Linting & Type Safety Cleanup
+Replaced all any types with proper TypeScript interfaces.
+Fixed React hook anti-patterns (setState inside useEffect).
+Removed dead code, unused vars, and stray imports.
+Result: zero linting errors, zero warnings.
+
+11. ✅ Built Subtasks Feature
+Added the ability to create subtasks inside any task from the Task Details Modal.
+Each task can have multiple subtasks with their own completion state.
+UI shows a Jira-inspired subtask table with:
+Inline composition (type and press Enter to add)
+Checkbox to mark subtasks as done
+Delete button per subtask
+Internal scrolling so the parent modal stays fixed
+Subtasks are stored in a dedicated subtasks table in Supabase.
+Real-time sync — if another user adds/checks a subtask, it updates instantly.
+Used Optimistic UI so the checkbox feels instant even before the DB confirms.
+
+12. 📜 Built Activity Timeline Feature
+Added an Activity / History tab inside the Task Details Modal.
+Every important change on a task is recorded:
+Status changed
+Priority changed
+Assignee changed
+Column moved (Kanban)
+Comment added/deleted
+Subtask added/completed
+Timeline shows who did what and when, displayed in a clean vertical feed.
+Activity entries are fetched via getTaskTimelineAction and auto-load on modal open.
+Paginated — loads the latest 100 events by default.
+
+13. 🏷️ Implemented Task Type Field & Filter
+Added a new type field for tasks (Task, Feature, Bug, Enhancement) via a database migration.
+Migrated the task type filter to the ProjectBoardHeader for a cleaner UI layout and easier Kanban navigation.
+Cleaned up the Kanban task card UI to keep it focused by removing the creation date.
+
+14. 🤖 Added AI-Driven Email Autocomplete
+Integrated dynamic, database-driven email suggestions using native browser `<datalist>`.
+Used in SignupForm and InviteMemberModal to help users autocomplete emails, drastically improving UX and input speed.
+
+15. 🔔 Built Project Task Inbox Notifications
+Created a NotificationService to generate server-side notifications.
+Integrated notification triggers for when users are added to projects or assigned to tasks (excluding self-assignments).
+Enhanced the HeaderInbox UI to visually distinguish `project_member_added` and `task_assigned` notification types with custom icons and colors.
+
+📦 Files / Folders Created Today
+| File/Folder | What it is |
+|-------------|------------|
+| src/lib/validations/task.schema.ts | Zod schema for tasks |
+| src/lib/validations/project.schema.ts | Zod schema for projects |
+| src/lib/validations/workspace.schema.ts | Zod schema for workspaces |
+| src/lib/validations/kanban.schema.ts | Zod schema for kanban columns |
+| tests/task.schema.test.ts | Tests for task validation |
+| tests/project.schema.test.ts | Tests for project validation |
+| tests/workspace.schema.test.ts | Tests for workspace validation |
+| tests/kanban.schema.test.ts | Tests for kanban validation |
+| tests/invitation.schema.test.ts | Tests for invitation validation |
+| src/features/tasks/services/task-subtasks.service.ts | Subtasks DB service |
+| src/features/tasks/actions/get-task-timeline.action.ts | Activity timeline server action |
+| supabase/migrations/20260618180000_add_task_type.sql | Migration for adding task type |
+
+🏁 End of Day Status
+✅ App builds successfully
+✅ Lint is clean (zero errors/warnings)
+✅ All new tests pass
+✅ Dev server running fine
+✅ Kanban drag-and-drop works and persists
+✅ Comments & real-time updates working
+✅ Subtasks — add, complete, delete with optimistic UI
+✅ Activity timeline — full history per task
+✅ Email Autocomplete works flawlessly in forms
+✅ Task types & UI filters function correctly
+✅ Inbox notifications work for task assignments and project additions
