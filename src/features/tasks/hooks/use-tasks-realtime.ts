@@ -1,5 +1,5 @@
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
-import type { Task, TaskPriority } from "@/features/project/types/project.types"
+import type { Task, TaskPriority, TaskType } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 
 /**
@@ -17,6 +17,7 @@ export function mapRealtimeTask(row: Record<string, unknown>, members: Workspace
     priority: (row.priority as TaskPriority) || "medium",
     position: (row.position as number) ?? 0,
     assigneeId,
+    type: (row.type as TaskType) || "task",
     createdAt: (row.created_at as string) || new Date().toISOString(),
     assignee: member
       ? {

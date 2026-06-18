@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { Task, TaskPriority } from "@/features/project/types/project.types"
+import type { Task, TaskPriority, TaskType } from "@/features/project/types/project.types"
 
 export class TaskService {
   /**
@@ -11,7 +11,7 @@ export class TaskService {
     const { data, error } = await supabase
       .from("tasks")
       .select(`
-        id, project_id, title, description, column_id, priority, position, assigned_to, created_at,
+        id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at,
         assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .eq("project_id", projectId)
@@ -21,7 +21,7 @@ export class TaskService {
       // Fallback: query without the join and select only guaranteed columns
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("tasks")
-        .select("id, project_id, title, description, column_id, priority, position, assigned_to, created_at")
+        .select("id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at")
         .eq("project_id", projectId)
         .order("position", { ascending: true })
 
@@ -52,7 +52,7 @@ export class TaskService {
 
     const { data, error } = await supabase
       .from("tasks")
-      .select("id, project_id, title, description, column_id, priority, position, assigned_to, created_at")
+      .select("id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at")
       .in("project_id", projectIds)
       .order("position", { ascending: true })
 
@@ -72,6 +72,7 @@ export class TaskService {
     title: string
     description?: string
     columnId: string
+    type?: TaskType
     priority?: TaskPriority
     assigneeId?: string
   }): Promise<Task> {
@@ -97,6 +98,7 @@ export class TaskService {
       position: nextPosition,
     }
     if (input.description) insertData.description = input.description
+    if (input.type) insertData.type = input.type
     if (input.priority) insertData.priority = input.priority
     if (input.assigneeId) insertData.assigned_to = input.assigneeId
 
@@ -104,7 +106,7 @@ export class TaskService {
       .from("tasks")
       .insert(insertData)
       .select(`
-        id, project_id, title, description, column_id, priority, position, created_at, assigned_to,
+        id, project_id, title, description, column_id, type, priority, position, created_at, assigned_to,
         assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url)
       `)
       .single()
@@ -206,6 +208,7 @@ export class TaskService {
     updates: {
       title?: string
       description?: string | null
+      type?: TaskType
       priority?: TaskPriority
     }
   ): Promise<void> {
@@ -257,6 +260,7 @@ export type TaskRow = {
   description?: string | null;
   status?: string | null;
   column_id?: string | null;
+  type?: string | null;
   priority?: string | null;
   position?: number | null;
   assignee_id?: string | null;
@@ -281,6 +285,7 @@ export function mapTask(row: TaskRow, assigneeDataRaw: AssigneeRow | AssigneeRow
     title: row.title as string,
     description: (row.description as string | null) || null,
     columnId: row.column_id as string,
+    type: (row.type as TaskType) || "task",
     priority: (row.priority as TaskPriority) || "medium",
     position: (row.position as number) ?? 0,
     assigneeId: (row.assignee_id as string) || (row.assigned_to as string) || null,

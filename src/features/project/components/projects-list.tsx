@@ -134,6 +134,7 @@ function BoardContent(props: ProjectsListProps) {
   } = useProjectBoard(props);
 
   const [isCreateColumnOpen, setIsCreateColumnOpen] = React.useState(false);
+  const [taskTypeFilter, setTaskTypeFilter] = React.useState<string[]>([]);
 
   // Pagination state and logic
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -175,6 +176,8 @@ function BoardContent(props: ProjectsListProps) {
         onEditProject={() => setProjectToEdit(activeProject || null)}
         onNewProject={() => setIsCreateProjectOpen(true)}
         onAddColumn={activeProject && (activeProject.columns || []).length < 5 ? () => setIsCreateColumnOpen(true) : undefined}
+        taskTypeFilter={taskTypeFilter}
+        setTaskTypeFilter={setTaskTypeFilter}
       />
 
       {errorMsg && (
@@ -212,6 +215,7 @@ function BoardContent(props: ProjectsListProps) {
             onMoveColumn={handleMoveColumn}
             onDeleteColumn={handleDeleteColumn}
             onAssigneeChange={handleAssigneeChange}
+            taskTypeFilter={taskTypeFilter}
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */

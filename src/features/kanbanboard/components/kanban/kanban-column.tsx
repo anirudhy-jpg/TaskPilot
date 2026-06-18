@@ -248,7 +248,11 @@ export const KanbanColumn = React.memo(
         pt.position !== nt.position ||
         pt.title !== nt.title ||
         pt.assigneeId !== nt.assigneeId ||
-        pt.priority !== nt.priority
+        pt.priority !== nt.priority ||
+        pt.type !== nt.type ||
+        pt.description !== nt.description ||
+        pt.columnId !== nt.columnId ||
+        JSON.stringify(pt.subtasks) !== JSON.stringify(nt.subtasks)
       ) {
         return false;
       }

@@ -14,6 +14,7 @@ interface TimelineItemProps {
 interface ActivityValue {
   column_id?: string;
   priority?: string;
+  type?: string;
 }
 
 interface ActivityMetadata {
@@ -72,6 +73,16 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
           <span className="line-through capitalize">{oldVal?.priority}</span>
           <ArrowRight size={10} />
           <span className="text-slate-300 capitalize">{newVal?.priority}</span>
+        </div>
+      );
+      break;
+    case "TYPE_CHANGED":
+      actionText = "changed task type";
+      details = (
+        <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
+          <span className="line-through capitalize">{oldVal?.type}</span>
+          <ArrowRight size={10} />
+          <span className="text-slate-300 capitalize">{newVal?.type}</span>
         </div>
       );
       break;

@@ -1,6 +1,6 @@
 # TaskPilot — Implementation & Completion Plan
 
-> **Last Updated:** June 17, 2026 — All core modules complete. Status updated to reflect current codebase.
+> **Last Updated:** June 18, 2026 — All core modules complete. Status updated to reflect current codebase.
 
 This document outlines the modular, step-by-step technical plan to complete the TaskPilot workspace application. It tracks all completed modules and highlights remaining work.
 
@@ -26,7 +26,12 @@ The following table summarizes the current state of all TaskPilot modules:
 | **UI / Design System** | ✅ Completed | Monochrome dark mode, skeleton loaders, custom scrollbars, 404 page, progress bar, pagination. | — |
 | **Workspace Settings** | ✅ Completed | Rename workspace, delete workspace (owner-only), leave workspace (members). | — |
 | **Workspace Switcher Hub** | ✅ Completed | `/workspaces` page showing owned + member workspaces, cookie-based switching. | — |
-| **Pagination** | ✅ Completed | Client-side pagination on the project dashboard grid (6 projects per page). | — |
+| **Pagination** | ✅ Completed | Client-side pagination on the project dashboard grid (6 projects per page). Pagination UI made compact. | — |
+| **Task Subtasks** | ✅ Completed | Jira-inspired inline subtask table in task details modal. Optimistic UI, real-time sync, progress bar, portal-rendered dropdowns. | — |
+| **Task Comments** | ✅ Completed | View, add, delete comments on tasks. Real-time updates via Supabase subscription. | — |
+| **Activity Timeline** | ✅ Completed | Full task change history feed (status, priority, assignee, column, comments, subtasks). Auto-loads on modal open. | — |
+| **Zod Input Validation** | ✅ Completed | Centralized `src/lib/validations/` schemas for all 5 action boundaries. `safeParse()` guards on every server action. | — |
+| **Vitest Testing** | ✅ Completed | Testing framework bootstrapped. 5 schema test files covering valid + invalid inputs for all Zod validators. | — |
 | **Search & Filtering** | 🔲 Pending | Global Command-K search, sidebar filters by assignee/priority/status. | Low |
 
 ---
@@ -42,7 +47,9 @@ graph TD
     M4 --> M5
     M5 --> M6[✅ Module 6: Analytics Dashboard]
     M6 --> M7[✅ Module 7: UI Polish]
-    M7 --> M8[🔲 Module 8: Global Search]
+    M7 --> M8[✅ Module 8: Subtasks & Activity Timeline]
+    M8 --> M9[✅ Module 9: Zod Validation & Vitest Tests]
+    M9 --> M10[🔲 Module 10: Global Search]
 
 ```
 
@@ -132,17 +139,46 @@ graph TD
 
 ---
 
-### 🔲 Module 8: Global Search & Custom Filters -FUTURE
+### ✅ Module 8: Subtasks & Activity Timeline — COMPLETE
+**Goal:** Deep task interaction — break tasks into subtasks and track all changes.
+
+*   [x] **Step 8.1:** Created `task_subtasks` table with Supabase Realtime publication.
+*   [x] **Step 8.2:** Built `task-subtasks.service.ts` — `getSubtasks`, `addSubtask`, `updateSubtaskDetails`, `deleteSubtask`.
+*   [x] **Step 8.3:** Built `<TaskSubtasks />` component with Jira-style inline table, progress bar, portal-rendered dropdowns, optimistic UI.
+*   [x] **Step 8.4:** Created `task_activities`, `task_comments`, `task_comment_mentions` tables with Postgres triggers.
+*   [x] **Step 8.5:** Built `get-task-timeline.action.ts` — paginated unified feed of activities + comments.
+*   [x] **Step 8.6:** Built `add-comment.action.ts`, `update-comment.action.ts`, `delete-comment.action.ts`.
+*   [x] **Step 8.7:** Built timeline UI components: `task-timeline.tsx`, `timeline-item-renderer.tsx`, `comment-composer.tsx`, `mention-selector.tsx`.
+*   [x] **Step 8.8:** Redesigned `TaskDetailsModal` to split-pane layout — left: task details, right: timeline feed.
+*   [x] **Step 8.9:** Subtask progress badge displayed on Kanban task cards.
+
+---
+
+### ✅ Module 9: Zod Validation & Vitest Tests — COMPLETE
+**Goal:** Secure all server action boundaries and protect critical business logic with tests.
+
+*   [x] **Step 9.1:** Created `src/lib/validations/task.schema.ts` — title length, priority/status enums, UUID checks.
+*   [x] **Step 9.2:** Created `src/lib/validations/project.schema.ts` — name, description, workspace ID.
+*   [x] **Step 9.3:** Created `src/lib/validations/workspace.schema.ts` — name length limits.
+*   [x] **Step 9.4:** Created `src/lib/validations/kanban.schema.ts` — column name, position values.
+*   [x] **Step 9.5:** Created invitation Zod schema — email format, role enum, workspace UUID.
+*   [x] **Step 9.6:** Refactored all server actions to run `safeParse()` before any DB interaction.
+*   [x] **Step 9.7:** Bootstrapped Vitest testing framework (was not previously in the project).
+*   [x] **Step 9.8:** Wrote `tests/task.schema.test.ts`, `tests/project.schema.test.ts`, `tests/workspace.schema.test.ts`, `tests/kanban.schema.test.ts`, `tests/invitation.schema.test.ts`.
+*   [x] **Step 9.9:** Removed unused `TaskPriority` imports from `create-task.action.ts` and `update-task.action.ts`.
+
+---
+
+### 🔲 Module 10: Global Search & Custom Filters — FUTURE
 **Goal:** Help users find projects, tasks, or members quickly.
 
-*   [ ] **Step 8.1:** Build Command Menu (Command-K) using `cmdk`.
+*   [ ] **Step 10.1:** Build Command Menu (Command-K) using `cmdk`.
     *   Navigate directly to project boards.
     *   Open task details from search results.
-*   [ ] **Step 8.2:** Sidebar filter toggles.
+*   [ ] **Step 10.2:** Sidebar filter toggles.
     *   "Show Only My Tasks" filter.
     *   "High Priority Only" filter.
     *   Filter by assignee.
 
 ---
-
 

@@ -86,6 +86,7 @@ export default async function WorkspaceLayout({
           description: null,
           columnId: t.column_id || "",
           priority: "medium" as const,
+          type: "task" as const,
           position: 0,
           assigneeId: null,
           createdAt: "",

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser, createClient } from "@/lib/supabase/server";
 import { AddProjectMemberSchema } from "@/lib/validations/project.schema";
+import { createNotification } from "@/lib/notifications/notification.service";
 
 export interface ActionResponse {
   success: boolean;
@@ -83,6 +84,25 @@ export async function addProjectMemberAction(
       }
       throw insertErr;
     }
+
+    // 5. Fire inbox notification to the added member
+    const [{ data: projectData }, { data: actorProfile }] = await Promise.all([
+      supabase.from("projects").select("name").eq("id", projectId).maybeSingle(),
+      supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
+    ]);
+
+    const projectName = projectData?.name ?? "a project";
+    const actorName = actorProfile?.full_name || actorProfile?.email || "A workspace admin";
+
+    await createNotification({
+      userId: validatedUserId,
+      workspaceId: project.workspace_id,
+      title: "Added to project",
+      message: `${actorName} added you to "${projectName}".`,
+      type: "project_member_added",
+      actorId: user.id,
+      client: supabase,
+    });
 
     revalidatePath("/projects", "layout");
     revalidatePath("/workspace");

@@ -2,6 +2,23 @@
 
 This document details the exact steps taken to bring the TaskPilot codebase to a pristine 0-error, 0-warning state during the linting and TypeScript compilation audit.
 
+> **Last audit passed:** June 18, 2026 — Zero errors, zero warnings.
+
+---
+
+## 0. June 18, 2026 — Additional Cleanup
+
+The following issues were fixed during the Zod validation and testing pass:
+
+*   **`src/features/tasks/actions/create-task.action.ts`**:
+    *   **Fix:** Removed unused `TaskPriority` type import.
+    *   **Impact:** Eliminated `@typescript-eslint/no-unused-vars` warning on the import line.
+*   **`src/features/tasks/actions/update-task.action.ts`**:
+    *   **Fix:** Removed unused `TaskPriority` type import.
+    *   **Impact:** Same as above — clean import block, no dead type references.
+
+---
+
 ## 1. What Was Fixed (Code Changes)
 
 These issues were resolved by actively refactoring the code rather than suppressing the linter.

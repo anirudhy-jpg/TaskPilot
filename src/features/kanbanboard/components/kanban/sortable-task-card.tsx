@@ -61,11 +61,13 @@ export const SortableTaskCard = React.memo(
       prevProps.task.title === nextProps.task.title &&
       prevProps.task.description === nextProps.task.description &&
       prevProps.task.priority === nextProps.task.priority &&
+      prevProps.task.type === nextProps.task.type &&
       prevProps.task.assigneeId === nextProps.task.assigneeId &&
       prevProps.disableHover === nextProps.disableHover &&
       prevProps.taskNumber === nextProps.taskNumber &&
       prevProps.isDragOverlay === nextProps.isDragOverlay &&
-      prevProps.members === nextProps.members
+      prevProps.members === nextProps.members &&
+      JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks)
     );
   }
 );

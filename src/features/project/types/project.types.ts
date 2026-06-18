@@ -26,6 +26,15 @@ export interface Project {
 export type TaskStatus = string // @deprecated
 export type TaskPriority = "low" | "medium" | "high"
 
+export const TASK_TYPES = [
+  "task",
+  "feature",
+  "bug",
+  "enhancement",
+] as const;
+
+export type TaskType = (typeof TASK_TYPES)[number];
+
 export interface Task {
   id: string
   projectId: string
@@ -34,6 +43,7 @@ export interface Task {
   /** @deprecated Board placement is now exclusively determined by columnId */
   status?: string | null 
   columnId: string
+  type: TaskType
   priority: TaskPriority
   position: number // double precision fractional index
   assigneeId: string | null
@@ -76,6 +86,7 @@ export const TASK_ACTIVITY_TYPES = {
   TASK_UPDATED: "TASK_UPDATED",
   STATUS_CHANGED: "STATUS_CHANGED",
   PRIORITY_CHANGED: "PRIORITY_CHANGED",
+  TYPE_CHANGED: "TYPE_CHANGED",
   DUE_DATE_CHANGED: "DUE_DATE_CHANGED",
   ASSIGNEE_ADDED: "ASSIGNEE_ADDED",
   ASSIGNEE_REMOVED: "ASSIGNEE_REMOVED",

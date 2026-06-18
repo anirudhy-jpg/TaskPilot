@@ -6,6 +6,7 @@ import { z } from "zod"
 
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Project } from "@/features/project/types/project.types"
+import { getAllEmailsAction } from "@/features/auth/actions/get-all-emails.action"
 
 interface InviteMemberModalProps {
   isOpen: boolean
@@ -29,6 +30,16 @@ export function InviteMemberModal({
   const [showErrors, setShowErrors] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dbEmails, setDbEmails] = useState<string[]>([])
+
+  useEffect(() => {
+    getAllEmailsAction().then(setDbEmails).catch(console.error)
+  }, [])
+
+  const getEmailSuggestions = (input: string) => {
+    if (!input.trim()) return []
+    return dbEmails.filter((e) => e.toLowerCase().includes(input.toLowerCase()))
+  }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -115,7 +126,13 @@ export function InviteMemberModal({
                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-800 bg-slate-955 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                 autoFocus
                 disabled={isPending}
+                list="email-suggestions"
               />
+              <datalist id="email-suggestions">
+                {getEmailSuggestions(email).map((suggestion) => (
+                  <option key={suggestion} value={suggestion} />
+                ))}
+              </datalist>
             </div>
 
             <div>

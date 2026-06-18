@@ -4,6 +4,7 @@ import type {
   Task,
   Column,
   TaskPriority,
+  TaskType,
 } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { createProjectAction } from "../actions/create-project.action";
@@ -165,6 +166,7 @@ export function useProjectBoardOperations({
     status?: string,
     assigneeId?: string,
     priority?: TaskPriority,
+    type?: TaskType,
   ) => {
     if (!createTaskProjectId) return;
     setErrorMsg(null);
@@ -188,6 +190,7 @@ export function useProjectBoardOperations({
         title,
         description: description || null,
         columnId,
+        type: type || "task",
         priority: priority || "medium",
         position: nextPosition,
         assigneeId: assigneeId || null,
@@ -211,6 +214,7 @@ export function useProjectBoardOperations({
         title,
         description,
         columnId: tempTask.columnId,
+        type: tempTask.type,
         priority: tempTask.priority,
         assigneeId: assigneeId || undefined,
       });
@@ -324,6 +328,7 @@ export function useProjectBoardOperations({
       title?: string;
       description?: string | null;
       priority?: TaskPriority;
+      type?: TaskType;
     },
   ) => {
     if (taskId.startsWith("temp-")) return;
