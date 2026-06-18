@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
-import type { TaskPriority, Column } from "@/features/project/types/project.types"
+import type { TaskPriority, Column, TaskType } from "@/features/project/types/project.types"
 
 interface CreateTaskModalProps {
   isOpen: boolean
@@ -16,7 +16,8 @@ interface CreateTaskModalProps {
     description?: string,
     status?: string,
     assigneeId?: string,
-    priority?: TaskPriority
+    priority?: TaskPriority,
+    type?: TaskType
   ) => void
 }
 
@@ -24,6 +25,13 @@ const priorityOptions = [
   { value: "low", label: "Easy" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "Hard" },
+]
+
+const typeOptions = [
+  { value: "task", label: "📋 Task" },
+  { value: "feature", label: "🚀 Feature" },
+  { value: "bug", label: "🐛 Bug" },
+  { value: "enhancement", label: "✨ Enhancement" },
 ]
 
 export function CreateTaskModal({
@@ -39,6 +47,7 @@ export function CreateTaskModal({
   const [desc, setDesc] = useState("")
   const [status, setStatus] = useState<string>(initialStatus)
   const [priority, setPriority] = useState<TaskPriority>("medium")
+  const [type, setType] = useState<TaskType>("task")
 
   const statusOptions = columns.map((col) => ({
     value: col.id,
@@ -55,11 +64,13 @@ export function CreateTaskModal({
       desc.trim() || undefined,
       status,
       undefined,
-      priority
+      priority,
+      type
     )
     setTitle("")
     setDesc("")
     setPriority("medium")
+    setType("task")
   }
 
   return (
@@ -130,6 +141,18 @@ export function CreateTaskModal({
                 value={priority}
                 onChange={(val) => setPriority(val as TaskPriority)}
                 options={priorityOptions}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-400 block mb-1">
+                Task Type
+              </label>
+              <Select
+                value={type}
+                onChange={(val) => setType(val as TaskType)}
+                options={typeOptions}
               />
             </div>
           </div>

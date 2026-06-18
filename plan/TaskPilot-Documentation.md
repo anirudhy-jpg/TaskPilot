@@ -1,6 +1,6 @@
 # TaskPilot — Project Documentation
 
-> **Last Updated:** June 17, 2026 — Reflects full production state of the application.
+> **Last Updated:** June 18, 2026 — Reflects full production state of the application.
 
 ## Project Overview
 
@@ -278,7 +278,18 @@ notifications
 - [x] React `memo` optimizations on Kanban card components
 - [x] Column add button conditionally hidden when 5-column limit is reached
 
-### 🔲 Phase 7: Search & Productivity — FUTURE
+### ✅ Phase 7: Input Validation & Testing — COMPLETE
+
+- [x] Centralized Zod validation layer under `src/lib/validations/` (Task, Project, Workspace, Kanban, Invitation schemas)
+- [x] All server actions validate input with `safeParse()` before hitting the database
+- [x] Exported inferred Zod types replace raw/unsafe inputs across all mutations
+- [x] Vitest testing framework set up from scratch
+- [x] Business validation test suites in `tests/` for all 5 schemas
+- [x] Tests cover both valid and invalid input paths without mocking infrastructure
+- [x] Removed unused `TaskPriority` imports from `create-task.action.ts` and `update-task.action.ts`
+- [x] Pagination UI made compact on the projects dashboard
+
+### 🔲 Phase 8: Search & Productivity — FUTURE
 
 - [ ] Global search dialog (Command-K / `cmdk`)
 - [ ] Sidebar filter toggles (by assignee, priority, status)
@@ -288,6 +299,6 @@ notifications
 
 ## Conclusion
 
-TaskPilot has evolved from a planned two-week MVP into a fully-featured, production-ready collaborative project management platform. All core phases (authentication, workspace management, project/task CRUD, kanban board, team collaboration, realtime sync, analytics, and UI polish) are now **complete and functional**.
+TaskPilot has evolved from a planned two-week MVP into a fully-featured, production-ready collaborative project management platform. All core phases (authentication, workspace management, project/task CRUD, kanban board, team collaboration, realtime sync, analytics, UI polish, and input validation with tests) are now **complete and functional**.
 
-The architecture maintains a clean separation between the Next.js App Router (routing only), feature modules (business logic), server actions (mutations), and Supabase services (data layer). The codebase is fully type-safe, follows feature-based colocation conventions, and is ready for the next phase of search enhancements.
+The architecture maintains a clean separation between the Next.js App Router (routing only), feature modules (business logic), server actions (mutations), and Supabase services (data layer). The codebase is fully type-safe, Zod-validated at all boundaries, follows feature-based colocation conventions, and is ready for the next phase of search enhancements.

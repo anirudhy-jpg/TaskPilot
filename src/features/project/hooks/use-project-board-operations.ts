@@ -3,8 +3,8 @@ import type {
   Project,
   Task,
   Column,
-  TaskStatus,
   TaskPriority,
+  TaskType,
 } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { createProjectAction } from "../actions/create-project.action";
@@ -163,9 +163,10 @@ export function useProjectBoardOperations({
   const handleCreateTask = (
     title: string,
     description?: string,
-    status?: TaskStatus,
+    status?: string,
     assigneeId?: string,
     priority?: TaskPriority,
+    type?: TaskType,
   ) => {
     if (!createTaskProjectId) return;
     setErrorMsg(null);
@@ -188,8 +189,8 @@ export function useProjectBoardOperations({
         projectId: createTaskProjectId,
         title,
         description: description || null,
-        status: columnId,
         columnId,
+        type: type || "task",
         priority: priority || "medium",
         position: nextPosition,
         assigneeId: assigneeId || null,
@@ -213,6 +214,7 @@ export function useProjectBoardOperations({
         title,
         description,
         columnId: tempTask.columnId,
+        type: tempTask.type,
         priority: tempTask.priority,
         assigneeId: assigneeId || undefined,
       });
@@ -295,7 +297,7 @@ export function useProjectBoardOperations({
             ...p,
             tasks: p.tasks.map((t) =>
               t.id === taskId
-                ? { ...t, columnId, status: columnId, position }
+                ? { ...t, columnId, position }
                 : t,
             ),
           })),
@@ -326,6 +328,7 @@ export function useProjectBoardOperations({
       title?: string;
       description?: string | null;
       priority?: TaskPriority;
+      type?: TaskType;
     },
   ) => {
     if (taskId.startsWith("temp-")) return;
@@ -482,7 +485,7 @@ export function useProjectBoardOperations({
               } else if (action === "move" && targetColumnId) {
                 newTasks = p.tasks.map((t) =>
                   t.columnId === columnId
-                    ? { ...t, columnId: targetColumnId, status: targetColumnId }
+                    ? { ...t, columnId: targetColumnId }
                     : t,
                 );
               }

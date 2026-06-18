@@ -9,7 +9,7 @@ import { useProjectsRealtime } from "../../project/hooks/use-projects-realtime";
 import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime";
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable";
 import { useRouter, usePathname } from "next/navigation";
-import type { Project, Task } from "../../project/types/project.types";
+import type { Project, Task, TaskType } from "../../project/types/project.types";
 import { EvictedModal } from "./modals/evicted-modal";
 import type { Workspace } from "../types/workspace.types";
 import type { UserProfile } from "@/features/auth/types/profile.types";
@@ -212,11 +212,11 @@ export function WorkspaceShell({
               project_id: string;
               title: string;
               description?: string | null;
-              status?: string;
               column_id?: string;
               priority?: string;
               position?: number;
               assigned_to?: string | null;
+              type?: string;
               created_at?: string;
               due_date?: string | null;
             };
@@ -226,9 +226,9 @@ export function WorkspaceShell({
               projectId: r.project_id,
               title: r.title,
               description: r.description || null,
-              status: r.status || "todo",
-              columnId: r.column_id || r.status || "",
+              columnId: r.column_id || "",
               priority: (r.priority as "low" | "medium" | "high") || "medium",
+              type: (r.type as TaskType) || "task",
               position: typeof r.position === "number" ? r.position : 0,
               assigneeId: r.assigned_to || null,
               createdAt: r.created_at || new Date().toISOString(),
@@ -244,11 +244,11 @@ export function WorkspaceShell({
               id: string;
               title?: string;
               description?: string | null;
-              status?: string;
               column_id?: string;
               priority?: string;
               position?: number;
               assigned_to?: string | null;
+              type?: string;
               due_date?: string | null;
             };
             const r = newRow as RealtimeTaskRow;
@@ -259,9 +259,9 @@ export function WorkspaceShell({
                   ? {
                       ...t,
                       title: r.title || t.title,
-                      status: r.status || t.status,
-                      columnId: r.column_id || r.status || t.columnId,
+                      columnId: r.column_id || t.columnId,
                       priority: (r.priority as "low" | "medium" | "high") || t.priority,
+                      type: (r.type as TaskType) || t.type || "task",
                       assigneeId: r.assigned_to || t.assigneeId,
                       dueDate: r.due_date || (t as { dueDate?: string | null }).dueDate,
                       description: r.description || t.description,

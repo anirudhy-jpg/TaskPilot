@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { Bell, MailOpen, Check, X, Loader2, UserPlus, Shield, UserMinus } from "lucide-react"
+import { Bell, MailOpen, Check, X, Loader2, UserPlus, Shield, UserMinus, ClipboardList, FolderPlus } from "lucide-react"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { createClient } from "@/lib/supabase/client"
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
@@ -466,6 +466,8 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   // - invitation_accepted: green (Accept)
                   // - invitation_rejected: red (Reject)
                   // - member_left: red (Leave)
+                  // - project_member_added: blue (FolderPlus)
+                  // - task_assigned: indigo (ClipboardList)
                   let colorClass = "bg-amber-500/10 text-amber-500"
                   let icon = <Bell size={14} />
 
@@ -478,6 +480,12 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   } else if (notif.type === "member_left") {
                     colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <UserMinus size={14} />
+                  } else if (notif.type === "project_member_added") {
+                    colorClass = "bg-blue-500/10 text-blue-400"
+                    icon = <FolderPlus size={14} />
+                  } else if (notif.type === "task_assigned") {
+                    colorClass = "bg-indigo-500/10 text-indigo-400"
+                    icon = <ClipboardList size={14} />
                   } else if (notif.type === "mention") {
                     colorClass = "bg-amber-500/10 text-amber-500"
                     icon = <span className="text-sm font-black">@</span>

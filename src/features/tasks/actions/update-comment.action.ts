@@ -2,6 +2,7 @@
 
 // Removed revalidatePath import
 import { TaskTimelineService } from "../services/task-timeline.service"
+import { UpdateCommentSchema } from "@/lib/validations/task.schema"
 
 export interface ActionResponse {
   success: boolean
@@ -13,7 +14,12 @@ export async function updateCommentAction(
   content: string
 ): Promise<ActionResponse> {
   try {
-    await TaskTimelineService.editComment(commentId, content)
+    const result = UpdateCommentSchema.safeParse({ content })
+    if (!result.success) {
+      return { success: false, error: result.error.issues[0]?.message }
+    }
+
+    await TaskTimelineService.editComment(commentId, result.data.content)
     return { success: true }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update comment."

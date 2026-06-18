@@ -248,6 +248,86 @@ Individual cards/items created within a project.
 
 ---
 
+### 5.1 `task_subtasks`
+Breaks a parent task into smaller trackable items.
+
+| Column Name   | Data Type                  | Constraints / Modifiers                           | Description                                  |
+| :------------ | :------------------------- | :------------------------------------------------ | :------------------------------------------- |
+| `id`          | `UUID`                     | `PRIMARY KEY`, `DEFAULT gen_random_uuid()`        | Unique subtask identifier.                   |
+| `task_id`     | `UUID`                     | `NOT NULL`, `REFERENCES tasks(id) ON DELETE CASCADE` | Parent task.                              |
+| `title`       | `TEXT`                     | `NOT NULL`                                        | Label of the subtask.                        |
+| `completed`   | `BOOLEAN`                  | `NOT NULL`, `DEFAULT false`                       | Completion toggle.                           |
+| `status`      | `TEXT`                     | `DEFAULT 'todo'`                                  | Subtask status (`'todo'`, `'done'`).         |
+| `priority`    | `TEXT`                     | `DEFAULT 'medium'`                                | Subtask priority (`'low'`, `'medium'`, `'high'`). |
+| `assignee_id` | `UUID`                     | `NULLABLE`, `REFERENCES profiles(id) ON DELETE SET NULL` | Optional assignee.                   |
+| `position`    | `INTEGER`                  | `NOT NULL`, `DEFAULT 0`                           | Display order.                               |
+| `created_at`  | `TIMESTAMP WITH TIME ZONE` | `NOT NULL`, `DEFAULT timezone('utc', now())`      | Creation timestamp.                          |
+| `updated_at`  | `TIMESTAMP WITH TIME ZONE` | `NOT NULL`, `DEFAULT timezone('utc', now())`      | Last update timestamp.                       |
+
+#### Realtime:
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.task_subtasks;
+```
+
+---
+
+### 5.2 `task_activities`
+Auto-populated by Postgres triggers on the `tasks` table. Records every meaningful field change.
+
+| Column Name   | Data Type                  | Constraints / Modifiers                           | Description                                  |
+| :------------ | :------------------------- | :------------------------------------------------ | :------------------------------------------- |
+| `id`          | `UUID`                     | `PRIMARY KEY`, `DEFAULT gen_random_uuid()`        | Unique activity record.                      |
+| `task_id`     | `UUID`                     | `NOT NULL`, `REFERENCES tasks(id) ON DELETE CASCADE` | Task being tracked.                       |
+| `actor_id`    | `UUID`                     | `NULLABLE`, `REFERENCES profiles(id) ON DELETE SET NULL` | User who triggered the change.        |
+| `action_type` | `TEXT`                     | `NOT NULL`                                        | Type of event: `STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `COLUMN_MOVED`, `TASK_CREATED`, `COMMENT_ADDED`, `SUBTASK_ADDED`, `SUBTASK_COMPLETED`. |
+| `old_value`   | `JSONB`                    | `NULLABLE`                                        | Previous field value as JSON.                |
+| `new_value`   | `JSONB`                    | `NULLABLE`                                        | New field value as JSON.                     |
+| `metadata`    | `JSONB`                    | `NULLABLE`                                        | Extra context (e.g., column name, subtask title). |
+| `created_at`  | `TIMESTAMP WITH TIME ZONE` | `NOT NULL`, `DEFAULT timezone('utc', now())`      | When the event occurred.                     |
+
+#### Realtime:
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.task_activities;
+```
+
+---
+
+### 5.3 `task_comments`
+User-authored comments attached to individual tasks.
+
+| Column Name   | Data Type                  | Constraints / Modifiers                           | Description                                  |
+| :------------ | :------------------------- | :------------------------------------------------ | :------------------------------------------- |
+| `id`          | `UUID`                     | `PRIMARY KEY`, `DEFAULT gen_random_uuid()`        | Unique comment identifier.                   |
+| `task_id`     | `UUID`                     | `NOT NULL`, `REFERENCES tasks(id) ON DELETE CASCADE` | Parent task.                              |
+| `author_id`   | `UUID`                     | `NOT NULL`, `REFERENCES profiles(id) ON DELETE CASCADE` | Comment author.                          |
+| `content`     | `TEXT`                     | `NOT NULL`                                        | Comment body text.                           |
+| `edited`      | `BOOLEAN`                  | `NOT NULL`, `DEFAULT false`                       | Whether the comment was edited after posting.|
+| `created_at`  | `TIMESTAMP WITH TIME ZONE` | `NOT NULL`, `DEFAULT timezone('utc', now())`      | When the comment was posted.                 |
+
+#### Realtime:
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.task_comments;
+```
+
+---
+
+### 5.4 `task_comment_mentions`
+Tracks `@` user mentions inside comments.
+
+| Column Name          | Data Type                  | Constraints / Modifiers                           | Description                                  |
+| :------------------- | :------------------------- | :------------------------------------------------ | :------------------------------------------- |
+| `id`                 | `UUID`                     | `PRIMARY KEY`, `DEFAULT gen_random_uuid()`        | Unique mention record.                       |
+| `comment_id`         | `UUID`                     | `NOT NULL`, `REFERENCES task_comments(id) ON DELETE CASCADE` | Parent comment.                  |
+| `mentioned_user_id`  | `UUID`                     | `NOT NULL`, `REFERENCES profiles(id) ON DELETE CASCADE` | The user who was mentioned.           |
+| `created_at`         | `TIMESTAMP WITH TIME ZONE` | `NOT NULL`, `DEFAULT timezone('utc', now())`      | When the mention was created.                |
+
+#### Realtime:
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.task_comment_mentions;
+```
+
+---
+
 ### 6. `workspace_invitations`
 Handles email invitations for workspace membership.
 
@@ -320,12 +400,28 @@ Stores workspace notifications for users.
 
 ## ─── Supabase Realtime Publications ───
 
-To support live updates on the Kanban board, PostgreSQL Write-Ahead Logging (WAL) replica events are enabled on specific tables via the `supabase_realtime` publication.
+To support live updates across the board, task details, and membership views, PostgreSQL WAL replica events are enabled on all core tables.
 
-### Enable Realtime for Tables:
+### Enable Realtime for All Tables:
 ```sql
--- Add the tasks table to the Supabase Realtime publication
+-- Core board tables
 alter publication supabase_realtime add table tasks;
+alter publication supabase_realtime add table columns;
+alter publication supabase_realtime add table projects;
+
+-- Membership & invitations
+alter publication supabase_realtime add table workspace_members;
+alter publication supabase_realtime add table workspace_invitations;
+alter publication supabase_realtime add table project_members;
+
+-- Task detail tables (subtasks, timeline, comments)
+alter publication supabase_realtime add table public.task_subtasks;
+alter publication supabase_realtime add table public.task_activities;
+alter publication supabase_realtime add table public.task_comments;
+alter publication supabase_realtime add table public.task_comment_mentions;
+
+-- Notifications
+alter publication supabase_realtime add table notifications;
 ```
 
-This configuration enables clients to establish WebSocket channels subscribing to PostgreSQL `INSERT`, `UPDATE`, and `DELETE` event broadcasts on `tasks` table rows filtered by specific `project_id` matching criteria. See [Realtime-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Realtime-Implementation.md) for frontend handler details.
+See [Realtime-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Realtime-Implementation.md) for frontend handler details.

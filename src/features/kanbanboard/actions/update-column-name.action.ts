@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { ColumnService } from "../services/column.service"
+import { UpdateColumnNameSchema } from "@/lib/validations/kanban.schema"
 
 export interface ActionResponse {
   success: boolean
@@ -13,7 +14,13 @@ export async function updateColumnNameAction(
   name: string
 ): Promise<ActionResponse> {
   try {
-    await ColumnService.updateColumnName(columnId, name)
+    const result = UpdateColumnNameSchema.safeParse({ name })
+    if (!result.success) {
+      return { success: false, error: result.error.issues[0]?.message }
+    }
+    const validatedName = result.data.name;
+
+    await ColumnService.updateColumnName(columnId, validatedName)
     revalidatePath("/workspace")
     revalidatePath("/projects", "layout")
     return { success: true }

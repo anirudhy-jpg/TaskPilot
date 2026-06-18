@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { X, Circle, Clock, CheckCircle2, Calendar, AlertCircle, AlertTriangle, Info } from "lucide-react";
-import type { Task, Column, TaskPriority } from "@/features/project/types/project.types";
+import type { Task, Column, TaskPriority, TaskType } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getVisualPriority } from "@/features/project/utils/avatar";
 import { AssigneeSelector } from "../assignee-selector";
@@ -24,7 +24,7 @@ interface TaskDetailsModalProps {
   columns?: Column[];
   onUpdateTask?: (
     taskId: string,
-    updates: { title?: string; description?: string | null; priority?: TaskPriority }
+    updates: { title?: string; description?: string | null; priority?: TaskPriority; type?: TaskType }
   ) => void;
   onLocalTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
@@ -136,6 +136,29 @@ export function TaskDetailsModal({
       label: "Low"
     }
   }[visualPriority];
+
+  const typeStyles = {
+    task: {
+      badge: "bg-slate-500/10 text-slate-400 border-slate-500/20",
+      icon: "📋",
+      label: "Task",
+    },
+    feature: {
+      badge: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+      icon: "🚀",
+      label: "Feature",
+    },
+    bug: {
+      badge: "bg-red-500/10 text-red-400 border-red-500/20",
+      icon: "🐛",
+      label: "Bug",
+    },
+    enhancement: {
+      badge: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      icon: "✨",
+      label: "Enhancement",
+    },
+  }[task.type || "task"];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -292,6 +315,28 @@ export function TaskDetailsModal({
                     </span>
                   )}
                 </div>
+
+                {/* Type Field */}
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Type</span>
+                  {onUpdateTask ? (
+                    <Select
+                      value={task.type || "task"}
+                      onChange={(val) => onUpdateTask(task.id, { type: val as TaskType })}
+                      options={[
+                        { value: "task", label: "📋 Task" },
+                        { value: "feature", label: "🚀 Feature" },
+                        { value: "bug", label: "🐛 Bug" },
+                        { value: "enhancement", label: "✨ Enhancement" },
+                      ]}
+                    />
+                  ) : (
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-black px-2 py-1.5 rounded border tracking-wider w-fit ${typeStyles.badge}`}>
+                      <span>{typeStyles.icon}</span>
+                      <span>{typeStyles.label}</span>
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Right Column */}
@@ -352,7 +397,7 @@ export function TaskDetailsModal({
                     value={editedDesc}
                     onChange={(e) => setEditedDesc(e.target.value)}
                     placeholder="Add a description for this task..."
-                    rows={6}
+                    rows={3}
                     className="w-full text-[11.5px] text-slate-200 bg-slate-955 border border-slate-800 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500 resize-none leading-relaxed shadow-3xs"
                     autoFocus
                   />
@@ -382,7 +427,7 @@ export function TaskDetailsModal({
               ) : (
                 <div 
                   onClick={() => onUpdateTask && setIsEditingDesc(true)}
-                  className={`bg-slate-950 border border-slate-850 rounded-xl p-4 min-h-[120px] shadow-3xs group relative ${onUpdateTask ? "cursor-pointer hover:border-slate-800 hover:bg-slate-900/40 transition-all" : ""}`}
+                  className={`bg-slate-950 border border-slate-850 rounded-xl p-4 min-h-[60px] shadow-3xs group relative ${onUpdateTask ? "cursor-pointer hover:border-slate-800 hover:bg-slate-900/40 transition-all" : ""}`}
                 >
                   {task.description ? (
                     <p className="text-[11.5px] text-slate-300 leading-relaxed whitespace-pre-wrap">

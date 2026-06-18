@@ -53,7 +53,7 @@ export default async function WorkspaceOverviewPage() {
     const [tasksRes, colsRes] = await Promise.all([
       supabase
         .from("tasks")
-        .select("id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at")
+        .select("id, project_id, title, description, column_id, priority, position, assigned_to, created_at")
         .in("project_id", projectIds)
         .order("position", { ascending: true }),
       supabase
@@ -83,7 +83,7 @@ export default async function WorkspaceOverviewPage() {
   let doneCount = 0
 
   allTasks.forEach((t) => {
-    const colName = columnMap.get(t.columnId) || t.status?.toLowerCase().trim() || ""
+    const colName = columnMap.get(t.columnId) || ""
     if (colName.includes("progress") || colName.includes("doing") || colName === "in_progress") {
       inProgressCount++
     } else if (
@@ -108,7 +108,7 @@ export default async function WorkspaceOverviewPage() {
     projectTaskCounts: projects.map((p) => {
       const projectTasks = allTasks.filter((t) => t.projectId === p.id)
       const completedTasksCount = projectTasks.filter((t) => {
-        const colName = columnMap.get(t.columnId) || t.status?.toLowerCase().trim() || ""
+        const colName = columnMap.get(t.columnId) || ""
         return (
           colName.includes("done") ||
           colName.includes("complete") ||
@@ -128,7 +128,7 @@ export default async function WorkspaceOverviewPage() {
   const membersWithStats = members.map((member) => {
     const memberTasks = allTasks.filter((t) => t.assigneeId === member.userId)
     const completedTasksCount = memberTasks.filter((t) => {
-      const colName = columnMap.get(t.columnId) || t.status?.toLowerCase().trim() || ""
+      const colName = columnMap.get(t.columnId) || ""
       return (
         colName.includes("done") ||
         colName.includes("complete") ||
