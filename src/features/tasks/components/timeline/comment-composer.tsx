@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React, { useState, useRef, useEffect } from "react";
 import { MentionSelector } from "./mention-selector";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
@@ -31,6 +32,7 @@ export function CommentComposer({ members, currentUser, onSubmit, isSubmitting }
   }).slice(0, 5) : [];
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMentionSelectedIndex(0);
   }, [mentionQuery]);
 

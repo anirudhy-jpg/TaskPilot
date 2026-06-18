@@ -30,8 +30,8 @@ export class WorkspaceService {
 
         if (ws) {
           const members = ws.workspace_members
-          const role = Array.isArray(members) ? members[0]?.role : (members as any)?.role
-          return mapWorkspace(ws, role)
+          const role = Array.isArray(members) ? members[0]?.role : (members as Record<string, unknown>)?.role
+          return mapWorkspace(ws, role as string | undefined)
         }
       }
     } catch (err) {
@@ -215,13 +215,12 @@ export class WorkspaceService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapWorkspace(row: any, userRole?: string): Workspace {
+function mapWorkspace(row: Record<string, unknown>, userRole?: string): Workspace {
   return {
-    id: row.id,
-    name: row.name,
-    ownerId: row.owner_id,
-    createdAt: row.created_at,
+    id: row.id as string,
+    name: row.name as string,
+    ownerId: row.owner_id as string,
+    createdAt: row.created_at as string,
     currentUserRole: userRole,
   }
 }

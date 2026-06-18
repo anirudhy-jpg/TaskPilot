@@ -140,11 +140,13 @@ function BoardContent(props: ProjectsListProps) {
   const totalItems = optimisticProjects.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  React.useEffect(() => {
+  const [prevTotalPages, setPrevTotalPages] = React.useState(totalPages);
+  if (totalPages !== prevTotalPages) {
+    setPrevTotalPages(totalPages);
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
-  }, [totalPages, currentPage]);
+  }
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProjects = optimisticProjects.slice(startIndex, startIndex + itemsPerPage);

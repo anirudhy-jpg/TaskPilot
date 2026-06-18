@@ -29,7 +29,7 @@ export function ProjectBoardHeader({
   onEditProject,
   onNewProject,
   onAddColumn,
-  onAddTask,
+  // Removed onAddTask
 }: ProjectBoardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)

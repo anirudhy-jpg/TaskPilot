@@ -57,12 +57,22 @@ export function OverviewCharts({
   const [liveNotifications, setLiveNotifications] = useState<NotificationItem[]>(initialNotifications)
   const [liveMembers, setLiveMembers] = useState<MemberWithStats[]>(initialMembers)
 
-  // Keep local state in sync if server re-renders with new props
-  useEffect(() => { setLiveNotifications(initialNotifications) }, [initialNotifications])
-  useEffect(() => { setLiveMembers(initialMembers) }, [initialMembers])
+  const [prevNotifications, setPrevNotifications] = useState(initialNotifications);
+  const [prevMembers, setPrevMembers] = useState(initialMembers);
 
+  if (initialNotifications !== prevNotifications) {
+    setPrevNotifications(initialNotifications);
+    setLiveNotifications(initialNotifications);
+  }
+
+  if (initialMembers !== prevMembers) {
+    setPrevMembers(initialMembers);
+    setLiveMembers(initialMembers);
+  }
+
+  // Intentional: sets mounted=true once on the client after hydration for SSR-safe portal
   useEffect(() => {
-    setMounted(true)
+    setMounted(true) // eslint-disable-line react-hooks/set-state-in-effect
   }, [])
 
   // ── Real-time: workspace_members DELETE ──────────────────────
@@ -80,7 +90,7 @@ export function OverviewCharts({
           filter: `workspace_id=eq.${workspaceId}`,
         },
         (payload) => {
-          const deletedUserId = (payload.old as any)?.user_id
+          const deletedUserId = (payload.old as { user_id?: string })?.user_id
           if (!deletedUserId) return
           setLiveMembers((prev) => prev.filter((m) => m.userId !== deletedUserId))
         },
@@ -105,7 +115,7 @@ export function OverviewCharts({
           filter: `workspace_id=eq.${workspaceId}`,
         },
         async (payload) => {
-          const row = payload.new as any
+          const row = payload.new as { id: string; actor_id: string | null; title: string; message: string; type: string; created_at: string }
           // Fetch actor profile so we can display name/avatar
           let actor: NotificationItem["actor"] = null
           if (row.actor_id) {
@@ -396,7 +406,6 @@ export function OverviewCharts({
         <div className="flex flex-row gap-4 overflow-x-auto pb-3 scrollbar-thin">
           {members.map((member) => {
             const name = member.profile?.fullName || "Member"
-            const email = member.profile?.email || ""
             const initials = getInitials(name)
             
             return (
@@ -497,7 +506,7 @@ function formatDate(dateStr: string): string {
     const mm = String(d.getMonth() + 1).padStart(2, "0")
     const dd = String(d.getDate()).padStart(2, "0")
     return `${yyyy}-${mm}-${dd}`
-  } catch (e) {
+  } catch {
     return "Recent"
   }
 }

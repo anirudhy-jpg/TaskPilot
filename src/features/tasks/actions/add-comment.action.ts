@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+// Removed revalidatePath import
 import { TaskTimelineService } from "../services/task-timeline.service"
 import type { TaskComment } from "@/features/project/types/project.types"
 

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { TaskActivity, TaskComment, TimelineItem } from "@/features/project/types/project.types"
+import type { TaskComment, TimelineItem } from "@/features/project/types/project.types"
 
 export class TaskTimelineService {
   /**
@@ -43,7 +43,13 @@ export class TaskTimelineService {
       throw new Error(commentsRes.error.message)
     }
 
-    const activities = (activitiesRes.data || []).map((row: any) => {
+    type ActivityRow = {
+      id: string; task_id: string; actor_id: string | null;
+      action_type: string; old_value: unknown; new_value: unknown;
+      metadata: Record<string, unknown> | null; created_at: string;
+      actor: { email: string; full_name: string | null; avatar_url: string | null } | { email: string; full_name: string | null; avatar_url: string | null }[] | null;
+    };
+    const activities = (activitiesRes.data || []).map((row: ActivityRow) => {
       const actorData = Array.isArray(row.actor) ? row.actor[0] : row.actor
       return {
         type: "activity" as const,
@@ -63,7 +69,17 @@ export class TaskTimelineService {
       }
     })
 
-    const comments = (commentsRes.data || []).map((row: any) => {
+    type MentionRow = {
+      id: string; comment_id: string; mentioned_user_id: string; created_at: string;
+      mentioned_user: { email: string; full_name: string | null; avatar_url: string | null } | { email: string; full_name: string | null; avatar_url: string | null }[] | null;
+    };
+    type CommentRow = {
+      id: string; task_id: string; author_id: string; content: string;
+      edited: boolean; created_at: string; updated_at: string;
+      author: { email: string; full_name: string | null; avatar_url: string | null } | { email: string; full_name: string | null; avatar_url: string | null }[] | null;
+      mentions: MentionRow[];
+    };
+    const comments = (commentsRes.data || []).map((row: CommentRow) => {
       const authorData = Array.isArray(row.author) ? row.author[0] : row.author
       return {
         type: "comment" as const,
@@ -79,7 +95,7 @@ export class TaskTimelineService {
           fullName: authorData.full_name,
           avatarUrl: authorData.avatar_url,
         } : undefined,
-        mentions: (row.mentions || []).map((m: any) => {
+        mentions: (row.mentions || []).map((m: MentionRow) => {
           const mentionedUser = Array.isArray(m.mentioned_user) ? m.mentioned_user[0] : m.mentioned_user
           return {
             id: m.id,
@@ -134,7 +150,11 @@ export class TaskTimelineService {
       throw new Error(error.message)
     }
 
-    let createdMentions: any[] = []
+    type MentionResult = {
+      id: string; comment_id: string; mentioned_user_id: string; created_at: string;
+      mentioned_user: { email: string; full_name: string | null; avatar_url: string | null } | { email: string; full_name: string | null; avatar_url: string | null }[] | null;
+    };
+    let createdMentions: MentionResult[] = []
 
     // Process mentions
     if (mentionedUserIds.length > 0) {
@@ -163,7 +183,7 @@ export class TaskTimelineService {
         .single()
 
       if (taskData) {
-        const workspaceId = Array.isArray(taskData.project) ? taskData.project[0]?.workspace_id : (taskData.project as any)?.workspace_id
+        const workspaceId = Array.isArray(taskData.project) ? taskData.project[0]?.workspace_id : (taskData.project as { workspace_id: string } | null)?.workspace_id
         
         const notificationsData = mentionedUserIds.map(userId => ({
           user_id: userId,
@@ -195,7 +215,7 @@ export class TaskTimelineService {
         fullName: commentAuthorData.full_name,
         avatarUrl: commentAuthorData.avatar_url,
       } : undefined,
-      mentions: createdMentions.map((m: any) => {
+      mentions: createdMentions.map((m: MentionResult) => {
         const mentionedUserData = Array.isArray(m.mentioned_user) ? m.mentioned_user[0] : m.mentioned_user
         return {
           id: m.id,

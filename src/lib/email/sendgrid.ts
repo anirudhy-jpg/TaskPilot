@@ -54,11 +54,12 @@ export async function sendEmail({
 
     await sgMail.send(msg);
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Log details of the SendGrid failure
     console.error("SendGrid email delivery failed:", error);
-    if (error.response && error.response.body) {
-      console.error("SendGrid API Response Error Body:", JSON.stringify(error.response.body, null, 2));
+    const sgError = error as { response?: { body?: unknown } };
+    if (sgError.response && sgError.response.body) {
+      console.error("SendGrid API Response Error Body:", JSON.stringify(sgError.response.body, null, 2));
     }
     return {
       success: false,

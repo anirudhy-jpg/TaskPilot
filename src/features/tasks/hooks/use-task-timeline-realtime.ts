@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable";
 import type { TimelineItem } from "@/features/project/types/project.types";
 
@@ -9,17 +9,31 @@ interface UseTaskTimelineRealtimeProps {
 
 export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTimelineRealtimeProps) {
   const [timeline, setTimeline] = useState<TimelineItem[]>(initialTimeline);
+  const [prevTaskId, setPrevTaskId] = useState(taskId);
+  const [prevInitialTimeline, setPrevInitialTimeline] = useState(initialTimeline);
 
-  // Sync state if initialTimeline changes (e.g. from server action refetch or task switch)
-  useEffect(() => {
+  if (taskId !== prevTaskId || initialTimeline !== prevInitialTimeline) {
+    setPrevTaskId(taskId);
+    setPrevInitialTimeline(initialTimeline);
     setTimeline(initialTimeline);
-  }, [initialTimeline, taskId]);
+  }
 
   useRealtimeSubscription({
     table: "task_activities",
     filter: `task_id=eq.${taskId}`,
     onPayload: (payload) => {
-      const { eventType, new: newRow } = payload;
+      type RealtimeActivityRow = {
+        id: string;
+        task_id: string;
+        actor_id: string | null;
+        action_type: import("@/features/project/types/project.types").TaskActivityType;
+        old_value: string | null;
+        new_value: string | null;
+        metadata: Record<string, unknown> | null;
+        created_at: string;
+      };
+      const newRow = payload.new as RealtimeActivityRow;
+      const eventType = payload.eventType;
       if (eventType === "INSERT") {
         setTimeline(prev => {
           if (prev.some(item => item.id === newRow.id)) return prev;
@@ -47,7 +61,18 @@ export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTime
     table: "task_comments",
     filter: `task_id=eq.${taskId}`,
     onPayload: (payload) => {
-      const { eventType, new: newRow, old: oldRow } = payload;
+      type RealtimeCommentRow = {
+        id: string;
+        task_id: string;
+        author_id: string;
+        content: string;
+        edited: boolean;
+        created_at: string;
+        updated_at: string;
+      };
+      const newRow = payload.new as RealtimeCommentRow;
+      const oldRow = payload.old as { id?: string };
+      const eventType = payload.eventType;
       
       setTimeline(prev => {
         if (eventType === "INSERT") {

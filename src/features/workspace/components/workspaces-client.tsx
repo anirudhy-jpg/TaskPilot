@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useTransition, useEffect } from "react"
+import React, { useState, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { Briefcase, Plus, Loader2, ArrowRight, ShieldCheck, User } from "lucide-react"
@@ -10,7 +10,7 @@ import type { Workspace } from "../types/workspace.types"
 import { switchActiveWorkspaceAction } from "../actions/switch-active-workspace.action"
 import { createWorkspaceAction } from "../actions/create-workspace.action"
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
-import { deleteWorkspaceAction } from "../actions/delete-workspace.action"
+
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime"
@@ -30,10 +30,12 @@ export function WorkspacesClient({
 }: WorkspacesClientProps) {
   const router = useRouter()
   const [localWorkspaces, setLocalWorkspaces] = useState(workspaces)
+  const [prevWorkspaces, setPrevWorkspaces] = useState(workspaces)
 
-  useEffect(() => {
+  if (workspaces !== prevWorkspaces) {
+    setPrevWorkspaces(workspaces)
     setLocalWorkspaces(workspaces)
-  }, [workspaces])
+  }
 
   useWorkspacesRealtime({
     workspaces: localWorkspaces,
@@ -49,9 +51,6 @@ export function WorkspacesClient({
   // Leave / Delete modal states
   const [leaveWorkspaceId, setLeaveWorkspaceId] = useState<string | null>(null)
   const [leaveWorkspaceName, setLeaveWorkspaceName] = useState<string>("")
-  const [deleteWorkspaceId, setDeleteWorkspaceId] = useState<string | null>(null)
-  const [deleteWorkspaceName, setDeleteWorkspaceName] = useState<string>("")
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Separate owned and member workspaces
   const ownedWorkspaces = localWorkspaces.filter((w) => w.ownerId === currentUserId)
@@ -71,7 +70,7 @@ export function WorkspacesClient({
     setErrorMsg(null)
     setLeaveWorkspaceId(null)
     if (typeof window !== "undefined") {
-      (window as any).isLeavingWorkspace = true
+      (window as unknown as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = true
     }
 
     // Broadcast leave event to remove member instantly on owner/other clients
@@ -99,7 +98,7 @@ export function WorkspacesClient({
         router.refresh()
       } else {
         if (typeof window !== "undefined") {
-          (window as any).isLeavingWorkspace = false
+          (window as unknown as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = false
         }
         setErrorMsg(res.error || "Failed to leave workspace.")
         setLeavingId(null)
@@ -107,36 +106,7 @@ export function WorkspacesClient({
     })
   }
 
-  // Handle Workspace Delete
-  const handleDelete = (e: React.MouseEvent, workspaceId: string, name: string) => {
-    e.stopPropagation()
-    setDeleteWorkspaceId(workspaceId)
-    setDeleteWorkspaceName(name)
-  }
 
-  const handleDeleteConfirm = () => {
-    if (!deleteWorkspaceId) return
-    const workspaceId = deleteWorkspaceId
-    setDeletingId(workspaceId)
-    setErrorMsg(null)
-    setDeleteWorkspaceId(null)
-    if (typeof window !== "undefined") {
-      (window as any).isLeavingWorkspace = true
-    }
-    startTransition(async () => {
-      const res = await deleteWorkspaceAction(workspaceId)
-      if (res.success) {
-        router.push("/workspaces")
-        router.refresh()
-      } else {
-        if (typeof window !== "undefined") {
-          (window as any).isLeavingWorkspace = false
-        }
-        setErrorMsg(res.error || "Failed to delete workspace.")
-        setDeletingId(null)
-      }
-    })
-  }
 
   // Handle Workspace Switch
   const handleSwitch = (workspaceId: string) => {
@@ -373,14 +343,7 @@ export function WorkspacesClient({
           isPending={leavingId !== null}
           onConfirm={handleLeaveConfirm}
         />
-        <DeleteConfirmModal
-          isOpen={deleteWorkspaceId !== null}
-          onClose={() => setDeleteWorkspaceId(null)}
-          type="delete_workspace"
-          name={deleteWorkspaceName}
-          isPending={deletingId !== null}
-          onConfirm={handleDeleteConfirm}
-        />
+
         {switchingId !== null && <SwitchingWorkspaceLoading />}
       </div>
     </div>

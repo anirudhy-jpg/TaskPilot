@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { User } from "lucide-react";
@@ -7,8 +8,18 @@ import type { Task } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getUserInitials, getAvatarBgColor } from "@/features/project/utils/avatar";
 
+interface AssigneeTaskProps {
+  id: string;
+  assigneeId?: string | null;
+  assignee?: {
+    email?: string | null;
+    fullName?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+}
+
 interface AssigneeSelectorProps {
-  task: Task;
+  task: AssigneeTaskProps;
   members: WorkspaceMember[];
   currentUserId?: string;
   onChange: (taskId: string, assigneeId: string | null) => void;
@@ -29,6 +40,7 @@ export function AssigneeSelector({
   const [coords, setCoords] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -108,17 +120,17 @@ export function AssigneeSelector({
           task.assignee.avatarUrl ? (
             <img
               src={task.assignee.avatarUrl}
-              alt={task.assignee.fullName || task.assignee.email}
+              alt={task.assignee.fullName || task.assignee.email || "Assignee"}
               className={`${sizeClasses} rounded-full object-cover border border-slate-800 shadow-sm hover:border-amber-500 transition-colors`}
             />
           ) : (
             <div
               className={`${sizeClasses} rounded-full flex items-center justify-center ${textClasses} font-bold border border-slate-900 shadow-sm uppercase hover:scale-105 transition-all ${getAvatarBgColor(
-                task.assignee.fullName || task.assignee.email
+                task.assignee.fullName || task.assignee.email || ""
               )}`}
-              title={task.assignee.fullName || task.assignee.email}
+              title={task.assignee.fullName || task.assignee.email || "Assignee"}
             >
-              {getUserInitials(task.assignee.fullName, task.assignee.email)}
+              {getUserInitials(task.assignee.fullName || "", task.assignee.email || "")}
             </div>
           )
         ) : (

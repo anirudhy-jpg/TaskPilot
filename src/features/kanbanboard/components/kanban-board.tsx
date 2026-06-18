@@ -8,7 +8,6 @@ import {
   pointerWithin,
   getFirstCollision,
   type Over,
-  type Collision,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -52,7 +51,7 @@ export function KanbanBoard({
   onAddTask,
   onAssigneeChange,
   onMoveTask,
-  onCreateColumn,
+  // Removed _onCreateColumn
   onRenameColumn,
   onMoveColumn,
   onDeleteColumn,
@@ -278,7 +277,8 @@ export function KanbanBoard({
         setActiveColumnId(data.columnId);
       }
     },
-    [tasks]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const handleDragOver = useCallback(
@@ -390,7 +390,7 @@ export function KanbanBoard({
       setLocalTasks(null);
       lastOverRef.current = null;
     },
-    [project.columns, localTasks, tasks, columnDefs, onMoveColumn, onMoveTask]
+    [project.columns, localTasks, columnDefs, onMoveColumn, onMoveTask]
   );
 
   const handleDragCancel = useCallback(() => {

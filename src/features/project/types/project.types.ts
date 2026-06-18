@@ -96,9 +96,9 @@ export interface TaskActivity {
   taskId: string
   actorId: string | null
   actionType: TaskActivityType
-  oldValue: any | null
-  newValue: any | null
-  metadata: any | null
+  oldValue: unknown | null
+  newValue: unknown | null
+  metadata: Record<string, unknown> | null
   createdAt: string
   actor?: {
     email: string

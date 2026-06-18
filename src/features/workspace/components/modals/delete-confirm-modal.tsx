@@ -22,8 +22,9 @@ export function DeleteConfirmModal({
 }: DeleteConfirmModalProps) {
   const [mounted, setMounted] = useState(false)
 
+  // Intentional: sets mounted=true once on the client after hydration for SSR-safe portal
   useEffect(() => {
-    setMounted(true)
+    setMounted(true) // eslint-disable-line react-hooks/set-state-in-effect
   }, [])
 
   if (!isOpen) return null

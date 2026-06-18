@@ -18,7 +18,13 @@ export async function getSubtasks(taskId: string) {
   if (error) throw new Error(error.message)
   
   // Transform snake_case to camelCase
-  return data.map((item: any) => ({
+  type SubtaskRow = {
+    id: string; task_id: string; title: string; completed: boolean;
+    status: string; priority: string | null; assignee_id: string | null;
+    position: number; created_at: string; updated_at: string;
+    assignee: { email: string; full_name: string | null; avatar_url: string | null } | null;
+  };
+  return data.map((item: SubtaskRow) => ({
     id: item.id,
     taskId: item.task_id,
     title: item.title,
@@ -46,7 +52,7 @@ export async function addSubtask(taskId: string, title: string) {
     .single()
 
   if (error) throw new Error(error.message)
-  return data as any
+  return data
 }
 
 export async function toggleSubtask(subtaskId: string, completed: boolean) {
@@ -67,7 +73,7 @@ export async function updateSubtaskDetails(subtaskId: string, updates: Partial<T
   const supabase = await createClient()
   
   // Map camelCase to snake_case for DB
-  const dbUpdates: any = { updated_at: new Date().toISOString() }
+  const dbUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (updates.title !== undefined) dbUpdates.title = updates.title
   if (updates.status !== undefined) {
     dbUpdates.status = updates.status

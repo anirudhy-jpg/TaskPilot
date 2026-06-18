@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 import React, { useState } from "react";
 import type { TimelineItem, TaskActivity, TaskComment } from "@/features/project/types/project.types";
-import { MessageSquare, Circle, ArrowRight, Activity, Edit2, Trash2 } from "lucide-react";
+import { ArrowRight, Activity, Edit2, Trash2 } from "lucide-react";
 
 interface TimelineItemProps {
   item: TimelineItem;
@@ -8,6 +9,19 @@ interface TimelineItemProps {
   onEditComment?: (id: string, content: string) => void;
   onDeleteComment?: (id: string) => void;
   columns?: { id: string; name: string }[];
+}
+
+interface ActivityValue {
+  column_id?: string;
+  priority?: string;
+}
+
+interface ActivityMetadata {
+  subtask?: string;
+  action?: string;
+  old_status?: string;
+  new_status?: string;
+  [key: string]: unknown;
 }
 
 export function TimelineItemRenderer({ item, currentUserId, onEditComment, onDeleteComment, columns = [] }: TimelineItemProps) {
@@ -31,13 +45,17 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
   let actionText = "";
   let details = null;
 
+  const oldVal = activity.oldValue as ActivityValue | null;
+  const newVal = activity.newValue as ActivityValue | null;
+  const meta = activity.metadata as ActivityMetadata | null;
+
   switch (activity.actionType) {
     case "TASK_CREATED":
       actionText = "created this task";
       break;
     case "STATUS_CHANGED":
-      const oldCol = columns.find(c => c.id === activity.oldValue?.column_id)?.name || "Unknown";
-      const newCol = columns.find(c => c.id === activity.newValue?.column_id)?.name || "Unknown";
+      const oldCol = columns.find(c => c.id === oldVal?.column_id)?.name || "Unknown";
+      const newCol = columns.find(c => c.id === newVal?.column_id)?.name || "Unknown";
       actionText = "changed status";
       details = (
         <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
@@ -51,9 +69,9 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       actionText = "changed priority";
       details = (
         <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
-          <span className="line-through capitalize">{activity.oldValue?.priority}</span>
+          <span className="line-through capitalize">{oldVal?.priority}</span>
           <ArrowRight size={10} />
-          <span className="text-slate-300 capitalize">{activity.newValue?.priority}</span>
+          <span className="text-slate-300 capitalize">{newVal?.priority}</span>
         </div>
       );
       break;
@@ -64,20 +82,20 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       actionText = "removed the assignee";
       break;
     case "TASK_UPDATED":
-      if (activity.metadata?.subtask) {
-        const sub = activity.metadata.subtask;
-        if (activity.metadata.action === 'added') {
+      if (meta?.subtask) {
+        const sub = String(meta.subtask);
+        if (meta.action === 'added') {
           actionText = `added subtask "${sub}"`;
-        } else if (activity.metadata.action === 'status_changed') {
+        } else if (meta.action === 'status_changed') {
           actionText = `updated subtask "${sub}" status`;
           details = (
             <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
-              <span className="line-through uppercase">{activity.metadata.old_status?.replace('_', ' ')}</span>
+              <span className="line-through uppercase">{String(meta.old_status)?.replace('_', ' ')}</span>
               <ArrowRight size={10} />
-              <span className="text-slate-300 uppercase">{activity.metadata.new_status?.replace('_', ' ')}</span>
+              <span className="text-slate-300 uppercase">{String(meta.new_status)?.replace('_', ' ')}</span>
             </div>
           );
-        } else if (activity.metadata.action === 'assignee_changed') {
+        } else if (meta.action === 'assignee_changed') {
           actionText = `updated assignee for subtask "${sub}"`;
         } else {
           actionText = `updated subtask "${sub}"`;

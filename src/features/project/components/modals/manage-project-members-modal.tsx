@@ -19,7 +19,7 @@ interface ManageProjectMembersModalProps {
 export function ManageProjectMembersModal({
   isOpen,
   onClose,
-  projectId,
+  // Removed unused projectId
   projectName,
   currentMembers,
   eligibleMembers,
@@ -33,6 +33,7 @@ export function ManageProjectMembersModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import type { TimelineItem, Task } from "@/features/project/types/project.types";
+import type { TimelineItem } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { useTaskTimelineRealtime } from "../../hooks/use-task-timeline-realtime";
 import { TimelineItemRenderer } from "./timeline-item-renderer";

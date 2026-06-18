@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { X, User, Calendar, FolderKanban, CheckSquare, Clock, Circle, CheckCircle2, AlertCircle, AlertTriangle, Info, Shield } from "lucide-react"
+import { X, Calendar, FolderKanban, CheckSquare, Clock, Circle, CheckCircle2, AlertCircle, AlertTriangle, Info, Shield } from "lucide-react"
 import type { Project, Task, TaskPriority } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getMemberDetailsAction } from "@/features/workspace/actions/get-member-details.action"
@@ -39,7 +39,7 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
   // Fetch member project and task assignments on open
   useEffect(() => {
     if (isOpen && member?.userId) {
-      setIsLoading(true)
+      setIsLoading(true) // eslint-disable-line react-hooks/set-state-in-effect
       setError(null)
       setActiveTab("all")
       getMemberDetailsAction(workspaceId, member.userId)

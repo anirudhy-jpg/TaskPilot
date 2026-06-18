@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { ChevronDown, MoreHorizontal, LayoutPanelLeft, Plus, AlertCircle, AlertTriangle, Info, Pencil, Trash2 } from "lucide-react"
+import { ChevronDown, Plus, AlertCircle, AlertTriangle, Info, Pencil, Trash2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import type { TaskSubtask } from "@/features/project/types/project.types"
+import type { TaskSubtask, Task } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getSubtasks, addSubtask, updateSubtaskDetails, deleteSubtask } from "../../services/task-subtasks.service"
 import { AssigneeSelector } from "../assignee-selector"
@@ -201,8 +201,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
                 {subtasks.map((task, i) => {
                   const priUI = getPriorityUI(task.priority || 'medium')
                   const statUI = getStatusUI(task.status || (task.completed ? 'done' : 'todo'))
-                  const avatar = task.assignee?.avatarUrl
-                  const initials = task.assignee?.fullName ? task.assignee.fullName.charAt(0).toUpperCase() : '?'
+
                   const taskKey = `${projectPrefix}-${parentTaskNumber}.${i + 1}`
 
                   return (
@@ -268,7 +267,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
                       {/* Assignee Column */}
                       <div className="w-[60px] flex items-center justify-center border-l border-slate-800/50 relative z-0">
                         <AssigneeSelector
-                          task={task as any}
+                          task={task}
                           members={members}
                           onChange={(id, assigneeId) => {
                             // Find member to optimistically update avatar
@@ -364,7 +363,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber 
               <button
                 key={p}
                 onClick={() => {
-                  handleUpdate(activeDropdown.id, { priority: p as any })
+                  handleUpdate(activeDropdown.id, { priority: p as "low" | "medium" | "high" })
                   setActiveDropdown(null)
                 }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-800 text-[11px] text-slate-300 transition-colors cursor-pointer"

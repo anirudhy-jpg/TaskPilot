@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useTransition } from "react"
-import { User, LogOut, Mail, Calendar, Shield, Lock, Lightbulb, DoorOpen, Loader2, Trash2 } from "lucide-react"
+import { User, LogOut, Mail, Calendar, Shield, Lock, Lightbulb, DoorOpen, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { logoutAction } from "@/features/auth/actions/logout.action"
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
@@ -188,7 +188,7 @@ export function SettingsPanel({
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Workspace Actions</h3>
                 </div>
                 <p className="text-xs text-slate-400 mb-5">
-                  Leave the current workspace "{workspaceName}". You will lose access to all its projects.
+                  Leave the current workspace &quot;{workspaceName}&quot;. You will lose access to all its projects.
                 </p>
                 {errorMsg && <p className="text-xs text-red-400 mb-3">{errorMsg}</p>}
                 <Button
@@ -263,7 +263,7 @@ export function SettingsPanel({
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">Security & Access</h3>
             </div>
             <p className="text-[11.5px] text-slate-400 leading-relaxed mb-4">
-              Your account is protected with enterprise-grade encryption. Here's a brief overview of your current access state:
+              Your account is protected with enterprise-grade encryption. Here&apos;s a brief overview of your current access state:
             </p>
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-[11px] py-1 border-b border-slate-800/80">

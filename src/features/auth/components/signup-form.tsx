@@ -35,8 +35,8 @@ export function SignupForm() {
         },
       })
       if (error) throw error
-    } catch (err: any) {
-      setError(err.message || "Failed to initiate GitHub login.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to initiate GitHub login.")
       setLoading(false)
     }
   }
@@ -74,11 +74,14 @@ export function SignupForm() {
           setValidationErrors({ email: errMsg })
         }
       }
-    } catch (err: any) {
-      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+    } catch (err: unknown) {
+      if (
+        err instanceof Error && 
+        (err.message.includes("NEXT_REDIRECT") || ('digest' in err && typeof err.digest === 'string' && err.digest.includes("NEXT_REDIRECT")))
+      ) {
         throw err
       }
-      setValidationErrors({ email: err.message || "An unexpected error occurred." })
+      setValidationErrors({ email: err instanceof Error ? err.message : "An unexpected error occurred." })
     } finally {
       setLoading(false)
     }

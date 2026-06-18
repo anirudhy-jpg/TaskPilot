@@ -35,8 +35,8 @@ export function LoginForm() {
         },
       })
       if (error) throw error
-    } catch (err: any) {
-      setError(err.message || "Failed to initiate GitHub login.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to initiate GitHub login.")
       setLoading(false)
     }
   }
@@ -72,11 +72,14 @@ export function LoginForm() {
           setError(errMsg)
         }
       }
-    } catch (err: any) {
-      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+    } catch (err: unknown) {
+      if (
+        err instanceof Error && 
+        (err.message.includes("NEXT_REDIRECT") || ('digest' in err && typeof err.digest === 'string' && err.digest.includes("NEXT_REDIRECT")))
+      ) {
         throw err
       }
-      setError(err.message || "An unexpected error occurred.")
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.")
     } finally {
       setLoading(false)
     }
@@ -202,7 +205,7 @@ export function LoginForm() {
 
       {/* Footer link */}
       <div className="mt-6 text-center text-xs text-slate-400">
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-amber-500 hover:text-amber-400 hover:underline font-semibold ml-1">
           Sign up
         </Link>

@@ -68,12 +68,12 @@ export function TaskDetailsModal({
   // Sync state when task changes or modal opens
   useEffect(() => {
     if (task) {
-      setEditedTitle(task.title || "");
+      setEditedTitle(task.title || ""); // eslint-disable-line react-hooks/set-state-in-effect
       setEditedDesc(task.description || "");
       setIsEditingDesc(false);
       setIsEditingTitle(false);
     }
-  }, [task?.id]);
+  }, [task]);
 
   const handleCancel = useCallback(() => {
     onClose();
@@ -102,7 +102,7 @@ export function TaskDetailsModal({
       document.body.style.overflow = "unset";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, handleCancel, isEditingDesc, task?.description]);
+  }, [isOpen, handleCancel, isEditingTitle, isEditingDesc, task?.title, task?.description]);
 
   if (!isOpen || !task) return null;
 

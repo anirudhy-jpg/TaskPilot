@@ -23,7 +23,7 @@ export default async function ProjectsPage() {
   ])
 
   // Batch query tasks, columns, and project member IDs to eliminate N+1 queries
-  let projectsWithTasks: any[] = []
+  let projectsWithTasks: (Project & { tasks: Record<string, unknown>[], columns: Record<string, unknown>[], memberUserIds: string[] })[] = []
   if (projects.length > 0) {
     try {
       const projectIds = projects.map((p) => p.id)
@@ -50,20 +50,20 @@ export default async function ProjectsPage() {
           .in("project_id", projectIds),
       ])
 
-      const tasksByProj = new Map<string, any[]>()
-      const colsByProj = new Map<string, any[]>()
+      const tasksByProj = new Map<string, Record<string, unknown>[]>()
+      const colsByProj = new Map<string, Record<string, unknown>[]>()
       const membersByProj = new Map<string, string[]>()
 
       const { mapTask } = await import("@/features/tasks/services/task.service")
 
-      ;(tasksRes.data || []).forEach((row: any) => {
-        const list = tasksByProj.get(row.project_id) || []
-        list.push(mapTask(row, row.assignee))
-        tasksByProj.set(row.project_id, list)
+      ;(tasksRes.data || []).forEach((row: Record<string, unknown>) => {
+        const list = tasksByProj.get(row.project_id as string) || []
+        list.push(mapTask(row, row.assignee as Record<string, unknown>))
+        tasksByProj.set(row.project_id as string, list)
       })
 
-      ;(colsRes.data || []).forEach((row: any) => {
-        const list = colsByProj.get(row.board_id) || []
+      ;(colsRes.data || []).forEach((row: Record<string, unknown>) => {
+        const list = colsByProj.get(row.board_id as string) || []
         list.push({
           id: row.id,
           boardId: row.board_id,
@@ -71,11 +71,11 @@ export default async function ProjectsPage() {
           position: row.position,
           createdAt: row.created_at,
         })
-        colsByProj.set(row.board_id, list)
+        colsByProj.set(row.board_id as string, list)
       })
 
-      ;(membersRes.data || []).forEach((row: any) => {
-        const list = membersByProj.get(row.project_id) || []
+      ;(membersRes.data || []).forEach((row: Record<string, unknown>) => {
+        const list = membersByProj.get(row.project_id as string) || []
         list.push(row.user_id)
         membersByProj.set(row.project_id, list)
       })

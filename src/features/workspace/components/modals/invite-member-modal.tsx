@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { X, Check, Shield, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
+
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Project } from "@/features/project/types/project.types"
 
@@ -30,6 +30,7 @@ export function InviteMemberModal({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 

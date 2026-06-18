@@ -1,4 +1,4 @@
-import type { Task, TaskStatus } from "@/features/project/types/project.types";
+import type { Task } from "@/features/project/types/project.types";
 import type { Active, Over } from "@dnd-kit/core";
 import type { TaskDragData } from "./types";
 

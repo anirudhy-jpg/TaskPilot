@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus, Trash2, Circle, MoreVertical, Edit2 } from "lucide-react";
+import { Trash2, Circle, MoreVertical, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Project, Task, TaskStatus, Column } from "../types/project.types";
 import { useRouter } from "next/navigation";
@@ -28,8 +28,7 @@ export function ProjectsDashboardGrid({
   statusConfig,
   cycleTaskStatus,
   setDeleteTarget,
-  setNewTaskStatus,
-  setCreateTaskProjectId,
+  // Removed setNewTaskStatus and setCreateTaskProjectId
   setIsCreateProjectOpen,
   isWorkspaceMember = false,
   onEditProject,

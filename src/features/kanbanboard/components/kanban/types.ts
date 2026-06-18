@@ -1,6 +1,5 @@
 import type {
   Task,
-  TaskStatus,
 } from "@/features/project/types/project.types";
 import type {
   WorkspaceMember,
