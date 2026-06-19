@@ -5,9 +5,10 @@ import type { TimelineItem } from "@/features/project/types/project.types";
 interface UseTaskTimelineRealtimeProps {
   taskId: string;
   initialTimeline: TimelineItem[];
+  members?: import("@/features/workspace/types/workspace.types").WorkspaceMember[];
 }
 
-export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTimelineRealtimeProps) {
+export function useTaskTimelineRealtime({ taskId, initialTimeline, members }: UseTaskTimelineRealtimeProps) {
   const [timeline, setTimeline] = useState<TimelineItem[]>(initialTimeline);
   const [prevTaskId, setPrevTaskId] = useState(taskId);
   const [prevInitialTimeline, setPrevInitialTimeline] = useState(initialTimeline);
@@ -38,6 +39,13 @@ export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTime
         setTimeline(prev => {
           if (prev.some(item => item.id === newRow.id)) return prev;
           
+          const member = members?.find(m => m.userId === newRow.actor_id);
+          const actor = member?.profile ? {
+            email: member.profile.email,
+            fullName: member.profile.fullName,
+            avatarUrl: member.profile.avatarUrl
+          } : undefined;
+
           const newActivity: TimelineItem = {
             type: "activity",
             id: newRow.id,
@@ -48,6 +56,7 @@ export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTime
             newValue: newRow.new_value,
             metadata: newRow.metadata,
             createdAt: newRow.created_at,
+            actor
           };
           
           const newTimeline = [...prev, newActivity];
@@ -78,6 +87,13 @@ export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTime
         if (eventType === "INSERT") {
           if (prev.some(item => item.id === newRow.id)) return prev;
           
+          const member = members?.find(m => m.userId === newRow.author_id);
+          const author = member?.profile ? {
+            email: member.profile.email,
+            fullName: member.profile.fullName,
+            avatarUrl: member.profile.avatarUrl
+          } : undefined;
+
           const newComment: TimelineItem = {
             type: "comment",
             id: newRow.id,
@@ -87,6 +103,7 @@ export function useTaskTimelineRealtime({ taskId, initialTimeline }: UseTaskTime
             edited: newRow.edited,
             createdAt: newRow.created_at,
             updatedAt: newRow.updated_at,
+            author,
             mentions: []
           };
           

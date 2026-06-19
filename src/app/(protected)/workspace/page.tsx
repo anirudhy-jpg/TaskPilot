@@ -53,7 +53,7 @@ export default async function WorkspaceOverviewPage() {
     const [tasksRes, colsRes] = await Promise.all([
       supabase
         .from("tasks")
-        .select("id, project_id, title, description, column_id, priority, position, assigned_to, created_at")
+        .select("id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at")
         .in("project_id", projectIds)
         .order("position", { ascending: true }),
       supabase
