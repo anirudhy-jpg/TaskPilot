@@ -34,7 +34,7 @@ export default async function ProjectsPage() {
         supabase
           .from("tasks")
           .select(`
-            id, project_id, title, description, column_id, priority, position, assigned_to, created_at,
+            id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at,
             assignee:profiles!tasks_assigned_to_fkey(email, full_name, avatar_url),
             subtasks:task_subtasks(id, completed, status)
           `)

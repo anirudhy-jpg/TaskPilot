@@ -45,7 +45,7 @@ export function TaskTimeline({ taskId, currentUserId, members, columns }: TaskTi
     return () => { mounted = false; };
   }, [taskId]);
 
-  const { timeline, setTimeline } = useTaskTimelineRealtime({ taskId, initialTimeline });
+  const { timeline, setTimeline } = useTaskTimelineRealtime({ taskId, initialTimeline, members });
 
   // Auto-scroll to bottom on new items
   useEffect(() => {

@@ -69,7 +69,7 @@ export async function getMemberDetailsAction(
     if (projectIds.length > 0) {
       const { data: tasksData, error: tasksErr } = await supabase
         .from("tasks")
-        .select("id, project_id, title, description, column_id, priority, position, assigned_to, created_at")
+        .select("id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at")
         .in("project_id", projectIds)
 
       if (tasksErr) {
