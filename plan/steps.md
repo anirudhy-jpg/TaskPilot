@@ -1,6 +1,6 @@
 # TaskPilot — Implementation & Completion Plan
 
-> **Last Updated:** June 18, 2026 — All core modules complete. Status updated to reflect current codebase.
+> **Last Updated:** June 19, 2026 — Expanded profile, auth, and workspace features.
 
 This document outlines the modular, step-by-step technical plan to complete the TaskPilot workspace application. It tracks all completed modules and highlights remaining work.
 
@@ -49,7 +49,8 @@ graph TD
     M6 --> M7[✅ Module 7: UI Polish]
     M7 --> M8[✅ Module 8: Subtasks & Activity Timeline]
     M8 --> M9[✅ Module 9: Zod Validation & Vitest Tests]
-    M9 --> M10[🔲 Module 10: Global Search]
+    M9 --> M10[✅ Module 10: Profile & Advanced Auth]
+    M10 --> M11[🔲 Module 11: Global Search]
 
 ```
 
@@ -169,7 +170,19 @@ graph TD
 
 ---
 
-### 🔲 Module 10: Global Search & Custom Filters — FUTURE
+### ✅ Module 10: Profile & Advanced Auth — COMPLETE
+**Goal:** User profiles, robust auth flows, and workspace security enhancements.
+
+*   [x] **Step 10.1:** Added custom profile pictures via Supabase Storage (`avatars` bucket) and `EditProfileModal`.
+*   [x] **Step 10.2:** Refined login form validation (decoupled from signup).
+*   [x] **Step 10.3:** Implemented Forgot Password and Reset Password flows.
+*   [x] **Step 10.4:** Added `SignOutConfirmModal` and Leave Workspace confirmation flows.
+*   [x] **Step 10.5:** Ensured workspace admins can add/remove project members.
+*   [x] **Step 10.6:** Added auto-workspace joining on sign up and post-auth redirect to user's workspace.
+
+---
+
+### 🔲 Module 11: Global Search & Custom Filters — FUTURE
 **Goal:** Help users find projects, tasks, or members quickly.
 
 *   [ ] **Step 10.1:** Build Command Menu (Command-K) using `cmdk`.

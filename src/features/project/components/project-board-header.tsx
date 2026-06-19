@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button"
 import type { Project } from "../types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getProjectInitials, getUserInitials } from "@/features/project/utils/avatar"
+import { SearchInput } from "@/components/ui/search-input"
 
 interface ProjectBoardHeaderProps {
   activeProject: Project | null
   currentProjectMembers: WorkspaceMember[]
-  isWorkspaceOwner: boolean
   isWorkspaceMember: boolean
   onManageMembers: () => void
   onDeleteProject: (target: { type: "project" | "task"; id: string; name: string }) => void
@@ -24,7 +24,6 @@ interface ProjectBoardHeaderProps {
 export function ProjectBoardHeader({
   activeProject,
   currentProjectMembers,
-  isWorkspaceOwner,
   isWorkspaceMember,
   onManageMembers,
   onDeleteProject,
@@ -56,7 +55,7 @@ export function ProjectBoardHeader({
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 sm:w-1/3">
         {activeProject ? (
           <>
             {/* Back to Projects Arrow */}
@@ -142,8 +141,8 @@ export function ProjectBoardHeader({
                     {initials}
                   </div>
                 );
-              })}
-              {isWorkspaceOwner && (
+              }) }
+              {!isWorkspaceMember &&(
                 <button
                   onClick={onManageMembers}
                   className="text-slate-400 hover:text-amber-500 p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center shrink-0 ml-1"
@@ -166,7 +165,11 @@ export function ProjectBoardHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex justify-center w-full sm:w-1/3">
+        <SearchInput placeholder={activeProject ? "Search tasks..." : "Search projects..."} />
+      </div>
+
+      <div className="flex items-center justify-end gap-4 shrink-0 sm:w-1/3">
         {activeProject ? (
           <>
             {/* Filter Dropdown */}

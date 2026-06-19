@@ -39,18 +39,34 @@ export async function addProjectMemberAction(
       return { success: false, error: "Project not found" };
     }
 
-    // 2. Verify that current user is the owner of this workspace
+    // 2. Verify that current user is the owner or admin of this workspace
     const { data: ws } = await supabase
       .from("workspaces")
       .select("owner_id")
       .eq("id", project.workspace_id)
       .maybeSingle();
 
-    if (!ws || ws.owner_id !== user.id) {
+    let isAuthorized = false;
+    if (ws && ws.owner_id === user.id) {
+      isAuthorized = true;
+    } else {
+      const { data: memberInfo } = await supabase
+        .from("workspace_members")
+        .select("role")
+        .eq("workspace_id", project.workspace_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (memberInfo && (memberInfo.role === "admin" || memberInfo.role === "owner")) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       return {
         success: false,
         error:
-          "Unauthorized: Only the workspace owner can add members to projects.",
+          "Unauthorized: Only workspace owners and admins can add members to projects.",
       };
     }
 
