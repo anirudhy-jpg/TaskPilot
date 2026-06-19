@@ -11,7 +11,8 @@ import { switchActiveWorkspaceAction } from "../actions/switch-active-workspace.
 import { createWorkspaceAction } from "../actions/create-workspace.action"
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
 
-import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
+
+import { LeaveWorkspaceConfirmModal } from "./modals/leave-workspace-confirm-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { useWorkspacesRealtime } from "../hooks/use-workspaces-realtime"
 
@@ -336,10 +337,9 @@ export function WorkspacesClient({
             </div>
           </div>
         )}
-        <DeleteConfirmModal
+        <LeaveWorkspaceConfirmModal
           isOpen={leaveWorkspaceId !== null}
           onClose={() => setLeaveWorkspaceId(null)}
-          type="leave_workspace"
           name={leaveWorkspaceName}
           isPending={leavingId !== null}
           onConfirm={handleLeaveConfirm}

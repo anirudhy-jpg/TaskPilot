@@ -317,6 +317,7 @@ export function WorkspaceShell({
           projects={localProjects}
           ownerEmail={ownerEmail}
           variant="desktop"
+          hasMultipleWorkspaces={localWorkspaces.length > 1}
         />
 
         {/* Mobile Sidebar Drawer */}
@@ -343,6 +344,7 @@ export function WorkspaceShell({
                 ownerEmail={ownerEmail}
                 variant="mobile"
                 onClose={() => setIsMobileSidebarOpen(false)}
+                hasMultipleWorkspaces={localWorkspaces.length > 1}
               />
             </div>
           </div>

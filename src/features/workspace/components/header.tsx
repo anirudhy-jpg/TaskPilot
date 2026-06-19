@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { Logo } from "@/components/ui/logo"
 import { Button } from "@/components/ui/button"
-import { logoutAction } from "@/features/auth/actions/logout.action"
+
 import { switchActiveWorkspaceAction } from "../actions/switch-active-workspace.action"
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
 import { LogOut, DoorOpen, ChevronDown, Briefcase, Menu } from "lucide-react"
@@ -12,9 +12,11 @@ import type { UserProfile } from "@/features/auth/types/profile.types"
 import type { Workspace } from "../types/workspace.types"
 import { HeaderInbox } from "./header-inbox"
 import { useRouter, usePathname } from "next/navigation"
-import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
+
+import { LeaveWorkspaceConfirmModal } from "./modals/leave-workspace-confirm-modal"
 import { SwitchWorkspaceModal } from "./modals/switch-workspace-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
+import { SignOutConfirmModal } from "@/features/auth/components/modals/signout-confirm-modal"
 
 import { createClient } from "@/lib/supabase/client"
 
@@ -51,6 +53,7 @@ export function Header({
   const [isLeaving, setIsLeaving] = useState(false)
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
   const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false)
+  const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false)
 
   const [prevRouteKey, setPrevRouteKey] = useState(`${workspaceId}:${pathname}`);
 
@@ -135,7 +138,7 @@ export function Header({
             <Logo size="lg" className="hidden sm:flex" />
             <Logo size="lg" iconOnly className="flex sm:hidden" />
           </Link>
-          {workspaceId && workspaces && workspaces.length > 0 && (
+          {workspaceId && workspaces && workspaces.length > 1 && (
             <>
               <div className="h-4 w-px bg-slate-800 shrink-0" />
               <button
@@ -161,11 +164,16 @@ export function Header({
 
           {/* User chip */}
           <div className="flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-900 px-3.5 py-2 rounded-full border border-slate-800 transition-all duration-300">
-            <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm select-none">
-              {profile?.fullName?.[0] ||
+            <div className="w-7 h-7 rounded-full bg-amber-500 overflow-hidden flex items-center justify-center text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm select-none">
+              {profile?.avatarUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                profile?.fullName?.[0] ||
                 profile?.email?.[0] ||
                 user.email?.[0] ||
-                "?"}
+                "?"
+              )}
             </div>
             <span className="text-base font-semibold text-slate-200 hidden sm:inline-block truncate max-w-[160px]">
               {profile?.fullName || profile?.email || user.email}
@@ -185,10 +193,9 @@ export function Header({
               >
                 <DoorOpen size={15} className="stroke-[2.5]" />
               </Button>
-              <DeleteConfirmModal
+              <LeaveWorkspaceConfirmModal
                 isOpen={isLeaveModalOpen}
                 onClose={() => setIsLeaveModalOpen(false)}
-                type="leave_workspace"
                 name={workspaceName}
                 isPending={isLeaving}
                 onConfirm={handleLeaveConfirm}
@@ -198,17 +205,22 @@ export function Header({
 
           {/* Always show logout/signout button if owner or if not inside a workspace */}
           {(!workspaceId || isWorkspaceOwner) && (
-            <form action={logoutAction}>
+            <>
               <Button
-                type="submit"
+                type="button"
                 variant="ghost"
                 size="icon"
+                onClick={() => setIsSignoutModalOpen(true)}
                 className="text-slate-400 hover:text-rose-455 hover:bg-rose-500/10 cursor-pointer rounded-full transition-colors w-8 h-8"
                 title="Sign Out"
               >
                 <LogOut size={15} className="stroke-[2.5]" />
               </Button>
-            </form>
+              <SignOutConfirmModal 
+                isOpen={isSignoutModalOpen} 
+                onClose={() => setIsSignoutModalOpen(false)} 
+              />
+            </>
           )}
         </div>
       </div>

@@ -4,10 +4,11 @@ import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { acceptInvitationAction } from "../actions/accept-invitation.action";
 import { rejectInvitationAction } from "../actions/reject-invitation.action";
-import { logoutAction } from "@/features/auth/actions/logout.action";
+
 import { Shield, User, LogIn, CheckCircle2, XCircle, Loader2, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SwitchingWorkspaceLoading } from "@/features/workspace/components/switching-workspace-loading";
+import { SignOutConfirmModal } from "@/features/auth/components/modals/signout-confirm-modal";
 
 interface AcceptInviteClientProps {
   token: string;
@@ -36,6 +37,7 @@ export function AcceptInviteClient({
   const [isSwitching, setIsSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false);
 
   // Reset switching loading screen on route changes
   React.useEffect(() => {
@@ -87,14 +89,16 @@ export function AcceptInviteClient({
         <div className="pt-4 flex flex-col gap-2 max-w-xs mx-auto">
           <Button
             variant="outline"
-            onClick={async () => {
-              await logoutAction();
-            }}
+            onClick={() => setIsSignoutModalOpen(true)}
             className="w-full text-slate-650 hover:text-slate-850 hover:bg-slate-50 border-slate-200 cursor-pointer rounded-xl py-2"
           >
             Sign Out
           </Button>
         </div>
+        <SignOutConfirmModal 
+          isOpen={isSignoutModalOpen} 
+          onClose={() => setIsSignoutModalOpen(false)} 
+        />
       </div>
     );
   }

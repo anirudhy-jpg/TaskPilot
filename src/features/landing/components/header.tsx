@@ -5,7 +5,8 @@ import Link from "next/link"
 import { Menu, X, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/ui/logo"
-import { logoutAction } from "@/features/auth/actions/logout.action"
+
+import { SignOutConfirmModal } from "@/features/auth/components/modals/signout-confirm-modal"
 
 interface HeaderProps {
   user: { id: string } | null // Current authenticated user, if any
@@ -14,6 +15,7 @@ interface HeaderProps {
 export function Header({ user }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,14 +64,13 @@ export function Header({ user }: HeaderProps) {
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <>
-                <form action={logoutAction}>
-                  <button
-                    type="submit"
-                    className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer px-3 py-2 bg-transparent border-none outline-none font-sans"
-                  >
-                    Sign Out
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => setIsSignoutModalOpen(true)}
+                  className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-colors duration-150 cursor-pointer px-3 py-2 bg-transparent border-none outline-none font-sans"
+                >
+                  Sign Out
+                </button>
                 <Link href="/workspace">
                   <Button
                     variant="default"
@@ -144,15 +145,17 @@ export function Header({ user }: HeaderProps) {
                     <ArrowRight className="w-4 h-4 text-slate-950" />
                   </Button>
                 </Link>
-                <form action={logoutAction} onSubmit={() => setIsOpen(false)} className="w-full">
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    className="w-full border-slate-800 hover:bg-slate-900 text-slate-300 font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent cursor-pointer"
-                  >
-                    Sign Out
-                  </Button>
-                </form>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false)
+                    setIsSignoutModalOpen(true)
+                  }}
+                  variant="outline"
+                  className="w-full border-slate-800 hover:bg-slate-900 text-slate-300 font-semibold py-2.5 rounded-lg transition-colors text-sm bg-transparent cursor-pointer"
+                >
+                  Sign Out
+                </Button>
               </>
             ) : (
               <>
@@ -174,6 +177,10 @@ export function Header({ user }: HeaderProps) {
           </div>
         </div>
       </div>
+      <SignOutConfirmModal 
+        isOpen={isSignoutModalOpen} 
+        onClose={() => setIsSignoutModalOpen(false)} 
+      />
     </header>
   )
 }
