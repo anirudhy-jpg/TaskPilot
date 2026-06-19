@@ -21,6 +21,7 @@ import { ManageProjectMembersModal } from "./modals/manage-project-members-modal
 import { EditProjectModal } from "./modals/edit-project-modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSearchParams } from "next/navigation";
 
 const KanbanBoard = dynamic(
   () => import("@/features/kanbanboard/components/kanban-board").then((mod) => mod.KanbanBoard),
@@ -134,11 +135,21 @@ function BoardContent(props: ProjectsListProps) {
 
   const [isCreateColumnOpen, setIsCreateColumnOpen] = React.useState(false);
   const [taskTypeFilter, setTaskTypeFilter] = React.useState<string[]>([]);
+  const searchParams = useSearchParams();
+  const searchQuery = (searchParams.get("search") || "").toLowerCase();
+
+  const filteredProjects = optimisticProjects.filter((p) => {
+    if (!searchQuery) return true;
+    return (
+      p.name.toLowerCase().includes(searchQuery) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery))
+    );
+  });
 
   // Pagination state and logic
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 6;
-  const totalItems = optimisticProjects.length;
+  const totalItems = filteredProjects.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const [prevTotalPages, setPrevTotalPages] = React.useState(totalPages);
@@ -150,7 +161,7 @@ function BoardContent(props: ProjectsListProps) {
   }
 
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedProjects = optimisticProjects.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedProjects = filteredProjects.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-6 flex flex-col h-full w-full select-none relative">
@@ -217,17 +228,26 @@ function BoardContent(props: ProjectsListProps) {
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */
-          <ProjectsDashboardGrid
-            optimisticProjects={paginatedProjects}
-            statusConfig={statusConfig}
-            cycleTaskStatus={cycleTaskStatus}
-            setDeleteTarget={setDeleteTarget}
-            setNewTaskStatus={setNewTaskStatus}
-            setCreateTaskProjectId={setCreateTaskProjectId}
-            setIsCreateProjectOpen={setIsCreateProjectOpen}
-            isWorkspaceMember={isWorkspaceMember}
-            onEditProject={(project) => setProjectToEdit(project)}
-          />
+          <div className="space-y-4">
+            {filteredProjects.length === 0 ? (
+              <div className="p-12 text-center bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+                <div className="text-3xl mb-3">🔍</div>
+                <p className="text-sm text-slate-400 font-medium">No projects found.</p>
+              </div>
+            ) : (
+              <ProjectsDashboardGrid
+                optimisticProjects={paginatedProjects}
+                statusConfig={statusConfig}
+                cycleTaskStatus={cycleTaskStatus}
+                setDeleteTarget={setDeleteTarget}
+                setNewTaskStatus={setNewTaskStatus}
+                setCreateTaskProjectId={setCreateTaskProjectId}
+                setIsCreateProjectOpen={setIsCreateProjectOpen}
+                isWorkspaceMember={isWorkspaceMember}
+                onEditProject={(project) => setProjectToEdit(project)}
+              />
+            )}
+          </div>
         )}
       </div>
 

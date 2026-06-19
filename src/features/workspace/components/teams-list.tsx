@@ -6,6 +6,8 @@ import type { WorkspaceMember } from "../types/workspace.types"
 import type { Project } from "../../project/types/project.types"
 import { Pagination } from "@/components/ui/pagination"
 import { TeamDetailsModal } from "./modals/team-details-modal"
+import { SearchInput } from "@/components/ui/search-input"
+import { useSearchParams } from "next/navigation"
 
 interface TeamsListProps {
   projects: Project[]
@@ -21,11 +23,24 @@ const getAbbreviation = (name: string) => {
     .toUpperCase()
 }
 
-export function TeamsList({ projects, membersByProject }: TeamsListProps) {
+import { Suspense } from "react"
+
+export function TeamsListContent({ projects, membersByProject }: TeamsListProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const searchParams = useSearchParams();
+  const searchQuery = (searchParams.get("search") || "").toLowerCase();
+
+  const filteredProjects = projects.filter(p => {
+    if (!searchQuery) return true;
+    return (
+      p.name.toLowerCase().includes(searchQuery) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery))
+    );
+  });
+
   const itemsPerPage = 4
-  const totalItems = projects.length
+  const totalItems = filteredProjects.length
   const totalPages = Math.ceil(totalItems / itemsPerPage)
 
   const [prevTotalPages, setPrevTotalPages] = useState(totalPages);
@@ -38,13 +53,13 @@ export function TeamsList({ projects, membersByProject }: TeamsListProps) {
   }
 
   const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedProjects = projects.slice(startIndex, startIndex + itemsPerPage)
+  const paginatedProjects = filteredProjects.slice(startIndex, startIndex + itemsPerPage)
 
   return (
     <div className="flex flex-col h-full min-h-0 w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 shrink-0">
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-extrabold text-slate-100 tracking-tight sm:text-2xl">
             Teams
           </h1>
@@ -52,17 +67,31 @@ export function TeamsList({ projects, membersByProject }: TeamsListProps) {
             All members in each project team.
           </p>
         </div>
+        <div className="flex-1 flex justify-center w-full sm:w-auto">
+          <SearchInput placeholder="Search teams..." />
+        </div>
+        <div className="flex-1 flex justify-end items-center gap-3">
+          {searchQuery && (
+            <div className="text-[10px] font-bold text-slate-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 shrink-0">
+              {totalItems} Team{totalItems !== 1 ? 's' : ''} Found
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto min-h-0 py-6 pr-1 scrollbar-thin">
-        {projects.length === 0 ? (
+        {filteredProjects.length === 0 ? (
           <div className="p-12 rounded-2xl bg-slate-900/60 backdrop-blur-md border border-slate-800/80 text-center">
-            <div className="text-3xl mb-3">👥</div>
-            <p className="text-sm text-slate-300 mb-1">No projects yet</p>
-            <p className="text-xs text-slate-400">
-              Create projects and assign tasks to members to see teams here.
+            <div className="text-3xl mb-3">{searchQuery ? "🔍" : "👥"}</div>
+            <p className="text-sm text-slate-300 mb-1">
+              {searchQuery ? "No teams found." : "No projects yet"}
             </p>
+            {!searchQuery && (
+              <p className="text-xs text-slate-400">
+                Create projects and assign tasks to members to see teams here.
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -167,6 +196,14 @@ export function TeamsList({ projects, membersByProject }: TeamsListProps) {
         members={selectedProject ? (membersByProject[selectedProject.id] || []) : []}
       />
     </div>
+  )
+}
+
+export function TeamsList(props: TeamsListProps) {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading teams...</div>}>
+      <TeamsListContent {...props} />
+    </Suspense>
   )
 }
 
