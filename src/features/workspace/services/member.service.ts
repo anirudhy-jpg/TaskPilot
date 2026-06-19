@@ -173,7 +173,7 @@ export class MemberService {
       }
     }
 
-    // 3. Create member_removed notification for the owner before we delete the membership
+    // 3. Create member_removed notifications before we delete the membership
     const { data: ws } = await supabase
       .from("workspaces")
       .select("owner_id, name")
@@ -181,9 +181,11 @@ export class MemberService {
       .single()
 
     if (ws?.owner_id && memberRow?.user_id) {
-      const { error: notifErr } = await supabase
-        .from("notifications")
-        .insert({
+      const notifications = []
+
+      // Notify the owner
+      if (ws.owner_id !== memberRow.user_id) {
+        notifications.push({
           user_id: ws.owner_id,
           workspace_id: workspaceId,
           title: "Member Removed",
@@ -191,9 +193,24 @@ export class MemberService {
           type: "member_removed",
           actor_id: actorId || null,
         })
+      }
+
+      // Notify the removed member
+      notifications.push({
+        user_id: memberRow.user_id,
+        workspace_id: workspaceId,
+        title: "Removed from Workspace",
+        message: `You have been removed from the workspace ${ws.name}.`,
+        type: "member_removed",
+        actor_id: actorId || null,
+      })
+
+      const { error: notifErr } = await supabase
+        .from("notifications")
+        .insert(notifications)
 
       if (notifErr) {
-        console.error("Error creating member_removed notification:", notifErr)
+        console.error("Error creating member_removed notifications:", notifErr)
       }
     }
 

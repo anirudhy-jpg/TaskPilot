@@ -40,7 +40,7 @@ export function TimelineItemRenderer({ item, currentUserId, onEditComment, onDel
 }
 
 function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: { id: string; name: string }[] }) {
-  const actorName = activity.actor?.fullName || activity.actor?.email.split("@")[0] || "Someone";
+  const actorName = activity.actor?.fullName || activity.actor?.email?.split("@")[0] || "Unknown User";
   const avatar = activity.actor?.avatarUrl;
   
   let actionText = "";
@@ -162,7 +162,7 @@ function CommentItem({
   const [editContent, setEditContent] = useState(comment.content);
   
   const isAuthor = currentUserId === comment.authorId;
-  const authorName = comment.author?.fullName || comment.author?.email.split("@")[0] || "Unknown";
+  const authorName = comment.author?.fullName || comment.author?.email?.split("@")[0] || "Unknown User";
   const avatar = comment.author?.avatarUrl;
   const dateStr = new Date(comment.createdAt).toLocaleString(undefined, {
     month: "short", day: "numeric", hour: "numeric", minute: "2-digit"

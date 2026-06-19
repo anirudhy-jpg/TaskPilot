@@ -477,7 +477,7 @@ export function HeaderInbox({ email, workspaceId, userId }: HeaderInboxProps) {
                   } else if (notif.type === "invitation_rejected") {
                     colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <X size={14} className="stroke-[2.5]" />
-                  } else if (notif.type === "member_left") {
+                  } else if (notif.type === "member_left" || notif.type === "member_removed") {
                     colorClass = "bg-rose-500/10 text-rose-455"
                     icon = <UserMinus size={14} />
                   } else if (notif.type === "project_member_added") {
