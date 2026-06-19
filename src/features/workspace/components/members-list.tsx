@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button"
 import { useMembersRealtime } from "../hooks/use-members-realtime"
 import { useInvitationsRealtime } from "../hooks/use-invitations-realtime"
 import { createClient } from "@/lib/supabase/client"
-import { Pagination } from "@/components/ui/pagination"
 import { MemberDetailsModal } from "./modals/member-details-modal"
+import { SearchInput } from "@/components/ui/search-input"
+import { useSearchParams } from "next/navigation"
 
 function ClientDate({ dateString }: { dateString: string }) {
   const [mounted, setMounted] = useState(false)
@@ -70,7 +71,9 @@ const roleConfig: Record<
   },
 }
 
-export function MembersList({
+import { Suspense } from "react"
+
+export function MembersListContent({
   workspaceId,
   members,
   pendingInvitations,
@@ -114,21 +117,6 @@ export function MembersList({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
   const [removingMember, setRemovingMember] = useState<{ id: string; userId: string; name: string } | null>(null)
 
-  // Pagination state and logic
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 6
-  const totalItems = localMembers.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
-
-  const [prevTotalPages, setPrevTotalPages] = useState(totalPages);
-
-  if (totalPages !== prevTotalPages) {
-    setPrevTotalPages(totalPages);
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
-    }
-  }
-
   // Click outside to close options dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -147,8 +135,18 @@ export function MembersList({
     return (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2)
   })
 
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedMembers = sortedMembers.slice(startIndex, startIndex + itemsPerPage)
+  const searchParams = useSearchParams();
+  const searchQuery = (searchParams.get("search") || "").toLowerCase();
+
+  const filteredMembers = sortedMembers.filter(m => {
+    if (!searchQuery) return true;
+    const nameMatch = (m.profile?.fullName || "").toLowerCase().includes(searchQuery);
+    const emailMatch = (m.profile?.email || "").toLowerCase().includes(searchQuery);
+    const roleMatch = m.role.toLowerCase().includes(searchQuery);
+    return nameMatch || emailMatch || roleMatch;
+  });
+
+  const totalItems = filteredMembers.length;
 
   const handleInviteSubmit = async (
     email: string,
@@ -236,7 +234,7 @@ export function MembersList({
 
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 shrink-0">
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-extrabold text-slate-100 tracking-tight sm:text-2xl">
             Workspace Members
           </h1>
@@ -244,8 +242,18 @@ export function MembersList({
             Manage your workspace members, roles, and pending invitations.
           </p>
         </div>
-        {canInvite && (
-          <div className="flex items-center gap-2 shrink-0">
+        
+        <div className="flex-1 flex justify-center w-full sm:w-auto">
+          <SearchInput placeholder="Search members..." />
+        </div>
+
+        <div className="flex-1 flex items-center justify-end gap-3 shrink-0">
+          {searchQuery && (
+            <div className="text-[10px] font-bold text-slate-400 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 shrink-0">
+              {totalItems} Found
+            </div>
+          )}
+          {canInvite && (
             <Button
               onClick={() => setIsInviteOpen(true)}
               className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-sm transition-all active:scale-[0.98] h-10 border-0"
@@ -253,8 +261,8 @@ export function MembersList({
               <UserPlus size={15} />
               Invite Member
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Scrollable Content Container */}
@@ -268,19 +276,21 @@ export function MembersList({
             </h3>
           </div>
 
-          {sortedMembers.length === 0 ? (
+          {filteredMembers.length === 0 ? (
             <div className="p-12 text-center bg-slate-900/40 rounded-b-xl">
-              <div className="text-3xl mb-3">👤</div>
-              <p className="text-sm text-slate-400 font-medium">No members found</p>
+              <div className="text-3xl mb-3">{searchQuery ? "🔍" : "👤"}</div>
+              <p className="text-sm text-slate-400 font-medium">
+                {searchQuery ? "No members found." : "No members found."}
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-800/60">
-              {paginatedMembers.map((member, index) => {
+            <div className="divide-y divide-slate-800/60 max-h-[415px] overflow-y-auto scrollbar-thin rounded-b-xl">
+              {filteredMembers.map((member, index) => {
                 const cfg = roleConfig[member.role] || roleConfig.member
                 const initials = member.profile?.fullName 
                   ? getInitials(member.profile.fullName) 
                   : getInitials(member.profile?.email || "?")
-                const isLast = index === paginatedMembers.length - 1
+                const isLast = index === filteredMembers.length - 1
                 return (
                   <div
                     key={member.id}
@@ -353,19 +363,6 @@ export function MembersList({
             </div>
           )}
         </div>
-
-        {totalPages > 1 && (
-          <div className="pt-2">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              itemName="members"
-            />
-          </div>
-        )}
       </div>
 
       {/* Pending Invitations Card Container */}
@@ -401,7 +398,7 @@ export function MembersList({
               )}
             </div>
           ) : (
-            <div className="divide-y divide-slate-800/60">
+            <div className="divide-y divide-slate-800/60 max-h-[345px] overflow-y-auto scrollbar-thin rounded-b-xl">
               {localInvitations.map((invite) => (
                 <div
                   key={invite.id}
@@ -483,5 +480,13 @@ export function MembersList({
         workspaceId={workspaceId}
       />
     </div>
+  )
+}
+
+export function MembersList(props: MembersListProps) {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading members...</div>}>
+      <MembersListContent {...props} />
+    </Suspense>
   )
 }

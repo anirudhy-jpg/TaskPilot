@@ -140,15 +140,15 @@ function SidebarContent({
 
       {/* Projects Section */}
       {projects.length > 0 && (
-        <div className="mt-5 flex flex-col gap-1">
-          <div className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+        <div className="mt-5 flex flex-col gap-1 flex-1 min-h-0">
+          <div className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between shrink-0">
             <span>Projects Board</span>
             <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold">
               {projects.length}
             </span>
           </div>
 
-          <div className="flex flex-col gap-1 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin">
             {projects.map((project) => {
               const isProjectActive = activeProjectId === project.id
               const isExpanded = expandedProjects.has(project.id)
@@ -234,7 +234,7 @@ function SidebarContent({
       )}
 
       {/* Settings at the bottom */}
-      <div className="mt-auto pt-4 border-t border-slate-800/60">
+      <div className="mt-auto pt-4 border-t border-slate-800/60 shrink-0">
         <Link
           href="/settings"
           onClick={handleLinkClick}
