@@ -1,4 +1,4 @@
-import type { Task, TaskStatus } from "@/features/project/types/project.types";
+import type { Task } from "@/features/project/types/project.types";
 import type { Active, Over } from "@dnd-kit/core";
 import type { TaskDragData } from "./types";
 
@@ -19,7 +19,7 @@ export function groupTasksByColumn(tasks: Task[], columnIds: string[]): TasksByC
   for (const task of tasks) {
     // Fallback to task.status if columnId is missing/legacy
     const colId = task.columnId || task.status;
-    if (grouped[colId]) {
+    if (colId && grouped[colId]) {
       grouped[colId].push(task);
     } else if (columnIds.length > 0) {
       // Fallback: put in the first column

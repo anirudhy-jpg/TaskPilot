@@ -1,22 +1,22 @@
 import { useRealtimeSubscription } from "@/lib/realtime/subscribeToTable"
-import type { Project, Task } from "../types/project.types"
+import type { Project, Task, ProjectStatus } from "../types/project.types"
 
 /**
  * Maps a raw Supabase projects row to the Project type model.
  */
-export function mapRealtimeProject(row: Record<string, any>): Project & { tasks: Task[] } {
+export function mapRealtimeProject(row: Record<string, unknown>): Project & { tasks: Task[] } {
   return {
-    id: row.id,
-    workspaceId: row.workspace_id,
-    name: row.name,
-    description: row.description || null,
-    status: row.status || "active",
-    createdAt: row.created_at || new Date().toISOString(),
-    createdBy: row.created_by,
+    id: row.id as string,
+    workspaceId: row.workspace_id as string,
+    name: row.name as string,
+    description: (row.description as string | null) || null,
+    status: (row.status as ProjectStatus) || "active",
+    createdAt: (row.created_at as string) || new Date().toISOString(),
+    createdBy: row.created_by as string,
     creatorEmail: null,
     creatorName: null,
     tasks: [],
-    memberUserIds: row.member_user_ids || [],
+    memberUserIds: (row.member_user_ids as string[]) || [],
   }
 }
 
@@ -31,7 +31,7 @@ interface UseProjectsRealtimeProps {
  */
 export function useProjectsRealtime({
   workspaceId,
-  projects,
+  // Removed _projects
   setProjects,
 }: UseProjectsRealtimeProps) {
   useRealtimeSubscription({

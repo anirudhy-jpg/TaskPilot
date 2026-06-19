@@ -66,10 +66,10 @@ export class ProjectService {
         // If regular member, only return projects they created or are assigned to
         if (!isOwner && !isAdmin) {
           return projectsData
-            .filter((project: any) => {
+            .filter((project: Record<string, unknown>) => {
               const isCreator = project.created_by === activeUserId;
-              const isAssigned = (project.project_members || []).some(
-                (pm: any) => pm.user_id === activeUserId
+              const isAssigned = ((project.project_members as Record<string, unknown>[]) || []).some(
+                (pm: Record<string, unknown>) => pm.user_id === activeUserId
               );
               return isCreator || isAssigned;
             })
@@ -371,20 +371,20 @@ export class ProjectService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapProject(row: any): Project {
-  const creatorProfile = Array.isArray(row.profiles)
-    ? row.profiles[0]
-    : row.profiles;
+function mapProject(row: Record<string, unknown>): Project {
+  const profiles = row.profiles as Record<string, unknown> | Record<string, unknown>[] | undefined;
+  const creatorProfile = Array.isArray(profiles)
+    ? profiles[0]
+    : profiles;
   return {
-    id: row.id,
-    workspaceId: row.workspace_id,
-    name: row.name,
-    description: row.description,
-    status: row.status || "active",
-    createdAt: row.created_at,
-    createdBy: row.created_by,
-    creatorEmail: creatorProfile?.email || null,
-    creatorName: creatorProfile?.full_name || null,
+    id: row.id as string,
+    workspaceId: row.workspace_id as string,
+    name: row.name as string,
+    description: (row.description as string | null | undefined) ?? null,
+    status: ((row.status as string) || "active") as import("../types/project.types").ProjectStatus,
+    createdAt: row.created_at as string,
+    createdBy: row.created_by as string,
+    creatorEmail: (creatorProfile?.email as string) || null,
+    creatorName: (creatorProfile?.full_name as string) || null,
   };
 }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { type SupabaseClient } from "@supabase/supabase-js"
 import type { WorkspaceMember } from "../types/workspace.types"
 
 export class MemberService {
@@ -63,13 +64,13 @@ export class MemberService {
         .not("assignee_id", "is", null)
 
       if (!fallbackErr && fallbackTasks) {
-        userIds = fallbackTasks.map((t: any) => t.assignee_id).filter(Boolean)
+        userIds = fallbackTasks.map((t: { assignee_id?: string }) => t.assignee_id as string).filter(Boolean)
       } else {
         console.error("Error fetching task assignees:", taskErr, fallbackErr)
         return []
       }
     } else if (tasks) {
-      userIds = tasks.map((t: any) => t.assigned_to).filter(Boolean)
+      userIds = tasks.map((t: { assigned_to?: string }) => t.assigned_to as string).filter(Boolean)
     }
 
     const uniqueUserIds = [...new Set(userIds)]
@@ -140,7 +141,7 @@ export class MemberService {
 
     let removedMemberName = "A member"
     if (memberRow) {
-      const profile: any = Array.isArray(memberRow.profile) ? memberRow.profile[0] : memberRow.profile
+      const profile: { full_name?: string, email?: string } = Array.isArray(memberRow.profile) ? memberRow.profile[0] as { full_name?: string, email?: string } : memberRow.profile as { full_name?: string, email?: string }
       removedMemberName = profile?.full_name || profile?.email || "A member"
     }
 
@@ -172,7 +173,7 @@ export class MemberService {
       }
     }
 
-    // 3. Create member_removed notification for the owner before we delete the membership
+    // 3. Create member_removed notifications before we delete the membership
     const { data: ws } = await supabase
       .from("workspaces")
       .select("owner_id, name")
@@ -180,9 +181,11 @@ export class MemberService {
       .single()
 
     if (ws?.owner_id && memberRow?.user_id) {
-      const { error: notifErr } = await supabase
-        .from("notifications")
-        .insert({
+      const notifications = []
+
+      // Notify the owner
+      if (ws.owner_id !== memberRow.user_id) {
+        notifications.push({
           user_id: ws.owner_id,
           workspace_id: workspaceId,
           title: "Member Removed",
@@ -190,9 +193,24 @@ export class MemberService {
           type: "member_removed",
           actor_id: actorId || null,
         })
+      }
+
+      // Notify the removed member
+      notifications.push({
+        user_id: memberRow.user_id,
+        workspace_id: workspaceId,
+        title: "Removed from Workspace",
+        message: `You have been removed from the workspace ${ws.name}.`,
+        type: "member_removed",
+        actor_id: actorId || null,
+      })
+
+      const { error: notifErr } = await supabase
+        .from("notifications")
+        .insert(notifications)
 
       if (notifErr) {
-        console.error("Error creating member_removed notification:", notifErr)
+        console.error("Error creating member_removed notifications:", notifErr)
       }
     }
 
@@ -212,29 +230,42 @@ export class MemberService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapMember(row: any, profileData: any): WorkspaceMember {
+type MemberRow = {
+  id?: string;
+  workspace_id?: string;
+  user_id?: string;
+  role?: string;
+  created_at?: string;
+};
+
+type ProfileRow = {
+  id?: string;
+  email?: string;
+  full_name?: string;
+  avatar_url?: string;
+};
+
+function mapMember(row: MemberRow, profileData: ProfileRow | null | undefined): WorkspaceMember {
   return {
-    id: row.id,
-    workspaceId: row.workspace_id,
-    userId: row.user_id,
-    role: row.role || "member",
-    joinedAt: row.created_at,
+    id: row.id as string,
+    workspaceId: row.workspace_id as string,
+    userId: row.user_id as string,
+    role: (row.role as "owner" | "admin" | "member") || "member",
+    joinedAt: row.created_at as string,
     profile: profileData
       ? {
-          email: profileData.email,
-          fullName: profileData.full_name,
-          avatarUrl: profileData.avatar_url,
+          email: profileData.email as string,
+          fullName: profileData.full_name as string,
+          avatarUrl: profileData.avatar_url as string | null,
         }
       : undefined,
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchProfilesForMembers(supabase: any, memberRows: any[]): Promise<WorkspaceMember[]> {
+async function fetchProfilesForMembers(supabase: SupabaseClient, memberRows: MemberRow[]): Promise<WorkspaceMember[]> {
   if (memberRows.length === 0) return []
 
-  const userIds = memberRows.map((r) => r.user_id)
+  const userIds = memberRows.map((r) => r.user_id as string)
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, avatar_url")
@@ -245,6 +276,6 @@ async function fetchProfilesForMembers(supabase: any, memberRows: any[]): Promis
     return memberRows.map((row) => mapMember(row, null))
   }
 
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
-  return memberRows.map((row) => mapMember(row, profileMap.get(row.user_id)))
+  const profileMap = new Map((profiles || []).map((p: ProfileRow) => [p.id, p]))
+  return memberRows.map((row) => mapMember(row, profileMap.get(row.user_id as string)))
 }

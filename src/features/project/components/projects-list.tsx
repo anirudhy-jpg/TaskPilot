@@ -4,7 +4,7 @@ import React, { Suspense } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { Circle, Clock, CheckCircle2, X } from "lucide-react";
-import type { Project, Task, TaskStatus, Column } from "../types/project.types";
+import type { Project, Task, Column } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 
 // Import custom hook
@@ -77,7 +77,7 @@ interface ProjectsListProps {
 }
 
 const statusConfig: Record<
-  TaskStatus,
+  string,
   { label: string; color: string; icon: typeof Circle }
 > = {
   todo: { label: "To Do", color: "text-[#9bb0a5]", icon: Circle },
@@ -123,6 +123,7 @@ function BoardContent(props: ProjectsListProps) {
     handleAssigneeChange,
     handleMoveTask,
     handleUpdateTask,
+    handleLocalTaskUpdate,
     cycleTaskStatus,
     handleCreateColumn,
     handleRenameColumn,
@@ -133,6 +134,7 @@ function BoardContent(props: ProjectsListProps) {
   } = useProjectBoard(props);
 
   const [isCreateColumnOpen, setIsCreateColumnOpen] = React.useState(false);
+  const [taskTypeFilter, setTaskTypeFilter] = React.useState<string[]>([]);
 
   // Pagination state and logic
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -140,11 +142,13 @@ function BoardContent(props: ProjectsListProps) {
   const totalItems = optimisticProjects.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  React.useEffect(() => {
+  const [prevTotalPages, setPrevTotalPages] = React.useState(totalPages);
+  if (totalPages !== prevTotalPages) {
+    setPrevTotalPages(totalPages);
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
-  }, [totalPages, currentPage]);
+  }
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProjects = optimisticProjects.slice(startIndex, startIndex + itemsPerPage);
@@ -172,6 +176,8 @@ function BoardContent(props: ProjectsListProps) {
         onEditProject={() => setProjectToEdit(activeProject || null)}
         onNewProject={() => setIsCreateProjectOpen(true)}
         onAddColumn={activeProject && (activeProject.columns || []).length < 5 ? () => setIsCreateColumnOpen(true) : undefined}
+        taskTypeFilter={taskTypeFilter}
+        setTaskTypeFilter={setTaskTypeFilter}
       />
 
       {errorMsg && (
@@ -187,7 +193,7 @@ function BoardContent(props: ProjectsListProps) {
       )}
 
       {/* ─── Main Content Views ─────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-hidden transition-all duration-300">
+      <div className={`flex-1 min-h-0 transition-all duration-300 ${activeProject ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden scrollbar-thin pr-2'}`}>
         {activeProject ? (
           /* ─── VIEW 1: KANBAN BOARD ─── */
           <KanbanBoard
@@ -203,11 +209,13 @@ function BoardContent(props: ProjectsListProps) {
             }
             onMoveTask={handleMoveTask}
             onUpdateTask={handleUpdateTask}
+            onLocalTaskUpdate={handleLocalTaskUpdate}
             onCreateColumn={handleCreateColumn}
             onRenameColumn={handleRenameColumn}
             onMoveColumn={handleMoveColumn}
             onDeleteColumn={handleDeleteColumn}
             onAssigneeChange={handleAssigneeChange}
+            taskTypeFilter={taskTypeFilter}
           />
         ) : (
           /* ─── VIEW 2: ALL PROJECTS GRID ─── */
@@ -304,8 +312,7 @@ function BoardContent(props: ProjectsListProps) {
         onClose={() => setIsCreateColumnOpen(false)}
         isPending={isPending}
         onCreate={(name) => {
-          handleCreateColumn(name);
-          setIsCreateColumnOpen(false);
+          handleCreateColumn(name, () => setIsCreateColumnOpen(false));
         }}
       />
     </div>

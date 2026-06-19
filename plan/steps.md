@@ -1,24 +1,38 @@
 # TaskPilot — Implementation & Completion Plan
 
-This document outlines a modular, step-by-step technical plan to complete the TaskPilot workspace application. It covers immediate bug fixes (such as the circular workspace onboarding redirect loop), core feature expansion, team collaboration, and advanced cloud integrations.
+> **Last Updated:** June 18, 2026 — All core modules complete. Status updated to reflect current codebase.
+
+This document outlines the modular, step-by-step technical plan to complete the TaskPilot workspace application. It tracks all completed modules and highlights remaining work.
 
 ---
 
 ## 📊 Project Status & Gap Audit
 
-The following table summarizes the current state of TaskPilot modules:
+The following table summarizes the current state of all TaskPilot modules:
 
-| Module / Feature | Current State | Missing Requirements / Gaps | Priority |
+| Module / Feature | Current State | Notes | Priority |
 | :--- | :--- | :--- | :--- |
-| **Authentication** | Completed | Social Auth configuration (GitHub credentials config) | Low |
-| **Workspace Onboarding** | Completed | Clean onboarding flow and guards implemented. | None |
-| **Projects CRUD** | Completed | Create and Delete actions work. | None |
-| **Task CRUD** | Completed | Task creation, deletion, details modal, assignees, priorities. | None |
-| **Kanban Board** | Completed | Smooth drag-and-drop powered by `@dnd-kit` with pointer-first collision detection. | None |
-| **Team Collaboration** | Completed | Workspace member invitation system (SSE notifications inbox), roles, and task assignment. | None |
-| **Realtime Sync** | Pending | Board changes are server-rendered on page refresh/action revalidation. Needs instant realtime updates. | Medium |
-| **File Attachments** | Pending | Supabase Storage bucket uploads and listing attachments on task cards. | Low |
-| **Search & Filtering** | Pending | Dashboard-wide query searches and sidebar filters (e.g. filter by assignee or priority). | Low |
+| **Authentication** | ✅ Completed | Email/password + GitHub OAuth. Idempotent onboarding flow (profile, workspace, membership all guaranteed on first login). | — |
+| **Workspace Onboarding** | ✅ Completed | Clean guard: `/workspaces` hub if no workspace. Duplicate workspace prevention. Owner restrictions enforced. | — |
+| **Projects CRUD** | ✅ Completed | Create, read, update (name/description), delete. Edit modal implemented. | — |
+| **Task CRUD** | ✅ Completed | Create, read, update (title, description, priority, due date, assignee), delete. Full task details modal. | — |
+| **Kanban Board** | ✅ Completed | Smooth drag-and-drop (`@dnd-kit`), fractional indexing, custom columns (max 5), pointer-first collision detection. | — |
+| **Custom Columns** | ✅ Completed | Add, rename, reorder, delete columns. Atomic RPC for deletion (move or delete tasks). Column limit enforced on client and server. | — |
+| **Team Collaboration** | ✅ Completed | Email invitations (SendGrid), role management, workspace member management, project-level membership. | — |
+| **Task Assignment** | ✅ Completed | Assignee selector on task cards and task details modal. Workspace member list passed into board. | — |
+| **Realtime Sync** | ✅ Completed | Full Supabase Realtime integration. Tasks, columns, projects, members, invitations, workspaces all sync instantly. SSE deprecated. | — |
+| **Notifications** | ✅ Completed | In-app notification system. Header inbox with real-time badge. Dismiss and mark-all-read actions. | — |
+| **Workspace Analytics** | ✅ Completed | Overview page with task distribution chart, project progress, member stats, notification feed. | — |
+| **UI / Design System** | ✅ Completed | Monochrome dark mode, skeleton loaders, custom scrollbars, 404 page, progress bar, pagination. | — |
+| **Workspace Settings** | ✅ Completed | Rename workspace, delete workspace (owner-only), leave workspace (members). | — |
+| **Workspace Switcher Hub** | ✅ Completed | `/workspaces` page showing owned + member workspaces, cookie-based switching. | — |
+| **Pagination** | ✅ Completed | Client-side pagination on the project dashboard grid (6 projects per page). Pagination UI made compact. | — |
+| **Task Subtasks** | ✅ Completed | Jira-inspired inline subtask table in task details modal. Optimistic UI, real-time sync, progress bar, portal-rendered dropdowns. | — |
+| **Task Comments** | ✅ Completed | View, add, delete comments on tasks. Real-time updates via Supabase subscription. | — |
+| **Activity Timeline** | ✅ Completed | Full task change history feed (status, priority, assignee, column, comments, subtasks). Auto-loads on modal open. | — |
+| **Zod Input Validation** | ✅ Completed | Centralized `src/lib/validations/` schemas for all 5 action boundaries. `safeParse()` guards on every server action. | — |
+| **Vitest Testing** | ✅ Completed | Testing framework bootstrapped. 5 schema test files covering valid + invalid inputs for all Zod validators. | — |
+| **Search & Filtering** | 🔲 Pending | Global Command-K search, sidebar filters by assignee/priority/status. | Low |
 
 ---
 
@@ -26,108 +40,145 @@ The following table summarizes the current state of TaskPilot modules:
 
 ```mermaid
 graph TD
-    M1[Module 1: Workspace Onboarding] --> M2[Module 2: Task Editing & Details]
-    M2 --> M3[Module 3: Drag & Drop Board]
-    M2 --> M4[Module 4: Team Collaboration]
-    M3 --> M5[Module 5: Realtime Sync]
+    M1[✅ Module 1: Workspace Onboarding] --> M2[✅ Module 2: Task Editing & Details]
+    M2 --> M3[✅ Module 3: Drag & Drop Board]
+    M2 --> M4[✅ Module 4: Team Collaboration]
+    M3 --> M5[✅ Module 5: Realtime Sync]
     M4 --> M5
-    M5 --> M6[Module 6: File Storage]
-    M6 --> M7[Module 7: Global Search]
-    M7 --> M8[Module 8: AI Enhancements]
+    M5 --> M6[✅ Module 6: Analytics Dashboard]
+    M6 --> M7[✅ Module 7: UI Polish]
+    M7 --> M8[✅ Module 8: Subtasks & Activity Timeline]
+    M8 --> M9[✅ Module 9: Zod Validation & Vitest Tests]
+    M9 --> M10[🔲 Module 10: Global Search]
+
 ```
 
-### Module 1: Workspace Onboarding & Onboarding Guard
-**Goal:** Fix the infinite redirect loop on `/workspace` when a user has no workspace, and allow workspace creation.
+---
 
-*   [x] **Step 1.1: Create Workspace Setup Page**
-    *   Create a route: `src/app/(protected)/workspace/new/page.tsx`
-    *   Implement a clean, simple onboarding form requesting "Workspace Name" (e.g., "Acme Team", "My Project Space").
-*   [x] **Step 1.2: Add Workspace Server Action**
-    *   Define `createWorkspaceAction` in `src/actions/workspace/workspace.actions.ts`.
-    *   Connect to `WorkspaceService.createWorkspace`.
-*   [x] **Step 1.3: Update Guards & Redirects**
-    *   Modify `/workspace` redirects. In `src/app/(protected)/workspace/page.tsx` and all page hooks, change:
-        ```typescript
-        if (!workspace) redirect("/workspace/new")
-        ```
-    *   In the `/workspace/new` page, check if a workspace *already* exists. If so, redirect back to `/workspace` to prevent duplicate workspace creations.
+### ✅ Module 1: Workspace Onboarding & Guard — COMPLETE
+**Goal:** Fix the infinite redirect loop on `/workspace` and allow workspace creation.
+
+*   [x] **Step 1.1:** Create workspace setup page (`/workspace/new` → now redirects to `/workspaces`).
+*   [x] **Step 1.2:** `createWorkspaceAction` — validates owner-one-workspace constraint.
+*   [x] **Step 1.3:** Updated guards in middleware proxy; idempotent onboarding post-OAuth callback ensures profile + workspace + membership are all created atomically.
 
 ---
 
-### Module 2: Task Details & Editing Modals
-**Goal:** Expand task management beyond basic creation/deletion to support priority, due dates, assignees, and detailed descriptions.
+### ✅ Module 2: Task Details & Editing Modals — COMPLETE
+**Goal:** Expand task management beyond basic creation/deletion.
 
-*   [ ] **Step 2.1: Add Task Updates to Service and Actions**
-    *   Add `updateTask` to `src/services/task.service.ts` allowing updates to `title`, `description`, `status`, `priority`, `due_date`, and `assignee_id`.
-    *   Define `updateTaskAction` in `src/actions/workspace/workspace.actions.ts`.
-*   [ ] **Step 2.2: Build Task Details Slide-Over / Modal**
-    *   Create `src/components/workspace/modals/TaskDetailsModal.tsx`.
-    *   Provide inputs for editing:
-        *   **Title & Description** (Rich-text or simple textarea).
-        *   **Status** (Dropdown: To Do, In Progress, Done).
-        *   **Priority** (Dropdown/Pills: Low, Medium, High).
-        *   **Due Date** (Date picker).
-        *   **Assignee** (Select dropdown displaying workspace members).
-*   [ ] **Step 2.3: Integrate Details Modal into KanbanBoard**
-    *   Make task cards clickable to open the task details modal.
+*   [x] **Step 2.1:** `updateTask` in `task.service.ts` — updates title, description, status, priority, due_date, assigned_to, column_id.
+*   [x] **Step 2.2:** Built `TaskDetailsModal` at `src/features/tasks/components/modals/task-details-modal.tsx`. Full form with all fields.
+*   [x] **Step 2.3:** Task cards on the Kanban board open the task details modal on click.
 
 ---
 
-### Module 3: Drag-and-Drop Board
-**Goal:** Convert status changes from action buttons to a smooth drag-and-drop experience.
+### ✅ Module 3: Drag-and-Drop Board — COMPLETE
+**Goal:** Smooth drag-and-drop task and column reordering.
 
-*   [x] **Step 3.1: Setup Native HTML5 Drag and Drop**
-    *   Set up native HTML5 drag events or install a lightweight utility library (`@dnd-kit`).
-*   [x] **Step 3.2: Implement Draggable Cards & Droppable Columns**
-    *   Update `KanbanBoard.tsx` task items to use `@dnd-kit/sortable` and wrap them with `SortableContext`.
-    *   Implement `pointerWithin` and `closestCorners` hybrid collision detection strategy to ensure empty columns behave as valid drop targets.
-*   [x] **Step 3.3: Link Drops to Server Actions**
-    *   On a successful drop, trigger `batchUpdateTaskPositionsAction` in a transition to update the database and revalidate the layout.
-    *   Implement defensive recovery check on drop to ensure cross-column drops persist even if drag-over updates are missed by the cursor.
+*   [x] **Step 3.1:** Installed `@dnd-kit/core` and `@dnd-kit/sortable`.
+*   [x] **Step 3.2:** `KanbanBoard.tsx` with `DndContext`, `SortableContext`, `useDroppable` per column.
+*   [x] **Step 3.3:** `batchUpdateTaskPositionsAction` — fractional indexing writes to Supabase on drop.
+*   [x] **Step 3.4:** Custom collision detection strategy (pointer-first hybrid, empty-column support).
+*   [x] **Step 3.5:** Column drag-and-drop (reorder columns horizontally). `moveColumnAction` persists positions.
 
 ---
 
-### Module 4: Team Collaboration & Invitations
-**Goal:** Open workspaces to multiple team members, manage assignments, and support roles.
+### ✅ Module 4: Team Collaboration & Invitations — COMPLETE
+**Goal:** Multi-user workspaces with role management and task assignment.
 
-*   [ ] **Step 4.1: Database Tables Adjustments**
-    *   Verify table permissions: Ensure `workspace_members` and invite systems can write correctly with RLS policies.
-*   [ ] **Step 4.2: Build Workspace Invitations**
-    *   Create an invite utility in `src/services/member.service.ts` (e.g. adding by email address or using invite codes).
-    *   Build the user interface on the `/members` page (`src/app/(protected)/members/page.tsx`) to show existing members and an "Invite Member" input field.
-*   [ ] **Step 4.3: Wire Task Assignment Dropdown**
-    *   Fetch workspace members in the projects/tasks views.
-    *   Pass the member list to the Task Create and Task Edit modals.
+*   [x] **Step 4.1:** Database: `workspace_members`, `project_members`, `workspace_invitations` tables with RLS.
+*   [x] **Step 4.2:** Email invitation flow — `InviteService` creates token, inserts DB row, calls SendGrid.
+*   [x] **Step 4.3:** Invite accept/reject pages at `/invite/[token]`. Auth redirect pipeline for unauthenticated users.
+*   [x] **Step 4.4:** Task assignment dropdown — `AssigneeSelector` component in task details and task card.
+*   [x] **Step 4.5:** Project member management modal — add/remove workspace members from a project.
+*   [x] **Step 4.6:** Leave workspace action for members; remove member action for owners/admins.
 
 ---
 
-### Module 5: Realtime Workspace Sync
-**Goal:** Enable active boards to instantly sync updates across multiple users on the same workspace.
+### ✅ Module 5: Realtime Workspace Sync — COMPLETE
+**Goal:** Instant live updates across all connected clients.
 
-*   [ ] **Step 5.1: Initialize Supabase Realtime Channels**
-    *   Create a custom hook `useWorkspaceRealtime` that subscribes to changes in `tasks` and `projects` tables filtered by the active workspace/project ID.
-*   [ ] **Step 5.2: Sync Local Component State**
-    *   Upon receiving an `INSERT`, `UPDATE`, or `DELETE` event from the Supabase realtime hook, call `router.refresh()` to fetch fresh layout server data, or update state locally.
-
----
-
-
-
-### Module 6: Global Search & Custom Filters
-**Goal:** Help users find projects, tasks, or comments quickly across large workspaces.
-
-*   [ ] **Step 7.1: Build Command Menu (Command-K)**
-    *   Implement a global search dialog using custom inputs or `cmdk`.
-    *   Provide navigation links directly to dynamic project pages (`/projects/[id]`) or open tasks.
-*   [ ] **Step 7.2: Sidebar Filter Options**
-    *   Add filter toggles on the projects list or Kanban page (e.g., "Show Only My Tasks", "High Priority Only").
+*   [x] **Step 5.1:** `src/lib/realtime/` — reusable abstraction: `createRealtimeChannel.ts`, `subscribeToTable.ts`, `realtimeTypes.ts`.
+*   [x] **Step 5.2:** `use-board-realtime.ts` — unified single-channel subscription per board for tasks + columns.
+*   [x] **Step 5.3:** `use-projects-realtime.ts` — sidebar + dashboard project list sync.
+*   [x] **Step 5.4:** `use-members-realtime.ts` — members tab live updates + eviction.
+*   [x] **Step 5.5:** `use-invitations-realtime.ts` — pending invitations grid sync.
+*   [x] **Step 5.6:** `use-workspaces-realtime.ts` — workspace switcher + header sync.
+*   [x] **Step 5.7:** `use-tasks-realtime.ts` — board-level task subscription.
+*   [x] **Step 5.8:** SSE endpoint deprecated → replaced with `410 Gone` response.
+*   [x] **Step 5.9:** Instant member eviction — `workspace-shell.tsx` redirects evicted user in <200ms.
 
 ---
 
-### Module 7: AI-Powered Productivity Enhancements
-**Goal:** Automate description writing, break tasks into subtasks, and estimate deadlines.
+### ✅ Module 6: Workspace Analytics Dashboard — COMPLETE
+**Goal:** Visualize workspace health and productivity metrics.
 
-*   [ ] **Step 8.1: Integrate AI API Client**
-    *   Configure route handlers/server actions connecting to OpenAI or Gemini API models.
-*   [ ] **Step 8.2: "Generate Subtasks" Button**
-    *   Add an AI button in the task details panel. It reads the title and description, and creates suggested checklist tasks automatically.
+*   [x] **Step 6.1:** Parallel server-side data fetching in `workspace/page.tsx` — projects, members, tasks, columns, notifications all batched.
+*   [x] **Step 6.2:** `OverviewCharts` component with Recharts:
+    *   Task distribution pie/donut chart (To Do / In Progress / Done).
+    *   Project progress bar chart (total vs. completed per project).
+    *   Member stats table with completion rates.
+    *   Recent notifications activity feed.
+*   [x] **Step 6.3:** `WorkspaceAnalytics` TypeScript interface for typed data passing.
+
+---
+
+### ✅ Module 7: UI Polish & Design System — COMPLETE
+**Goal:** Premium dark mode design and micro-interactions.
+
+*   [x] Custom Tailwind CSS v4 design tokens in `globals.css` (semantic dark mode palette).
+*   [x] Skeleton loaders for KanbanBoard SSR fallback (dynamic import).
+*   [x] Portal-rendered modals avoiding `backdrop-filter` z-index clipping.
+*   [x] Custom scrollbar CSS (`-webkit-scrollbar` theming).
+*   [x] Animated 404 page (`not-found.tsx`) with neon accents and grid overlay.
+*   [x] Client-side pagination component on project dashboard grid.
+*   [x] Top loading progress bar (Amber gradient) during server transitions.
+*   [x] Column limit enforcement — "Add Column" button hidden at 5 columns.
+*   [x] `WorkspaceSwitchingLoading` screen during workspace cookie switch.
+
+---
+
+### ✅ Module 8: Subtasks & Activity Timeline — COMPLETE
+**Goal:** Deep task interaction — break tasks into subtasks and track all changes.
+
+*   [x] **Step 8.1:** Created `task_subtasks` table with Supabase Realtime publication.
+*   [x] **Step 8.2:** Built `task-subtasks.service.ts` — `getSubtasks`, `addSubtask`, `updateSubtaskDetails`, `deleteSubtask`.
+*   [x] **Step 8.3:** Built `<TaskSubtasks />` component with Jira-style inline table, progress bar, portal-rendered dropdowns, optimistic UI.
+*   [x] **Step 8.4:** Created `task_activities`, `task_comments`, `task_comment_mentions` tables with Postgres triggers.
+*   [x] **Step 8.5:** Built `get-task-timeline.action.ts` — paginated unified feed of activities + comments.
+*   [x] **Step 8.6:** Built `add-comment.action.ts`, `update-comment.action.ts`, `delete-comment.action.ts`.
+*   [x] **Step 8.7:** Built timeline UI components: `task-timeline.tsx`, `timeline-item-renderer.tsx`, `comment-composer.tsx`, `mention-selector.tsx`.
+*   [x] **Step 8.8:** Redesigned `TaskDetailsModal` to split-pane layout — left: task details, right: timeline feed.
+*   [x] **Step 8.9:** Subtask progress badge displayed on Kanban task cards.
+
+---
+
+### ✅ Module 9: Zod Validation & Vitest Tests — COMPLETE
+**Goal:** Secure all server action boundaries and protect critical business logic with tests.
+
+*   [x] **Step 9.1:** Created `src/lib/validations/task.schema.ts` — title length, priority/status enums, UUID checks.
+*   [x] **Step 9.2:** Created `src/lib/validations/project.schema.ts` — name, description, workspace ID.
+*   [x] **Step 9.3:** Created `src/lib/validations/workspace.schema.ts` — name length limits.
+*   [x] **Step 9.4:** Created `src/lib/validations/kanban.schema.ts` — column name, position values.
+*   [x] **Step 9.5:** Created invitation Zod schema — email format, role enum, workspace UUID.
+*   [x] **Step 9.6:** Refactored all server actions to run `safeParse()` before any DB interaction.
+*   [x] **Step 9.7:** Bootstrapped Vitest testing framework (was not previously in the project).
+*   [x] **Step 9.8:** Wrote `tests/task.schema.test.ts`, `tests/project.schema.test.ts`, `tests/workspace.schema.test.ts`, `tests/kanban.schema.test.ts`, `tests/invitation.schema.test.ts`.
+*   [x] **Step 9.9:** Removed unused `TaskPriority` imports from `create-task.action.ts` and `update-task.action.ts`.
+
+---
+
+### 🔲 Module 10: Global Search & Custom Filters — FUTURE
+**Goal:** Help users find projects, tasks, or members quickly.
+
+*   [ ] **Step 10.1:** Build Command Menu (Command-K) using `cmdk`.
+    *   Navigate directly to project boards.
+    *   Open task details from search results.
+*   [ ] **Step 10.2:** Sidebar filter toggles.
+    *   "Show Only My Tasks" filter.
+    *   "High Priority Only" filter.
+    *   Filter by assignee.
+
+---
+

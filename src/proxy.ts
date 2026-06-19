@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { type NextRequest } from "next/server"
 import { handleLegacyRedirects } from "@/lib/proxy/redirects"
 import { getSessionAndResponse, handleAuthRoutes } from "@/lib/proxy/auth"
 

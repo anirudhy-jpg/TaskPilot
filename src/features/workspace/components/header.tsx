@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { Logo } from "@/components/ui/logo"
 import { Button } from "@/components/ui/button"
@@ -52,15 +52,18 @@ export function Header({
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
   const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false)
 
-  useEffect(() => {
-    setIsSwitchingWorkspace(false)
-  }, [workspaceId, pathname])
+  const [prevRouteKey, setPrevRouteKey] = useState(`${workspaceId}:${pathname}`);
+
+  if (`${workspaceId}:${pathname}` !== prevRouteKey) {
+    setPrevRouteKey(`${workspaceId}:${pathname}`);
+    setIsSwitchingWorkspace(false);
+  }
 
   const handleLeaveConfirm = async () => {
     if (!workspaceId) return
     setIsLeaving(true)
     if (typeof window !== "undefined") {
-      (window as any).isLeavingWorkspace = true
+      (window as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = true
     }
 
     // Broadcast leave event to remove member instantly on owner/other clients
@@ -89,13 +92,13 @@ export function Header({
         router.refresh()
       } else {
         if (typeof window !== "undefined") {
-          (window as any).isLeavingWorkspace = false
+          (window as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = false
         }
         alert(res.error || "Failed to leave workspace.")
       }
     } catch {
       if (typeof window !== "undefined") {
-        (window as any).isLeavingWorkspace = false
+        (window as { isLeavingWorkspace?: boolean }).isLeavingWorkspace = false
       }
       alert("An unexpected error occurred.")
     } finally {

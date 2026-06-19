@@ -5,6 +5,7 @@ import type {
   Task,
   Column,
   TaskPriority,
+  TaskType,
 } from "../types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 
@@ -47,7 +48,7 @@ export type OptimisticAction =
   | {
       type: "update_task";
       taskId: string;
-      updates: { title?: string; description?: string | null; priority?: TaskPriority };
+      updates: { title?: string; description?: string | null; priority?: TaskPriority; type?: TaskType };
     };
 
 export interface UseProjectBoardStateProps {

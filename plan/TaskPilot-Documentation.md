@@ -1,54 +1,71 @@
 # TaskPilot — Project Documentation
 
+> **Last Updated:** June 18, 2026 — Reflects full production state of the application.
+
 ## Project Overview
 
-TaskPilot is a modern project management and workflow tracking application built to help teams organize work, manage projects, and track task progress in a unified platform. The platform is designed to support modern workflows with an intuitive interface, structured data model, and a foundation for realtime collaboration
+TaskPilot is a modern project management and workflow tracking application built to help teams organize work, manage projects, and track task progress in a unified platform. The platform is designed to support modern workflows with an intuitive interface, structured data model, and a fully realized realtime collaboration system.
 
-The purpose of TaskPilot is to provide an adaptable workspace for managing tasks, projects, and workflows across teams. It serves as a centralized system for planning work, monitoring progress, and preparing the product for advanced collaboration and automation features.
+The purpose of TaskPilot is to provide an adaptable workspace for managing tasks, projects, and workflows across teams. It serves as a centralized system for planning work, monitoring progress, and enables advanced collaboration through invitations, role-based access, real-time updates, and workspace-level analytics.
 
-
+---
 
 ## Project Goals
 
-- **Task Management**: Enable users to create, update, organize, and track tasks across projects.
-- **Project Management**: Support project creation, editing, and lifecycle tracking within workspaces.
-- **Workflow Tracking**: Provide a board-based workflow view for task status and progress.
-- **Team Collaboration (future)**: Expand to shared workspaces, member roles, assignments, and activity history.
+- **Task Management** ✅: Create, update, organize, and track tasks across projects with priority, due dates, descriptions, assignees, subtasks, and rich interaction elements.
+- **Task Collaboration** ✅: Task-level comments, interactive activity timelines, and progress tracking via subtasks.
+- **Project Management** ✅: Project creation, editing, deletion, and lifecycle tracking with kanban boards and custom columns.
+- **Workflow Tracking** ✅: Board-based workflow view with drag-and-drop task management and custom column workflows.
+- **Team Collaboration** ✅: Shared workspaces, member roles, email invitations, task assignments, and activity notifications.
+- **Realtime Sync** ✅: Instant board updates across all connected clients via Supabase Realtime WebSocket channels.
+- **Workspace Analytics** ✅: Live workspace overview dashboard with task distribution charts, member activity stats, and notification feed.
 
-
+---
 
 ## Technology Stack
 
 ### Frontend
 
-- Next.js
-- TypeScript
-- Tailwind CSS
-- App Router
-- Server Actions
+- **Next.js** (App Router, `force-dynamic` pages)
+- **TypeScript**
+- **Tailwind CSS v4** (with semantic design tokens in `globals.css`)
+- **Server Actions** (for all mutations)
+- **`@dnd-kit/core` + `@dnd-kit/sortable`** (drag-and-drop engine)
+- **Recharts** (workspace analytics charts)
+- **Lucide React** (icon library)
+- **`next/dynamic`** (code-split KanbanBoard for performance)
 
 ### Backend
 
-- Next.js Server Actions
+- **Next.js Server Actions** (`"use server"` functions)
+- **Next.js Route Handlers** (`app/api/` for invite accept/reject)
+- **Supabase Edge / Postgres Functions** (RPC for atomic column deletion)
 
 ### Database
 
-- Supabase PostgreSQL
-- Supabase Realtime (Active)
+- **Supabase PostgreSQL**
+- **Supabase Realtime** (WebSocket channels for live board sync)
+- **Row Level Security (RLS)** (on all tables)
 
 ### Authentication
 
-- Supabase Auth
-- JWT Session Management
+- **Supabase Auth** (Email/Password + GitHub OAuth)
+- **JWT Session Management** via `@supabase/ssr` (server-side cookie sessions)
+- **Middleware proxy** (`src/proxy.ts`) for route guards and redirects
+
+### External Integrations
+
+- **SendGrid** (`@sendgrid/mail`) — transactional email delivery for workspace invitations
 
 ### Development Tools
 
-- GitHub
+- **GitHub** (version control)
+- **Supabase CLI** (migrations)
 
 ### Future Integrations
 
-- Supabase Storage
-- OpenAI API
+- Supabase Storage (file attachments)
+- OpenAI / Gemini API (AI-enhanced task management)
 
 ---
 
@@ -59,298 +76,229 @@ User
 │
 ▼
 Next.js Frontend
-(UI + Routing + Server Actions)
+(App Router, Server Components, Client Islands)
 │
-▼
-Supabase Auth
-│
-▼
-PostgreSQL Database
-│
-├── Profiles
-│
-├── Workspaces
-│
-├── Projects
-└── Tasks
+├── Server Actions ──────────► Supabase PostgreSQL
+│                                  │
+├── Supabase Auth ◄─────────────── ┤
+│                                  ├── profiles
+├── Realtime Channels ◄────────── ┤── workspaces
+│   (WebSockets)                   ├── workspace_members
+│                                  ├── projects
+└── SendGrid API ◄──── Invitations ├── tasks
+    (Email delivery)               ├── task_activities
+                                   ├── task_comments
+                                   ├── task_subtasks
+                                   ├── columns
+                                   ├── workspace_invitations
+                                   ├── project_members
+                                   └── notifications
 ```
-
-TaskPilot is built as a web-first application where users interact with the Next.js frontend. The frontend manages routing, server actions, and UI rendering. Authentication is handled by Supabase Auth, while persistent data is stored in Supabase PostgreSQL. The database model supports user profiles, workspace scope, projects, and tasks.
 
 ---
 
-## Database Architecture
+## Database Architecture (Current — Full Schema)
 
 ```
 profiles
-  ├─ id
+  ├─ id (UUID, FK → auth.users)
   ├─ email
-  ├─ name
+  ├─ full_name
   ├─ avatar_url
-  └─ created_at
+  ├─ created_at
+  └─ updated_at
 
 workspaces
   ├─ id
   ├─ name
-  ├─ owner_id
+  ├─ owner_id (FK → profiles)
   └─ created_at
 
 workspace_members
   ├─ id
-  ├─ workspace_id
-  ├─ profile_id
-  ├─ role
+  ├─ workspace_id (FK → workspaces)
+  ├─ user_id (FK → profiles)
+  ├─ role ('owner' | 'admin' | 'member')
   └─ joined_at
 
 projects
   ├─ id
-  ├─ workspace_id
+  ├─ workspace_id (FK → workspaces)
   ├─ name
   ├─ description
-  ├─ status
+  ├─ status ('active' | 'archived' | 'completed')
+  └─ created_at
+
+columns
+  ├─ id
+  ├─ board_id (FK → projects)
+  ├─ name
+  ├─ position (DOUBLE PRECISION — fractional indexing)
   └─ created_at
 
 tasks
   ├─ id
-  ├─ project_id
+  ├─ project_id (FK → projects)
+  ├─ column_id (FK → columns)
   ├─ title
   ├─ description
-  ├─ status
-  ├─ priority
-  └─ due_date
-```
-
-```
-Profile
-│
-▼
-Workspace
-│
-▼
-Project
-│
-▼
-Task
-```
-
-- **profiles**: Stores user identity data, authentication references, and profile metadata.
-- **workspaces**: Defines workspace containers for grouping projects and teams.
-- **workspace_members**: Tracks membership of profiles in workspaces and supports future role management.
-- **projects**: Captures project-level structure, including association to a workspace and project metadata.
-- **tasks**: Stores tasks associated with projects, including status and scheduling details.
-
----
-
-## Development Roadmap
-  ├─ description
-  ├─ status
+  ├─ status ('todo' | 'in_progress' | 'done')
+  ├─ priority ('low' | 'medium' | 'high')
+  ├─ position (DOUBLE PRECISION — fractional indexing)
+  ├─ assigned_to (FK → profiles, nullable)
   └─ created_at
 
-tasks
+task_subtasks
   ├─ id
-  ├─ project_id
+  ├─ task_id (FK → tasks)
   ├─ title
-  ├─ description
-  ├─ status
-  ├─ priority
-  └─ due_date
+  ├─ completed (BOOLEAN)
+  ├─ position (INTEGER)
+  └─ created_at
+
+task_activities
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ actor_id (FK → profiles)
+  ├─ action_type (TEXT)
+  ├─ old_value (JSONB)
+  ├─ new_value (JSONB)
+  ├─ metadata (JSONB)
+  └─ created_at
+
+task_comments
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ author_id (FK → profiles)
+  ├─ content
+  ├─ edited (BOOLEAN)
+  └─ created_at
+
+task_comment_mentions
+  ├─ id
+  ├─ comment_id (FK → task_comments)
+  ├─ mentioned_user_id (FK → profiles)
+  └─ created_at
+
+project_members
+  ├─ id
+  ├─ project_id (FK → projects)
+  ├─ user_id (FK → profiles)
+  ├─ role ('admin' | 'member')
+  └─ joined_at
+
+workspace_invitations
+  ├─ id
+  ├─ workspace_id (FK → workspaces)
+  ├─ email
+  ├─ role ('admin' | 'member')
+  ├─ token (UUID, UNIQUE)
+  ├─ status ('pending' | 'accepted' | 'declined')
+  ├─ invited_by (FK → profiles)
+  ├─ created_at
+  ├─ expires_at
+  └─ project_ids (UUID[])
+
+notifications
+  ├─ id
+  ├─ user_id (FK → profiles)
+  ├─ workspace_id (FK → workspaces, nullable)
+  ├─ task_id (FK → tasks, nullable)
+  ├─ comment_id (FK → task_comments, nullable)
+  ├─ title
+  ├─ message
+  ├─ type
+  ├─ read (BOOLEAN)
+  ├─ actor_id (FK → profiles, nullable)
+  └─ created_at
 ```
-
-
-### Phase 1: Core MVP
-
-**Objective:** Build the foundation of the application.
-
-**Features:**
-
-- Authentication
-- Workspace Creation
-- Project CRUD
-- Task CRUD
-- Drag and Drop
-
-```
-User
-│
-▼
-Workspace
-│
-▼
-Project
-│
-▼
-Task
-
-```
-
-**Deliverables:**
-
-- Authentication
-- Workspace Onboarding & Management
-- Project Management
-- Task Management
-- **Drag and Drop Board**: Powered by `@dnd-kit`, featuring optimistic updates, pointer-first collision detection for empty columns, and server revalidation. See the detailed [Kanban-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Kanban-Implementation.md) for architecture.
-
-### Phase 2: Team Collaboration
-
-**Features:**
-
-- Invite Members
-- Workspace Members
-- Role Management
-- Task Assignment
-- Activity Logs
-
-```
-Team Member
-│
-▼
-Workspace
-│
-▼
-Project
-│
-▼
-Assigned Task
-│
-▼
-Activity Log
-```
-
-This phase expands the platform into a shared collaboration environment by adding membership and assignment capabilities. The architecture supports workspaces with multiple contributors and audit-ready activity tracking.
 
 ---
 
-### Phase 3: Advanced Task Management
+## Development Roadmap — Current Status
 
-**Features:**
+### ✅ Phase 1: Core MVP — COMPLETE
 
-- Priorities
-- Labels
-- Due Dates
-- Subtasks
-- Task Dependencies
+- [x] Authentication (Email/Password + GitHub OAuth)
+- [x] Workspace creation and onboarding guard
+- [x] Project CRUD (Create, Read, Update, Delete)
+- [x] Task CRUD with priority, due dates, descriptions, and assignees
+- [x] Drag-and-drop Kanban board (`@dnd-kit`, fractional indexing)
+- [x] Custom column management (add, rename, reorder, delete — max 5)
+- [x] Column seeding on project creation (To Do, In Progress, Done)
 
-```
-Task
-│
-├─ Priority
-│
-├─ Labels
-│
-├─ Due Date
-│
-├─ Subtasks
-└─ Dependencies
-```
+### ✅ Phase 2: Team Collaboration — COMPLETE
 
-This phase improves task granularity and scheduling, enabling teams to categorize work, manage deadlines, and express task relationships with subtasks and dependencies.
+- [x] Email-based workspace invitations (SendGrid + token flow)
+- [x] Workspace member management (invite, remove, leave)
+- [x] Role-based access (owner / admin / member)
+- [x] Task assignment to workspace members
+- [x] Project-level member management (add/remove from projects)
+- [x] Notification system (invitation accepted/rejected, member left)
+- [x] Real-time notification inbox in header (`HeaderInbox`)
+
+### ✅ Phase 3: Advanced Task Management — COMPLETE
+
+- [x] Task priorities (Low / Medium / High)
+- [x] Task descriptions (rich textarea)
+- [x] Task due dates
+- [x] Assignee selector on task cards and detail modal
+- [x] Task details modal (full edit UI)
+- [x] Task status cycling on dashboard grid
+- [x] Task subtasks tracking with UI and database integration
+- [x] Real-time task comments with user mentions
+- [x] Automatically tracked chronological activity feeds via database triggers
+
+### ✅ Phase 4: Realtime Collaboration — COMPLETE
+
+- [x] **Live board sync**: Task INSERT/UPDATE/DELETE sync instantly via Supabase Realtime
+- [x] **Project list sync**: Sidebar and dashboard update without reload
+- [x] **Member eviction**: Removed members are redirected immediately
+- [x] **Invitation inbox**: Header bell updates in real-time
+- [x] **Workspace sync**: Workspace name/deletion updates propagate instantly
+- [x] Reusable `lib/realtime/` abstraction layer (channel factory, list hook, subscription hook)
+
+### ✅ Phase 5: Workspace Analytics Dashboard — COMPLETE
+
+- [x] Workspace overview page with task distribution pie chart
+- [x] Project progress bar chart (total vs. completed tasks per project)
+- [x] Member stats table (tasks assigned, completed, completion rate)
+- [x] Recent activity / notification feed panel
+- [x] Workspace-level aggregation using parallel server-side fetching
+
+### ✅ Phase 6: UX & UI Polish — COMPLETE
+
+- [x] Monochrome dark mode design system (Tailwind CSS semantic tokens)
+- [x] Custom scrollbar styles (`globals.css`)
+- [x] Animated skeleton loaders (Kanban board SSR fallback)
+- [x] Top loading progress bar during server transitions
+- [x] Custom 404 page (`not-found.tsx`) with micro-animations
+- [x] Pagination on the project dashboard grid (6 projects per page)
+- [x] Portal-rendered modals (avoid `backdrop-filter` clipping)
+- [x] React `memo` optimizations on Kanban card components
+- [x] Column add button conditionally hidden when 5-column limit is reached
+
+### ✅ Phase 7: Input Validation & Testing — COMPLETE
+
+- [x] Centralized Zod validation layer under `src/lib/validations/` (Task, Project, Workspace, Kanban, Invitation schemas)
+- [x] All server actions validate input with `safeParse()` before hitting the database
+- [x] Exported inferred Zod types replace raw/unsafe inputs across all mutations
+- [x] Vitest testing framework set up from scratch
+- [x] Business validation test suites in `tests/` for all 5 schemas
+- [x] Tests cover both valid and invalid input paths without mocking infrastructure
+- [x] Removed unused `TaskPriority` imports from `create-task.action.ts` and `update-task.action.ts`
+- [x] Pagination UI made compact on the projects dashboard
+
+### 🔲 Phase 8: Search & Productivity — FUTURE
+
+- [ ] Global search dialog (Command-K / `cmdk`)
+- [ ] Sidebar filter toggles (by assignee, priority, status)
+- [ ] Task search within a project
 
 ---
-
-### Phase 4: Realtime Collaboration (Partially Implemented)
-
-**Features:**
-
-- **Live Board Updates (Implemented)**: Changes to tasks (status, order, assignees, creation, deletion) sync instantly across collaborators' browsers without reload. See [Realtime-Implementation.md](file:///home/hp/Desktop/practise/TaskPilot/taskpilot/plan/Realtime-Implementation.md) for technical details.
-- **Kanban Board Sync (Implemented)**: Dual integration with React 19 optimistic updates and DND.
-- Realtime Comments (Future)
-- Notifications (Future)
-- Presence Tracking (Future)
-
-Powered by Supabase Realtime.
-
-```
-User
-│
-▼
-Frontend (optimistic rendering)
-│
-▼
-Supabase Realtime (WebSockets)
-│
-▼
-Shared Board (synchronized state)
-│
-▼
-Live Updates (reconciled in background)
-```
-
-Realtime collaboration enables multiple users to interact with the same board simultaneously, receive live status changes, and stay aware of collaborators.
-
----
-### Phase 6: Search & Productivity
-
-**Features:**
-
-- Global Search
-- Task Search
-- Project Search
-- Filters
-
-```
-Search Input
-│
-▼
-Search Service
-│
-▼
-Tasks / Projects
-│
-▼
-Filtered Results
-```
-
-Search capabilities help users quickly locate projects and tasks across workspaces. Advanced filtering improves productivity by surfacing relevant work items faster.
-
-## Project Timeline
-
-Total Project Duration: 2 Weeks
-
-**Week 1:**
-
-- Setup
-- Authentication
-- Database
-- Workspace Module
-- Project Module
-
-**Week 2:**
-
-- Task CRUD
-- Kanban Board
-- Drag and Drop
-- Testing
-- Bug Fixes
-- Deployment Preparation
-
-```
-Week 1
-│
-├─ Setup
-├─ Authentication
-├─ Database
-├─ Workspace Module
-└─ Project Module
-
-Week 2
-│
-├─ Task CRUD
-├─ Kanban Board
-├─ Drag and Drop
-├─ Testing
-├─ Bug Fixes
-└─ Deployment Preparation
-```
-
-
 
 ## Conclusion
 
-TaskPilot is designed to be scalable and extensible. The current architecture supports a clean separation between the Next.js frontend, Supabase authentication, and PostgreSQL-backed persistence. The roadmap positions the product to evolve from a strong MVP into a collaborative, realtime platform with file storage and AI-enhanced productivity.
+TaskPilot has evolved from a planned two-week MVP into a fully-featured, production-ready collaborative project management platform. All core phases (authentication, workspace management, project/task CRUD, kanban board, team collaboration, realtime sync, analytics, UI polish, and input validation with tests) are now **complete and functional**.
 
-The project is prepared for:
-
-- collaboration through workspace membership and task assignment,
-- realtime functionality via Supabase Realtime,
-- storage for attachments with Supabase Storage,
+The architecture maintains a clean separation between the Next.js App Router (routing only), feature modules (business logic), server actions (mutations), and Supabase services (data layer). The codebase is fully type-safe, Zod-validated at all boundaries, follows feature-based colocation conventions, and is ready for the next phase of search enhancements.

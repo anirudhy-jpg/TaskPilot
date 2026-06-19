@@ -1,4 +1,4 @@
-const http = require('http');
+import http from 'node:http';
 
 http.get('http://localhost:3000/api/check-policies', (res) => {
   let data = '';

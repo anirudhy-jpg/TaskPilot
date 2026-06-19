@@ -1,7 +1,7 @@
 "use server"
 
 import { TaskService } from "../services/task.service"
-import type { TaskStatus } from "@/features/project/types/project.types"
+
 
 export interface ActionResponse {
   success: boolean
@@ -9,7 +9,7 @@ export interface ActionResponse {
 }
 
 export async function batchUpdateTaskPositionsAction(
-  updates: { id: string; status: TaskStatus; position: number }[]
+  updates: { id: string; columnId: string; position: number }[]
 ): Promise<ActionResponse> {
   try {
     await TaskService.batchUpdatePositions(updates)

@@ -1,14 +1,24 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { User } from "lucide-react";
-import type { Task } from "@/features/project/types/project.types";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getUserInitials, getAvatarBgColor } from "@/features/project/utils/avatar";
 
+interface AssigneeTaskProps {
+  id: string;
+  assigneeId?: string | null;
+  assignee?: {
+    email?: string | null;
+    fullName?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+}
+
 interface AssigneeSelectorProps {
-  task: Task;
+  task: AssigneeTaskProps;
   members: WorkspaceMember[];
   currentUserId?: string;
   onChange: (taskId: string, assigneeId: string | null) => void;
@@ -26,9 +36,10 @@ export function AssigneeSelector({
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number }>({ top: 0, left: 0 });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -36,11 +47,12 @@ export function AssigneeSelector({
   const calculateCoords = (buttonEl: HTMLButtonElement) => {
     const rect = buttonEl.getBoundingClientRect();
     const leftPos = Math.max(16, rect.right - 256);
-    // Height is approx 270px max
-    const topPos = rect.bottom + 270 > window.innerHeight 
-      ? rect.top - 270 - 8 
-      : rect.bottom + 8;
-    return { top: topPos, left: leftPos };
+    const openUp = rect.bottom + 270 > window.innerHeight;
+    
+    if (openUp) {
+      return { bottom: window.innerHeight - rect.top + 8, left: leftPos };
+    }
+    return { top: rect.bottom + 8, left: leftPos };
   };
 
   // Toggle dropdown with pre-calculated coordinates to prevent flicker
@@ -108,17 +120,17 @@ export function AssigneeSelector({
           task.assignee.avatarUrl ? (
             <img
               src={task.assignee.avatarUrl}
-              alt={task.assignee.fullName || task.assignee.email}
+              alt={task.assignee.fullName || task.assignee.email || "Assignee"}
               className={`${sizeClasses} rounded-full object-cover border border-slate-800 shadow-sm hover:border-amber-500 transition-colors`}
             />
           ) : (
             <div
               className={`${sizeClasses} rounded-full flex items-center justify-center ${textClasses} font-bold border border-slate-900 shadow-sm uppercase hover:scale-105 transition-all ${getAvatarBgColor(
-                task.assignee.fullName || task.assignee.email
+                task.assignee.fullName || task.assignee.email || ""
               )}`}
-              title={task.assignee.fullName || task.assignee.email}
+              title={task.assignee.fullName || task.assignee.email || "Assignee"}
             >
-              {getUserInitials(task.assignee.fullName, task.assignee.email)}
+              {getUserInitials(task.assignee.fullName || "", task.assignee.email || "")}
             </div>
           )
         ) : (
@@ -136,7 +148,8 @@ export function AssigneeSelector({
           onClick={(e) => e.stopPropagation()}
           style={{
             position: "fixed",
-            top: `${coords.top}px`,
+            ...(coords.top !== undefined ? { top: `${coords.top}px` } : {}),
+            ...(coords.bottom !== undefined ? { bottom: `${coords.bottom}px` } : {}),
             left: `${coords.left}px`,
           }}
           className="assignee-dropdown-portal z-50 w-64 bg-slate-900/95 backdrop-blur-md text-slate-200 rounded-xl border border-amber-500/20 shadow-2xl p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150"

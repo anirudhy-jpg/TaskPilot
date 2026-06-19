@@ -156,13 +156,13 @@ export const KanbanColumn = React.memo(
                   <MoreHorizontal size={14} />
                 </button>
                 {isMenuOpen && (
-                  <div className="absolute right-0 mt-1.5 top-6 w-36 bg-slate-950 border border-slate-800 rounded-xl shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
+                  <div className="absolute right-0 mt-1.5 top-6 w-36 bg-slate-950 border border-slate-800 rounded-xl shadow-lg overflow-hidden z-30 animate-in fade-in zoom-in-95 duration-100 text-left">
                     <button
                       onClick={() => {
                         setIsEditing(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-350 hover:bg-slate-900 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
+                      className="w-full px-3 py-2.5 text-left text-xs font-semibold text-slate-350 hover:bg-slate-900 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
                     >
                       <Edit2 size={13} />
                       Rename
@@ -173,7 +173,7 @@ export const KanbanColumn = React.memo(
                           onDeleteColumn(column.id, "delete");
                           setIsMenuOpen(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-2"
                       >
                         <Trash2 size={13} />
                         Delete
@@ -248,7 +248,11 @@ export const KanbanColumn = React.memo(
         pt.position !== nt.position ||
         pt.title !== nt.title ||
         pt.assigneeId !== nt.assigneeId ||
-        pt.priority !== nt.priority
+        pt.priority !== nt.priority ||
+        pt.type !== nt.type ||
+        pt.description !== nt.description ||
+        pt.columnId !== nt.columnId ||
+        JSON.stringify(pt.subtasks) !== JSON.stringify(nt.subtasks)
       ) {
         return false;
       }

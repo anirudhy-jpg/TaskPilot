@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { FolderKanban, User, Users } from "lucide-react"
+import React, { useState } from "react"
+import { Users } from "lucide-react"
 import type { WorkspaceMember } from "../types/workspace.types"
 import type { Project } from "../../project/types/project.types"
 import { Pagination } from "@/components/ui/pagination"
@@ -28,11 +28,14 @@ export function TeamsList({ projects, membersByProject }: TeamsListProps) {
   const totalItems = projects.length
   const totalPages = Math.ceil(totalItems / itemsPerPage)
 
-  useEffect(() => {
+  const [prevTotalPages, setPrevTotalPages] = useState(totalPages);
+
+  if (totalPages !== prevTotalPages) {
+    setPrevTotalPages(totalPages);
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages)
+      setCurrentPage(totalPages);
     }
-  }, [totalPages, currentPage])
+  }
 
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedProjects = projects.slice(startIndex, startIndex + itemsPerPage)

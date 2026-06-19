@@ -39,13 +39,18 @@ export async function getMemberDetailsAction(
     }
 
     // Filter projects where this member is a creator or is registered as a project member
-    const matchedProjects = (projectsData || []).filter((p: any) => {
+    type ProjectRow = {
+      id: string; workspace_id: string; name: string;
+      description: string | null; created_by: string; created_at: string;
+      project_members: { user_id: string }[];
+    };
+    const matchedProjects = (projectsData || []).filter((p: ProjectRow) => {
       const isCreator = p.created_by === memberUserId
-      const isMember = (p.project_members || []).some((pm: any) => pm.user_id === memberUserId)
+      const isMember = (p.project_members || []).some((pm: { user_id: string }) => pm.user_id === memberUserId)
       return isCreator || isMember
     })
 
-    const projectsJoined: Project[] = matchedProjects.map((p: any) => ({
+    const projectsJoined: Project[] = matchedProjects.map((p: ProjectRow) => ({
       id: p.id,
       workspaceId: p.workspace_id,
       name: p.name,
@@ -64,7 +69,7 @@ export async function getMemberDetailsAction(
     if (projectIds.length > 0) {
       const { data: tasksData, error: tasksErr } = await supabase
         .from("tasks")
-        .select("id, project_id, title, description, status, column_id, priority, position, assigned_to, created_at")
+        .select("id, project_id, title, description, column_id, type, priority, position, assigned_to, created_at")
         .in("project_id", projectIds)
 
       if (tasksErr) {
@@ -73,10 +78,11 @@ export async function getMemberDetailsAction(
       }
 
       if (tasksData) {
+        type TaskRow = { id: string; project_id: string; assigned_to: string | null; [key: string]: unknown };
         memberTasks = tasksData
-          .filter((t: any) => t.assigned_to === memberUserId)
-          .map((row: any) => {
-            const mapped = mapTask(row, null)
+          .filter((t: TaskRow) => t.assigned_to === memberUserId)
+          .map((row: TaskRow) => {
+            const mapped = mapTask(row as Parameters<typeof mapTask>[0], null)
             const proj = projectsJoined.find(p => p.id === row.project_id)
             return {
               ...mapped,

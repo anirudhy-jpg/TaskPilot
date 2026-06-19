@@ -39,6 +39,7 @@ export default async function TeamsPage() {
 
       // Group user_ids by project
       const userIdsByProject = new Map<string, Set<string>>()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(projectMemberRows || []).forEach((row: any) => {
         const set = userIdsByProject.get(row.project_id) || new Set<string>()
         set.add(row.user_id)

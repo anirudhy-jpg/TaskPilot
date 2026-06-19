@@ -13,7 +13,7 @@ export interface UseRealtimeSubscriptionOptions {
   schema?: string;
   event?: RealtimeEvent;
   onPayload: (
-    payload: RealtimePostgresChangesPayload<Record<string, any>>,
+    payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>,
   ) => void;
 }
 
@@ -28,7 +28,9 @@ export function useRealtimeSubscription({
   onPayload,
 }: UseRealtimeSubscriptionOptions) {
   const onPayloadRef = useRef(onPayload);
-  onPayloadRef.current = onPayload;
+  useEffect(() => {
+    onPayloadRef.current = onPayload;
+  }, [onPayload]);
 
   useEffect(() => {
     const { unsubscribe } = createRealtimeChannel({
@@ -62,16 +64,16 @@ export function useRealtimeList<T extends object>(
 
   // Use refs to avoid resubscribing when callbacks/mapRow/setState/keyField change references
   const callbacksRef = useRef(callbacks);
-  callbacksRef.current = callbacks;
-
   const mapRowRef = useRef(mapRow);
-  mapRowRef.current = mapRow;
-
   const setStateRef = useRef(setState);
-  setStateRef.current = setState;
-
   const keyFieldRef = useRef(keyField);
-  keyFieldRef.current = keyField;
+
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+    mapRowRef.current = mapRow;
+    setStateRef.current = setState;
+    keyFieldRef.current = keyField;
+  }, [callbacks, mapRow, setState, keyField]);
 
   useEffect(() => {
     const { unsubscribe } = createRealtimeChannel({
@@ -114,20 +116,20 @@ export function useRealtimeList<T extends object>(
                 if (
                   !("tasks" in rawItem) &&
                   "tasks" in item &&
-                  Array.isArray((item as any).tasks) &&
-                  (item as any).tasks.length > 0
+                  Array.isArray((item as Record<string, unknown>).tasks) &&
+                  ((item as Record<string, unknown>).tasks as unknown[]).length > 0
                 ) {
-                  (merged as any).tasks = (item as any).tasks;
+                  (merged as Record<string, unknown>).tasks = (item as Record<string, unknown>).tasks;
                 }
                 // Keep existing memberUserIds if the update payload didn't explicitly include member_user_ids or memberUserIds
                 if (
                   !("member_user_ids" in rawItem) &&
                   !("memberUserIds" in rawItem) &&
                   "memberUserIds" in item &&
-                  Array.isArray((item as any).memberUserIds) &&
-                  (item as any).memberUserIds.length > 0
+                  Array.isArray((item as Record<string, unknown>).memberUserIds) &&
+                  ((item as Record<string, unknown>).memberUserIds as unknown[]).length > 0
                 ) {
-                  (merged as any).memberUserIds = (item as any).memberUserIds;
+                  (merged as Record<string, unknown>).memberUserIds = (item as Record<string, unknown>).memberUserIds;
                 }
                 return merged;
               }

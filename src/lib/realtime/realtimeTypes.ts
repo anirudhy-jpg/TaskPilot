@@ -7,11 +7,11 @@ export interface RealtimeConfig<T> {
   filter?: string
   schema?: string
   keyField?: keyof T
-  mapRow?: (row: Record<string, any>) => T
+  mapRow?: (row: { [key: string]: unknown }) => T
 }
 
 export interface RealtimeCallbacks<T> {
-  onInsert?: (item: T, payload: RealtimePostgresChangesPayload<Record<string, any>>) => void
-  onUpdate?: (item: T, payload: RealtimePostgresChangesPayload<Record<string, any>>) => void
-  onDelete?: (id: string, payload: RealtimePostgresChangesPayload<Record<string, any>>) => void
+  onInsert?: (item: T, payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => void
+  onUpdate?: (item: T, payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => void
+  onDelete?: (id: string, payload: RealtimePostgresChangesPayload<{ [key: string]: unknown }>) => void
 }

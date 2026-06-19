@@ -24,7 +24,7 @@ export async function getSessionAndResponse(request: NextRequest): Promise<{
     } else {
       user = data.user
     }
-  } catch (err) {
+  } catch {
     // Ignore background auth verification errors
   }
 
