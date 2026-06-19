@@ -73,15 +73,7 @@ export function LoginForm() {
     try {
       const response = await loginAction({ email, password }, next)
       if (response && !response.success) {
-        const errMsg = response.error || "Failed to sign in. Please check your credentials."
-        if (errMsg.toLowerCase().includes("credential") || errMsg.toLowerCase().includes("invalid")) {
-          setValidationErrors({
-            email: "Invalid email address or password",
-            password: "Invalid email address or password",
-          })
-        } else {
-          setError(errMsg)
-        }
+        setError(response.error || "Failed to sign in. Please check your credentials.")
       }
     } catch (err: unknown) {
       if (
@@ -155,6 +147,12 @@ export function LoginForm() {
             >
               Password <span className="text-red-500">*</span>
             </Label>
+            <Link 
+              href="/forgot-password" 
+              className="text-xs font-semibold text-amber-500 hover:text-amber-400 hover:underline transition-colors"
+            >
+              Forgot Password?
+            </Link>
           </div>
           <div className="relative">
             <Input

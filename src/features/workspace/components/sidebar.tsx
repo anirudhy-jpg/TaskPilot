@@ -43,6 +43,7 @@ interface SidebarProps {
   ownerEmail?: string | null
   variant?: "desktop" | "mobile"
   onClose?: () => void
+  hasMultipleWorkspaces?: boolean
 }
 
 function SidebarContent({
@@ -50,6 +51,7 @@ function SidebarContent({
   projects = [],
   variant = "desktop",
   onClose,
+  hasMultipleWorkspaces = false,
 }: SidebarProps) {
   const pathname = usePathname()
   const params = useParams()
@@ -94,13 +96,15 @@ function SidebarContent({
             {workspaceName}
           </div>
         </div>
-        <Link
-          href="/workspaces"
-          onClick={handleLinkClick}
-          className="text-xs text-amber-500 hover:text-amber-400 font-extrabold cursor-pointer border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded-md transition-all active:scale-[0.95]"
-        >
-          Switch
-        </Link>
+        {hasMultipleWorkspaces && (
+          <Link
+            href="/workspaces"
+            onClick={handleLinkClick}
+            className="text-xs text-amber-500 hover:text-amber-400 font-extrabold cursor-pointer border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded-md transition-all active:scale-[0.95]"
+          >
+            Switch
+          </Link>
+        )}
       </div>
 
       {/* Divider */}

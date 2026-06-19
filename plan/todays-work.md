@@ -107,6 +107,35 @@ Created a NotificationService to generate server-side notifications.
 Integrated notification triggers for when users are added to projects or assigned to tasks (excluding self-assignments).
 Enhanced the HeaderInbox UI to visually distinguish `project_member_added` and `task_assigned` notification types with custom icons and colors.
 
+16. 🧹 Resolved Remaining Linting & Build Issues
+Fixed the remaining linting warning in `project-board-header.tsx` caused by an unused `isWorkspaceOwner` variable.
+Resolved `@typescript-eslint/no-explicit-any` errors in `update-profile.action.ts` and React hook anti-patterns (set state in effect) in `SignOutConfirmModal`, `EditProfileModal`, and `LeaveWorkspaceConfirmModal`.
+Addressed `@next/next/no-img-element` warnings across various UI components.
+Cleaned up unused `logoutAction` imports, achieving a clean production build.
+
+17. 🔑 Enhanced Workspace & Project Membership
+Updated permissions so workspace admins can add or remove members from any project, matching owner capabilities.
+Fixed a bug in Workspace Membership Creation where newly registered users were not automatically added as members to a workspace.
+Hid the "Remove" option for owners and admins in the `ManageProjectMembersModal` to prevent accidental removal of high-privileged users.
+Implemented a notification system alerting users when they are removed from a workspace.
+
+18. 🔐 Improved Authentication Flows
+Refined the login form validation by decoupling it from the signup schema and removing unnecessary password length constraints for logins.
+Established a functional forgot password and reset password flow, ensuring the email reset link dynamically points to the correct local environment origin.
+Added a comprehensive sign-out confirmation modal system to prevent accidental account sign-outs and unintended workspace departures.
+
+19. 👤 Implemented User Profile Editing
+Enabled users to update their display name and upload a custom profile picture.
+Created a Supabase storage bucket (`avatars`) with appropriate access policies.
+Developed `updateProfileAction` and an `EditProfileModal` component with local state for image previews and file size limits.
+
+20. 👁️ UI & Visibility Improvements
+Implemented conditional visibility for the workspace switcher, hiding it when the user only has access to a single workspace.
+Resolved the "Unknown" author display bug in task comments and activity logs by ensuring proper `profiles` table joins.
+
+21. 🛠️ Fixed Task Type Persistence
+Ensured the 'Task Type' field correctly persists and is fetched in the `projects` page queries, making the UI correctly receive and display the type.
+
 📦 Files / Folders Created Today
 | File/Folder | What it is |
 |-------------|------------|

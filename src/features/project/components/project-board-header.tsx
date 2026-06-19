@@ -9,7 +9,6 @@ import { getProjectInitials, getUserInitials } from "@/features/project/utils/av
 interface ProjectBoardHeaderProps {
   activeProject: Project | null
   currentProjectMembers: WorkspaceMember[]
-  isWorkspaceOwner: boolean
   isWorkspaceMember: boolean
   onManageMembers: () => void
   onDeleteProject: (target: { type: "project" | "task"; id: string; name: string }) => void
@@ -24,7 +23,6 @@ interface ProjectBoardHeaderProps {
 export function ProjectBoardHeader({
   activeProject,
   currentProjectMembers,
-  isWorkspaceOwner,
   isWorkspaceMember,
   onManageMembers,
   onDeleteProject,
@@ -142,8 +140,8 @@ export function ProjectBoardHeader({
                     {initials}
                   </div>
                 );
-              })}
-              {isWorkspaceOwner && (
+              }) }
+              {!isWorkspaceMember &&(
                 <button
                   onClick={onManageMembers}
                   className="text-slate-400 hover:text-amber-500 p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center shrink-0 ml-1"

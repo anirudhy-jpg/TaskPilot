@@ -143,22 +143,42 @@ export class ProjectService {
       throw new Error(error.message);
     }
 
-    // Auto-assign project creator to project_members table
+    // Auto-assign project creator and workspace admins to project_members table
     try {
-      const { error: pmError } = await supabase.from("project_members").insert({
+      const { data: adminMembers } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspaceId)
+        .in("role", ["admin", "owner"]);
+
+      const membersToAssign = new Set<string>();
+      membersToAssign.add(user.id);
+      
+      if (adminMembers) {
+         adminMembers.forEach(m => membersToAssign.add(m.user_id));
+      }
+
+      // Also add the workspace owner specifically, just in case they aren't in workspace_members (though they should be)
+      if (ws?.owner_id) {
+         membersToAssign.add(ws.owner_id);
+      }
+
+      const inserts = Array.from(membersToAssign).map(uid => ({
         project_id: data.id,
-        user_id: user.id,
-      });
+        user_id: uid,
+      }));
+
+      const { error: pmError } = await supabase.from("project_members").insert(inserts);
 
       if (pmError) {
         console.error(
-          "Failed to auto-assign creator to project members:",
+          "Failed to auto-assign creator and admins to project members:",
           pmError.message,
         );
       }
     } catch (pmErr) {
       console.error(
-        "Exception during creator project member auto-assignment:",
+        "Exception during project member auto-assignment:",
         pmErr,
       );
     }

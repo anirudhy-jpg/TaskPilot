@@ -192,7 +192,12 @@ export class InviteService {
     const alreadyMember = await InvitationRepository.isWorkspaceMember(invitation.workspaceId, userId);
     if (alreadyMember) {
       // Assign project memberships if present
-      const projectIdsToAssign = invitation.projectIds || [];
+      let projectIdsToAssign = invitation.projectIds || [];
+      if (invitation.role === "admin") {
+        const allProjectIds = await InvitationRepository.getAllProjectIdsByWorkspace(invitation.workspaceId);
+        projectIdsToAssign = Array.from(new Set([...projectIdsToAssign, ...allProjectIds]));
+      }
+
       if (projectIdsToAssign.length > 0) {
         await InvitationRepository.addProjectMembers(projectIdsToAssign, userId);
       }
@@ -223,7 +228,12 @@ export class InviteService {
     await InvitationRepository.addWorkspaceMember(invitation.workspaceId, userId, invitation.role);
 
     // 6. Insert into project_members
-    const projectIdsToAssign = invitation.projectIds || [];
+    let projectIdsToAssign = invitation.projectIds || [];
+    if (invitation.role === "admin") {
+      const allProjectIds = await InvitationRepository.getAllProjectIdsByWorkspace(invitation.workspaceId);
+      projectIdsToAssign = Array.from(new Set([...projectIdsToAssign, ...allProjectIds]));
+    }
+
     if (projectIdsToAssign.length > 0) {
       await InvitationRepository.addProjectMembers(projectIdsToAssign, userId);
     }

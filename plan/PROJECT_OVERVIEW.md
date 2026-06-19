@@ -122,6 +122,11 @@ Security is deeply integrated at both the application and database levels.
 * **Solution**: Integrated Supabase Realtime WebSockets. Database triggers publish PostgreSQL WAL changes directly to subscribed React clients, patching the local state automatically.
 * **Outcome**: Seamless multi-player collaboration where everyone sees the same board state in real-time.
 
+### Idempotent Onboarding & OAuth Signups
+* **Problem**: New users signing up via GitHub OAuth were not reliably being added to their default workspace because the OAuth callback lacked the synchronized creation steps that existed in the standard email signup flow.
+* **Solution**: Standardized the onboarding path by migrating the workspace and membership creation logic into the core auth callback layer. Implemented an idempotent onboarding guard that guarantees a profile, a default workspace, and an owner membership record are all atomically created the first time any user (Email or OAuth) logs in.
+* **Outcome**: A bulletproof, unified onboarding flow where every new user is guaranteed a fully functioning default workspace without manual intervention or race conditions.
+
 ---
 
 ## 8. Performance Optimizations

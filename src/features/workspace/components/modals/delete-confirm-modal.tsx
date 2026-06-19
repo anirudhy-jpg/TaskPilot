@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 interface DeleteConfirmModalProps {
   isOpen: boolean
   onClose: () => void
-  type: "project" | "task" | "member" | "workspace" | "leave_workspace" | "delete_workspace"
+  type: "project" | "task" | "member" | "workspace" | "delete_workspace"
   name: string
   isPending: boolean
   onConfirm: () => void
@@ -30,7 +30,7 @@ export function DeleteConfirmModal({
   if (!isOpen) return null
   if (!mounted) return null
 
-  const isLeave = type === "workspace" || type === "leave_workspace"
+  const isLeave = type === "workspace"
 
   return createPortal(
     <div
@@ -52,7 +52,7 @@ export function DeleteConfirmModal({
             <h3 className="text-base font-bold text-slate-100">
               {type === "member"
                 ? "Remove Member"
-                : type === "leave_workspace" || type === "workspace"
+                : type === "workspace"
                   ? "Leave Workspace"
                   : type === "delete_workspace"
                     ? "Delete Workspace"
@@ -64,7 +64,7 @@ export function DeleteConfirmModal({
         <p className="text-xs text-slate-400 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-850">
           {type === "member" ? (
             <>You are about to remove <strong>&ldquo;{name}&rdquo;</strong> from this workspace. They will lose access to all projects and tasks.</>
-          ) : type === "leave_workspace" || type === "workspace" ? (
+          ) : type === "workspace" ? (
              <>You are about to leave the workspace <strong>&ldquo;{name}&rdquo;</strong>. You will lose access to all of its projects, boards, and tasks.</>
           ) : type === "delete_workspace" ? (
             <>You are about to permanently delete the workspace <strong>&ldquo;{name}&rdquo;</strong>. This action is irreversible and will delete all associated projects, tasks, and members.</>
@@ -91,10 +91,10 @@ export function DeleteConfirmModal({
             className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
           >
             {isPending
-              ? (type === "member" ? "Removing..." : type === "delete_workspace" ? "Deleting..." : type === "leave_workspace" || type === "workspace" ? "Leaving..." : "Deleting...")
+              ? (type === "member" ? "Removing..." : type === "delete_workspace" ? "Deleting..." : type === "workspace" ? "Leaving..." : "Deleting...")
               : type === "member"
                 ? "Remove Member"
-                : type === "leave_workspace" || type === "workspace"
+                : type === "workspace"
                   ? "Leave Workspace"
                   : type === "delete_workspace"
                     ? "Delete Workspace"
