@@ -36,11 +36,27 @@ export async function removeProjectMemberAction(
       .eq("id", project.workspace_id)
       .maybeSingle();
 
-    if (!ws || ws.owner_id !== user.id) {
+    let isAuthorized = false;
+    if (ws && ws.owner_id === user.id) {
+      isAuthorized = true;
+    } else {
+      const { data: memberInfo } = await supabase
+        .from("workspace_members")
+        .select("role")
+        .eq("workspace_id", project.workspace_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (memberInfo && (memberInfo.role === "admin" || memberInfo.role === "owner")) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       return {
         success: false,
         error:
-          "Unauthorized: Only the workspace owner can remove members from projects.",
+          "Unauthorized: Only workspace owners and admins can remove members from projects.",
       };
     }
 

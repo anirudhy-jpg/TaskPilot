@@ -99,7 +99,6 @@ function BoardContent(props: ProjectsListProps) {
     optimisticProjects,
     currentProjectMembers,
     eligibleMembers,
-    isWorkspaceOwner,
     isWorkspaceMember,
     isCreateProjectOpen,
     setIsCreateProjectOpen,
@@ -169,7 +168,6 @@ function BoardContent(props: ProjectsListProps) {
       <ProjectBoardHeader
         activeProject={activeProject || null}
         currentProjectMembers={currentProjectMembers}
-        isWorkspaceOwner={isWorkspaceOwner}
         isWorkspaceMember={isWorkspaceMember}
         onManageMembers={() => setIsManageMembersOpen(true)}
         onDeleteProject={(target) => setDeleteTarget(target)}
