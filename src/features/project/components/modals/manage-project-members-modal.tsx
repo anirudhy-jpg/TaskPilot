@@ -152,6 +152,7 @@ export function ManageProjectMembersModal({
                 const displayName = member.profile?.fullName || member.profile?.email || "?"
                 const email = member.profile?.email || "No email"
                 const isOwner = member.role === "owner"
+                const isAdmin = member.role === "admin"
 
                 return (
                   <div key={member.userId} className="flex items-center justify-between p-3 hover:bg-slate-950/40 transition-colors">
@@ -164,7 +165,12 @@ export function ManageProjectMembersModal({
                           <span>{displayName}</span>
                           {isOwner && (
                             <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 rounded font-bold shrink-0">
-                              Workspace Owner
+                               Owner
+                            </span>
+                          )}
+                          {isAdmin && (
+                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1 rounded font-bold shrink-0">
+                              Admin
                             </span>
                           )}
                         </div>
@@ -174,18 +180,20 @@ export function ManageProjectMembersModal({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleRemove(member.userId)}
-                      disabled={removingUserId !== null || isAdding}
-                      className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
-                      title="Remove member from project"
-                    >
-                      {removingUserId === member.userId ? (
-                        <Loader2 size={13} className="animate-spin text-slate-500" />
-                      ) : (
-                        <Trash2 size={13} />
-                      )}
-                    </button>
+                    {!isOwner && !isAdmin && (
+                      <button
+                        onClick={() => handleRemove(member.userId)}
+                        disabled={removingUserId !== null || isAdding}
+                        className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
+                        title="Remove member from project"
+                      >
+                        {removingUserId === member.userId ? (
+                          <Loader2 size={13} className="animate-spin text-slate-500" />
+                        ) : (
+                          <Trash2 size={13} />
+                        )}
+                      </button>
+                    )}
                   </div>
                 )
               })}

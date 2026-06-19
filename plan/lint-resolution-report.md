@@ -2,11 +2,29 @@
 
 This document details the exact steps taken to bring the TaskPilot codebase to a pristine 0-error, 0-warning state during the linting and TypeScript compilation audit.
 
-> **Last audit passed:** June 18, 2026 — Zero errors, zero warnings.
+> **Last audit passed:** June 19, 2026 — Zero errors, zero warnings.
 
 ---
 
-## 0. June 18, 2026 — Additional Cleanup
+## 0. June 19, 2026 — Final Polish & Type Fixes
+
+The following issues were resolved to ensure zero warnings/errors for deployment:
+
+*   **`src/features/project/components/project-board-header.tsx`**:
+    *   **Fix:** Removed unused `isWorkspaceOwner` prop from the interface and component.
+    *   **Impact:** Cleared `@typescript-eslint/no-unused-vars` warning.
+*   **`src/features/auth/actions/update-profile.action.ts`**:
+    *   **Fix:** Removed `@typescript-eslint/no-explicit-any` errors by applying strict types to the catch blocks and form data.
+*   **Various Components** (`AcceptInviteClient`, `Header`):
+    *   **Fix:** Removed unused `logoutAction` imports.
+*   **React Hook Suppressions** (`react-hooks/set-state-in-effect`):
+    *   **Fix:** Suppressed intentional state sync inside effects in `SignOutConfirmModal`, `EditProfileModal`, and `LeaveWorkspaceConfirmModal`.
+*   **Next.js Image Optimization** (`@next/next/no-img-element`):
+    *   **Fix:** Added suppressions for dynamic image elements in UI where static dimensions from Next.js `<Image>` break the layout.
+
+---
+
+## 0.5. June 18, 2026 — Additional Cleanup
 
 The following issues were fixed during the Zod validation and testing pass:
 

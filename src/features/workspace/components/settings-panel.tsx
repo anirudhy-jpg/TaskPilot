@@ -3,12 +3,15 @@
 import React, { useState, useTransition } from "react"
 import { User, LogOut, Mail, Calendar, Shield, Lock, Lightbulb, DoorOpen, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { logoutAction } from "@/features/auth/actions/logout.action"
+
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
 import { deleteWorkspaceAction } from "../actions/delete-workspace.action"
 import { useRouter } from "next/navigation"
 import type { UserProfile } from "@/features/auth/types/profile.types"
 import { DeleteConfirmModal } from "./modals/delete-confirm-modal"
+import { LeaveWorkspaceConfirmModal } from "./modals/leave-workspace-confirm-modal"
+import { SignOutConfirmModal } from "@/features/auth/components/modals/signout-confirm-modal"
+import { EditProfileModal } from "./modals/edit-profile-modal"
 
 interface SettingsPanelProps {
   profile: UserProfile | null
@@ -35,6 +38,8 @@ export function SettingsPanel({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false)
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false)
 
   const handleLeaveWorkspace = () => {
     setIsLeaveModalOpen(true)
@@ -98,19 +103,35 @@ export function SettingsPanel({
             </div>
 
             {/* Avatar + Name */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 flex items-center justify-center text-white text-xl font-black shadow-md shadow-amber-555/15 uppercase">
-                {profile?.fullName?.[0] ||
-                  profile?.email?.[0] ||
-                  user.email?.[0] ||
-                  "?"}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 overflow-hidden flex items-center justify-center text-white text-xl font-black shadow-md shadow-amber-555/15 uppercase border border-amber-600/30 relative">
+                  {profile?.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    profile?.fullName?.[0] ||
+                    profile?.email?.[0] ||
+                    user.email?.[0] ||
+                    "?"
+                  )}
+                </div>
+                <div>
+                  <p className="text-base font-bold text-slate-200">
+                    {profile?.fullName || "Unknown User"}
+                  </p>
+                  <p className="text-xs text-slate-400">{profile?.email || user.email}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-base font-bold text-slate-200">
-                  {profile?.fullName || "Unknown User"}
-                </p>
-                <p className="text-xs text-slate-400">{profile?.email || user.email}</p>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditProfileModalOpen(true)}
+                className="text-xs h-8 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                Edit Profile
+              </Button>
             </div>
 
             {/* Details */}
@@ -168,17 +189,16 @@ export function SettingsPanel({
               <p className="text-xs text-slate-400 mb-5">
                 Sign out of your account. You will be redirected to the login page.
               </p>
-              <form action={logoutAction}>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  size="sm"
-                  className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9 animate-all"
-                >
-                  <LogOut size={14} />
-                  <span>Sign Out</span>
-                </Button>
-              </form>
+              <Button
+                type="button"
+                onClick={() => setIsSignoutModalOpen(true)}
+                variant="destructive"
+                size="sm"
+                className="cursor-pointer rounded-xl font-bold text-xs px-4 h-9 animate-all"
+              >
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </Button>
             </div>
 
             {!isWorkspaceOwner && workspaceId && (
@@ -285,10 +305,9 @@ export function SettingsPanel({
 
       </div>
 
-      <DeleteConfirmModal
+      <LeaveWorkspaceConfirmModal
         isOpen={isLeaveModalOpen}
         onClose={() => setIsLeaveModalOpen(false)}
-        type="leave_workspace"
         name={workspaceName}
         isPending={isPending}
         onConfirm={handleLeaveConfirm}
@@ -300,6 +319,16 @@ export function SettingsPanel({
         name={workspaceName}
         isPending={isPending}
         onConfirm={handleDeleteConfirm}
+      />
+      <SignOutConfirmModal 
+        isOpen={isSignoutModalOpen} 
+        onClose={() => setIsSignoutModalOpen(false)} 
+      />
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        profile={profile}
+        user={user}
       />
     </div>
   )

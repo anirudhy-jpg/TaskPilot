@@ -173,6 +173,20 @@ export class InvitationRepository {
   }
 
   /**
+   * Get all project IDs in a workspace.
+   */
+  static async getAllProjectIdsByWorkspace(workspaceId: string): Promise<string[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("workspace_id", workspaceId);
+
+    if (error || !data) return [];
+    return data.map((p) => p.id);
+  }
+
+  /**
    * Get raw invitation record by token.
    */
   static async getInvitationByToken(token: string): Promise<DBInvitation | null> {

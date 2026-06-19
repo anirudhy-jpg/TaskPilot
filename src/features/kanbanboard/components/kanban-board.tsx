@@ -28,6 +28,7 @@ import { TaskCard } from "./kanban/task-card";
 import { groupTasksByColumn, getColumnFromDropTarget, computeFractionalPosition } from "./kanban/utils";
 import type { KanbanColumnDef } from "./kanban/types";
 import { getProjectInitials } from "@/features/project/utils/avatar";
+import { useSearchParams } from "next/navigation";
 
 interface KanbanBoardProps {
   project: Project & { tasks: Task[]; columns: Column[] };
@@ -122,11 +123,23 @@ export function KanbanBoard({
     });
   }, [project.columns]);
 
-  // Filter tasks by type before grouping
+  const searchParams = useSearchParams();
+  const searchQuery = (searchParams.get("search") || "").toLowerCase();
+
+  // Filter tasks by type and search query before grouping
   const filteredTasks = useMemo(() => {
-    if (taskTypeFilter.length === 0) return tasks;
-    return tasks.filter(t => taskTypeFilter.includes(t.type || "task"));
-  }, [tasks, taskTypeFilter]);
+    let result = tasks;
+    if (taskTypeFilter.length > 0) {
+      result = result.filter(t => taskTypeFilter.includes(t.type || "task"));
+    }
+    if (searchQuery) {
+      result = result.filter(t => 
+        t.title.toLowerCase().includes(searchQuery) ||
+        (t.description && t.description.toLowerCase().includes(searchQuery))
+      );
+    }
+    return result;
+  }, [tasks, taskTypeFilter, searchQuery]);
 
   // Group tasks into columns
   const tasksByColumn = useMemo(() => {

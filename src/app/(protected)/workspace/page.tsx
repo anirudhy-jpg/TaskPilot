@@ -39,6 +39,7 @@ export default async function WorkspaceOverviewPage() {
         actor:profiles!notifications_actor_id_fkey(full_name, email, avatar_url)
       `)
       .eq("workspace_id", workspace.id)
+      .not("type", "ilike", "%mention%")
       .order("created_at", { ascending: false })
       .limit(10)
   ])
