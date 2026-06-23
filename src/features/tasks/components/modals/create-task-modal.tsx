@@ -106,6 +106,7 @@ export function CreateTaskModal({
               placeholder="e.g. Write API integration tests"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-800 bg-slate-955 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               autoFocus
             />

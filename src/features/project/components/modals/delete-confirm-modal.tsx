@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 interface DeleteConfirmModalProps {
   isOpen: boolean
   onClose: () => void
-  type: "project" | "task" | "member" | "workspace" | "leave_workspace" | "delete_workspace"
+  type: "project" | "task" | "subtask" | "member" | "workspace" | "leave_workspace" | "delete_workspace" | "attachment"
   name: string
   isPending: boolean
   onConfirm: () => void
@@ -35,6 +35,7 @@ export function DeleteConfirmModal({
   return createPortal(
     <div
       onClick={(e) => {
+        e.stopPropagation();
         if (e.target === e.currentTarget && !isPending) onClose()
       }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-955/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -56,7 +57,9 @@ export function DeleteConfirmModal({
                   ? "Leave Workspace"
                   : type === "delete_workspace"
                     ? "Delete Workspace"
-                    : `Delete ${type === "project" ? "Project" : "Task"}`}
+                    : type === "attachment"
+                      ? "Delete Attachment"
+                      : `Delete ${type === "project" ? "Project" : type === "subtask" ? "Subtask" : "Task"}`}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">Are you sure you want to proceed?</p>
           </div>
@@ -68,6 +71,10 @@ export function DeleteConfirmModal({
              <>You are about to leave the workspace <strong>&ldquo;{name}&rdquo;</strong>. You will lose access to all of its projects, boards, and tasks.</>
           ) : type === "delete_workspace" ? (
             <>You are about to permanently delete the workspace <strong>&ldquo;{name}&rdquo;</strong>. This action is irreversible and will delete all associated projects, tasks, and members.</>
+          ) : type === "attachment" ? (
+            <>You are about to permanently delete the attachment <strong>&ldquo;{name}&rdquo;</strong>. This action cannot be undone.</>
+          ) : type === "subtask" ? (
+            <>You are about to permanently delete the subtask <strong>&ldquo;{name}&rdquo;</strong>. This action cannot be undone.</>
           ) : (
             <>You are about to delete <strong>&ldquo;{name}&rdquo;</strong>. This will
           permanently remove it from the workspace.{" "}
@@ -98,7 +105,9 @@ export function DeleteConfirmModal({
                   ? "Leave Workspace"
                   : type === "delete_workspace"
                     ? "Delete Workspace"
-                    : `Delete ${type === "project" ? "Project" : "Task"}`}
+                    : type === "attachment"
+                      ? "Delete Attachment"
+                      : `Delete ${type === "project" ? "Project" : type === "subtask" ? "Subtask" : "Task"}`}
           </Button>
         </div>
       </div>

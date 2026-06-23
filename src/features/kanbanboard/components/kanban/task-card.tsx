@@ -89,7 +89,7 @@ export const TaskCard = React.memo(
             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">
               {projectPrefix}-{taskNumber || "???"}
             </span>
-            <h4 className="text-xs font-bold text-slate-200 leading-snug mt-1 hover:text-amber-400 transition-colors">
+            <h4 className="text-xs font-bold text-slate-200 leading-snug mt-1 hover:text-amber-400 transition-colors break-all line-clamp-2">
               {task.title}
             </h4>
           </div>

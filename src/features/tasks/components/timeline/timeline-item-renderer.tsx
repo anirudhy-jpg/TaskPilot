@@ -115,6 +115,26 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
         actionText = "updated task details";
       }
       break;
+    case "ATTACHMENT_ADDED":
+      actionText = "attached a file";
+      if (meta?.file_name) {
+        details = (
+          <span className="text-[10px] font-bold text-slate-300 mt-1 block break-all">
+            {String(meta.file_name)}
+          </span>
+        );
+      }
+      break;
+    case "ATTACHMENT_REMOVED":
+      actionText = "deleted an attachment";
+      if (meta?.file_name) {
+        details = (
+          <span className="text-[10px] font-bold text-slate-500 line-through mt-1 block break-all">
+            {String(meta.file_name)}
+          </span>
+        );
+      }
+      break;
     default:
       actionText = "updated the task";
   }
@@ -135,7 +155,7 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
         </div>
       </div>
       <div className="flex flex-col min-w-0 pb-4">
-        <p className="text-[11px] text-slate-400 leading-snug">
+        <p className="text-[11px] text-slate-400 leading-snug break-all">
           <span className="font-extrabold text-slate-200">{actorName}</span> {actionText}
         </p>
         {details}
@@ -222,7 +242,7 @@ function CommentItem({
             </div>
           </div>
         ) : (
-          <div className="text-[11.5px] text-slate-300 leading-relaxed whitespace-pre-wrap break-words">
+          <div className="text-[11.5px] text-slate-300 leading-relaxed whitespace-pre-wrap break-all">
             {comment.content.split(/(@\w+)/g).map((part, i) => {
               if (part.startsWith("@")) {
                 return <span key={i} className="text-amber-500 font-extrabold bg-amber-500/10 px-1 py-0.5 rounded-md">{part}</span>;
