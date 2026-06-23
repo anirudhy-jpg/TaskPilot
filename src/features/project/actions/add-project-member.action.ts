@@ -102,19 +102,21 @@ export async function addProjectMemberAction(
     }
 
     // 5. Fire inbox notification to the added member
-    const [{ data: projectData }, { data: actorProfile }] = await Promise.all([
+    const [{ data: projectData }, { data: actorProfile }, { data: targetProfile }] = await Promise.all([
       supabase.from("projects").select("name").eq("id", projectId).maybeSingle(),
       supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
+      supabase.from("profiles").select("full_name, email").eq("id", validatedUserId).maybeSingle(),
     ]);
 
     const projectName = projectData?.name ?? "a project";
     const actorName = actorProfile?.full_name || actorProfile?.email || "A workspace admin";
+    const targetName = targetProfile?.full_name || targetProfile?.email || "Someone";
 
     await createNotification({
       userId: validatedUserId,
       workspaceId: project.workspace_id,
       title: "Added to project",
-      message: `${actorName} added you to "${projectName}".`,
+      message: `${actorName} added ${targetName} to "${projectName}".`,
       type: "project_member_added",
       actorId: user.id,
       client: supabase,

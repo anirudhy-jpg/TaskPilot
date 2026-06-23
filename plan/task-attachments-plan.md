@@ -1,92 +1,72 @@
-# Implement Task Attachments Feature
+# Task Attachments Feature (Implemented)
 
-This implementation plan details the steps and architecture required to build out the full file attachment system for tasks within TaskPilot using Next.js 15, TypeScript, Supabase, Server Actions, React Query, and TailwindCSS.
+This document details the architecture, implementation, and components of the file attachment system built for TaskPilot using Next.js 15, TypeScript, Supabase, Server Actions, React Query, and TailwindCSS.
 
-## User Review Required
-
-> [!WARNING]
-> We will need to create a new Supabase Storage Bucket named `attachments`. Please confirm if you would like me to write a Supabase Migration script for this and the `task_attachments` table, or if you will run SQL snippets directly in the Supabase Dashboard. 
-
-## Open Questions
-
-> [!IMPORTANT]
-> 1. To track the upload progress visually, we typically cannot use Server Actions alone for the actual file upload stream because Server Actions do not currently support progress events cleanly. We will need to upload directly from the Client (browser) to Supabase Storage using `@supabase/supabase-js`, and then call a Server Action to record the database entry in `task_attachments`. Does this approach align with your architecture?
-> 2. Are we using a specific UI component library for the drag-and-drop file upload (e.g., `react-dropzone`), or should I build a custom drag-and-drop area using native HTML5 drag-and-drop events?
-
-## Proposed Changes
+**Status:** Fully Implemented and Refined.
 
 ---
 
-### Database & Storage Schema
+## 🏗️ Architecture & How It Works
 
-#### [NEW] `supabase/migrations/[timestamp]_task_attachments.sql`
-- Create `task_attachments` table with `uuid`, `task_id`, `uploaded_by`, `file_name`, `file_path`, `file_size`, `mime_type`, and `created_at`.
-- Since RLS is NOT used, ensure Server Actions explicitly validate workspace membership and roles before allowing database mutations.
-- Create `attachments` Storage bucket.
-- Storage operations (upload/delete/download) will be gated by permission checks at the application level (Server Actions) rather than storage RLS.
+The attachment system relies on a hybrid approach for file uploading and metadata management to ensure a smooth, progress-tracked user experience while maintaining robust server-side security.
 
----
+### 1. Upload Flow
+1. **Client-Side Upload:** Because Next.js Server Actions do not currently support progress events for file streams effectively, the file is uploaded directly from the client browser to a Supabase Storage bucket (`attachments`) using `@supabase/supabase-js`. This allows the UI to display a real-time progress bar or loading spinner.
+2. **Metadata Registration:** Once the storage upload succeeds, the client calls a Next.js Server Action (`upload-attachment.action.ts`).
+3. **Database Insertion:** The Server Action records the file metadata (name, path, size, MIME type, uploader ID, task ID) into the PostgreSQL `task_attachments` table.
+4. **Activity Logging:** The same Server Action creates an entry in the `activities` table noting that the user uploaded an attachment.
 
-### Features: Attachments (Types, Hooks, Actions, Components)
+### 2. Retrieval & Display Flow
+1. **Fetching:** A React Query hook (`use-task-attachments`) calls a Server Action (`get-task-attachments.action.ts`) to fetch attachment metadata for a specific task.
+2. **Signed URLs:** To keep files secure, the Server Action dynamically generates short-lived signed URLs for each file from Supabase Storage and returns them with the metadata.
+3. **Rendering:** The client components render the files in a ClickUp-inspired grid layout. Images are displayed using optimized `next/image` components, while documents show corresponding icons.
 
-#### [NEW] `src/features/attachments/types/attachment.ts`
-- Define `TaskAttachment` interface reflecting the database schema.
-- Define specific upload payload types.
-
-#### [NEW] `src/features/attachments/actions/upload-attachment.ts`
-- Server Action: Takes the uploaded file metadata and inserts a record into `task_attachments` after it's successfully uploaded to Supabase Storage from the client.
-- Adds an entry to the `activities` table noting "User uploaded [file_name]".
-
-#### [NEW] `src/features/attachments/actions/delete-attachment.ts`
-- Server Action: Deletes the metadata record from `task_attachments`.
-- Deletes the file from the `attachments` Supabase storage bucket.
-- Adds an entry to the `activities` table noting "User deleted [file_name]".
-
-#### [NEW] `src/features/attachments/actions/get-task-attachments.ts`
-- Server Action: Fetches all attachment records for a given `task_id` ordered by `created_at` descending.
-- Generates signed URLs for the attachments if needed, or signed URLs will be generated dynamically on the client depending on caching needs.
-
-#### [NEW] `src/features/attachments/hooks/use-task-attachments.ts`
-- React Query hook: Fetches attachments and manages cache invalidation.
-
-#### [NEW] `src/features/attachments/hooks/use-upload-attachment.ts`
-- React Query mutation hook: Handles the file upload to Supabase Storage (tracking progress) and subsequently calls the `upload-attachment` Server Action. Uses optimistic updates where possible.
-
-#### [NEW] `src/features/attachments/hooks/use-delete-attachment.ts`
-- React Query mutation hook: Calls the `delete-attachment` Server Action and provides optimistic UI removal.
-
-#### [NEW] `src/features/attachments/components/AttachmentList.tsx`
-- Renders the list of `AttachmentItem`s or an empty state.
-- Handles the loading states and the integration with React Query.
-
-#### [NEW] `src/features/attachments/components/AttachmentItem.tsx`
-- Displays individual file info (MIME type icon, name, size, uploader, date).
-- Handles Download and Delete user interactions, including the delete confirmation dialog.
-
-#### [NEW] `src/features/attachments/components/AttachmentUpload.tsx`
-- Renders the drag-and-drop zone and file picker button.
-- Handles client-side file size validation (Max 20MB).
-- Manages upload progress visual state.
+### 3. Deletion Flow
+1. **User Action:** A user clicks delete on an attachment, triggering a reusable `DeleteConfirmationModal`.
+2. **Optimistic UI:** Upon confirmation, the UI updates optimistically to remove the item instantly.
+3. **Server Action:** The client invokes `delete-attachment.action.ts`.
+4. **Cleanup:** The Server Action removes the metadata record from the `task_attachments` table, deletes the actual file from the Supabase Storage bucket, and logs the deletion event in the `activities` table.
 
 ---
 
-### Integration: Tasks Feature
+## 🗂️ Implemented Components
 
-#### [MODIFY] `src/features/tasks/components/modals/task-details-modal.tsx`
-- Import and render `AttachmentUpload` and `AttachmentList` within the modal content area.
+The feature is organized into a cohesive, modular structure within `src/features/attachments`:
+
+### Actions (`src/features/attachments/actions/`)
+- **`upload-attachment.action.ts`**: Registers attachment metadata in the database after client upload and logs activity.
+- **`delete-attachment.action.ts`**: Removes storage file, deletes DB record, and logs activity.
+- **`get-task-attachments.action.ts`**: Fetches attachment records and generates secure signed URLs.
+
+### Hooks (`src/features/attachments/hooks/`)
+- **`use-task-attachments.ts`**: React Query hook for fetching and caching attachments.
+- **`use-upload-attachment.ts`**: Handles the direct-to-storage upload logic and orchestrates the Server Action call.
+- **`use-delete-attachment.ts`**: Wraps the delete Server Action with optimistic cache updates.
+
+### UI Components (`src/features/attachments/components/`)
+- **`AttachmentList.tsx`**: The main container that renders the grid of attachments and handles empty/loading states.
+- **`AttachmentItem.tsx`**: Renders individual files. Uses Next.js `<Image>` for image types to ensure performance and accessibility. Includes hover states, download buttons, and the delete confirmation integration.
+- **`AttachmentUpload.tsx`**: Provides the UI for initiating an upload.
+- **`AttachmentPreviewModal.tsx`**: A dedicated modal for viewing full-size images or documents without leaving the task view.
+
+### Integration
+- **`task-details-modal.tsx`**: Integrates the attachment list and upload components seamlessly into the Task Details view.
 
 ---
 
-## Verification Plan
+## 🛠️ Database & Storage Schema
 
-### Automated Tests
-- If applicable, run linter and TypeScript compiler checks `npm run lint` and `npm run typecheck` after the code changes are made.
+- **Table:** `task_attachments`
+  - Columns: `id` (uuid), `task_id` (uuid), `uploaded_by` (uuid), `file_name` (text), `file_path` (text), `file_size` (integer), `mime_type` (text), `created_at` (timestamp).
+- **Storage Bucket:** `attachments`
+- **Security:** Storage and DB access are mediated by Server Actions, which validate user authentication, workspace membership, and permissions before executing operations.
 
-### Manual Verification
-- **Upload Flow:** Drag and drop a valid file (< 20MB) and verify the upload progress indicator appears and the file subsequently appears in the list.
-- **Validation:** Attempt to upload a file > 20MB and verify an appropriate error message is shown.
-- **View Flow:** Verify the file appears in the Supabase Storage bucket and the metadata is present in `task_attachments`.
-- **Download Flow:** Click the attachment name/icon and verify it opens the signed URL in a new tab or triggers a download.
-- **Delete Flow:** Delete the file and verify it disappears instantly (optimistic UI), is removed from the database, and is removed from the storage bucket.
-- **Activity Feed:** Verify the "User uploaded..." and "User deleted..." activities populate correctly in the activity feed section.
-- **Permissions:** Verify another user who is NOT an admin cannot delete a file they didn't upload.
+---
+
+## ✨ Recent Refinements & Optimizations
+
+- **Performance & Accessibility:** Replaced all standard HTML `<img>` tags with Next.js `<Image>` components to resolve linting warnings and improve load times.
+- **Type Safety:** Eliminated `any` types across hooks and actions, ensuring strict TypeScript validation for error handling and payloads.
+- **UI Stability:** Resolved flickering issues during upload and deletion by refining how React Query invalidates cache and manages `isLoading` states.
+- **ClickUp-Style Aesthetics:** Implemented a modern, responsive grid layout for attachments with dedicated preview modals, file-type icons, and smooth hover interactions.
+- **Timeline Integration:** Fully integrated upload and delete events into the task's Activity Timeline for comprehensive audit trails.
