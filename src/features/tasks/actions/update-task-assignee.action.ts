@@ -19,7 +19,7 @@ export async function updateTaskAssigneeAction(
     // Only send notification if we're assigning (not un-assigning) and it's a different user
     if (assigneeId && assigneeId !== user.id) {
       // Fetch task + project info for the notification message
-      const [{ data: task }, { data: actorProfile }] = await Promise.all([
+      const [{ data: task }, { data: actorProfile }, { data: targetProfile }] = await Promise.all([
         supabase
           .from("tasks")
           .select("title, project_id, projects(workspace_id, name)")
@@ -29,6 +29,11 @@ export async function updateTaskAssigneeAction(
           .from("profiles")
           .select("full_name, email")
           .eq("id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", assigneeId)
           .maybeSingle(),
       ])
 
@@ -43,12 +48,13 @@ export async function updateTaskAssigneeAction(
         const projectRaw = typedTask.projects
         const project = Array.isArray(projectRaw) ? projectRaw[0] : projectRaw
         const actorName = actorProfile?.full_name || actorProfile?.email || "Someone"
+        const targetName = targetProfile?.full_name || targetProfile?.email || "Someone"
 
         await createNotification({
           userId: assigneeId,
           workspaceId: project?.workspace_id,
-          title: "Task assigned to you",
-          message: `${actorName} assigned you to "${typedTask.title}"${project ? ` in project "${project.name}"` : ""}.`,
+          title: "Task assigned",
+          message: `${actorName} assigned ${targetName} to "${typedTask.title}"${project ? ` in project "${project.name}"` : ""}.`,
           type: "task_assigned",
           actorId: user.id,
           client: supabase,

@@ -6,9 +6,17 @@ import type { Task, Column, TaskPriority, TaskType } from "@/features/project/ty
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getVisualPriority } from "@/features/project/utils/avatar";
 import { AssigneeSelector } from "../assignee-selector";
+import { DeleteConfirmModal } from "@/features/project/components/modals/delete-confirm-modal";
 import { Select } from "@/components/ui/select";
 import { TaskTimeline } from "../timeline/task-timeline";
 import { TaskSubtasks } from "./task-subtasks";
+import { AttachmentUpload } from "@/features/attachments/components/AttachmentUpload";
+import { AttachmentList } from "@/features/attachments/components/AttachmentList";
+import { useUploadAttachment } from "@/features/attachments/hooks/use-upload-attachment";
+import { useTaskAttachments } from "@/features/attachments/hooks/use-task-attachments";
+import { UploadCloud } from "lucide-react";
+import { TaskTimeStatistics } from "@/features/time-tracking/components/TaskTimeStatistics";
+import { TimeLogList } from "@/features/time-tracking/components/TimeLogList";
 
 interface TaskDetailsModalProps {
   task: Task | null;
@@ -52,10 +60,29 @@ export function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const initialTaskRef = useRef<Task | null>(null);
-  const [editedTitle, setEditedTitle] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task?.title || "");
   const [isEditingDesc, setIsEditingDesc] = useState(false);
-  const [editedDesc, setEditedDesc] = useState("");
+  const [editedDesc, setEditedDesc] = useState(task?.description || "");
+  const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [activeTab, setActiveTabState] = useState<"subtasks" | "attachments" | "tracker">("subtasks");
+  const [renderedTabs, setRenderedTabs] = useState<Set<string>>(new Set(["subtasks"]));
+  const [subtaskCount, setSubtaskCount] = useState(0);
+
+  const setActiveTab = useCallback((tab: "subtasks" | "attachments" | "tracker") => {
+    setActiveTabState(tab);
+    setRenderedTabs(prev => {
+      if (prev.has(tab)) return prev;
+      const newSet = new Set(prev);
+      newSet.add(tab);
+      return newSet;
+    });
+  }, []);
+  
+  // Use the upload hook here so we can support drag-and-drop anywhere on the left pane
+  const { mutate: uploadAttachment, isPending: isUploading } = useUploadAttachment(task?.id || "");
+  const { data: attachments } = useTaskAttachments(task?.id || "");
 
   // Capture initial state when modal opens
   useEffect(() => {
@@ -64,6 +91,9 @@ export function TaskDetailsModal({
     }
     if (!isOpen) {
       initialTaskRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRenderedTabs(new Set(["subtasks"]));
+      setActiveTabState("subtasks");
     }
   }, [isOpen, task]);
 
@@ -80,6 +110,33 @@ export function TaskDetailsModal({
   const handleCancel = useCallback(() => {
     onClose();
   }, [onClose]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDraggingOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (!task) return;
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        alert("File size must be less than 20MB.");
+        return;
+      }
+      uploadAttachment({ file });
+    }
+  }, [task, uploadAttachment]);
 
   // Close on Escape key
   useEffect(() => {
@@ -171,10 +228,24 @@ export function TaskDetailsModal({
       {/* Modal Container */}
       <div
         ref={modalRef}
-        className={`relative w-full max-w-5xl bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 flex flex-col md:flex-row h-[85vh] animate-in fade-in zoom-in-95 duration-200 z-10 ${priorityStyles.border}`}
+        className={`relative w-[95vw] md:w-[90vw] max-w-7xl bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 flex flex-col md:flex-row h-[90vh] md:h-[85vh] animate-in fade-in zoom-in-95 duration-200 z-10 ${priorityStyles.border}`}
       >
         {/* Left Column: Task Details */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 p-6 md:border-r border-slate-800">
+        <div 
+          className="flex-1 flex flex-col min-w-0 min-h-0 p-6 md:border-r border-slate-800 relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drag & Drop Overlay */}
+          {isDraggingOver && (
+            <div className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-sm border-2 border-dashed border-blue-500 rounded-l-2xl md:rounded-bl-2xl md:rounded-tl-2xl flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-150">
+              <UploadCloud size={48} className="text-blue-500 mb-4 animate-bounce" />
+              <h3 className="text-xl font-bold text-slate-200">Drop files to upload</h3>
+              <p className="text-sm text-slate-400 mt-2">Maximum file size: 20MB</p>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1.5 min-w-0">
@@ -193,6 +264,7 @@ export function TaskDetailsModal({
                     type="text"
                     value={editedTitle}
                     onChange={(e) => setEditedTitle(e.target.value)}
+                    maxLength={200}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         if (editedTitle.trim() && editedTitle.trim() !== task.title) {
@@ -236,7 +308,7 @@ export function TaskDetailsModal({
                 <div className="flex items-center justify-between group relative w-full">
                   <h2 
                     onClick={() => onUpdateTask && setIsEditingTitle(true)}
-                    className={`text-xl font-extrabold text-slate-200 leading-snug break-words ${onUpdateTask ? "cursor-pointer hover:bg-slate-800/50 rounded-lg px-2 -mx-2 py-1 border border-transparent hover:border-slate-800 transition-colors" : ""}`}
+                    className={`text-xl font-extrabold text-slate-200 leading-snug break-all ${onUpdateTask ? "cursor-pointer hover:bg-slate-800/50 rounded-lg px-2 -mx-2 py-1 border border-transparent hover:border-slate-800 transition-colors" : ""}`}
                   >
                     {task.title}
                   </h2>
@@ -266,114 +338,106 @@ export function TaskDetailsModal({
           <div className="h-[1px] bg-slate-800 my-5" />
 
           {/* Content */}
-          <div className="flex flex-col gap-5 flex-1 min-h-0">
-            {/* Properties Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0">
-              {/* Left Column */}
-              <div className="flex flex-col gap-4">
-                {/* Status Field */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Status</span>
-                  {onStatusChange ? (
-                    <Select
-                      value={status}
-                      onChange={(val) => onStatusChange(task.id, val)}
-                      options={columns.length > 0 ? columns.map((col) => ({
-                        value: col.id,
-                        label: col.name
-                      })) : [
-                        { value: "todo", label: "To Do" },
-                        { value: "in_progress", label: "In Progress" },
-                        { value: "done", label: "Done" },
-                      ]}
-                    />
-                  ) : (
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-wider shadow-2xs w-fit ${statusColor}`}>
-                      <StatusIcon size={12} />
-                      <span>{statusLabel}</span>
-                    </div>
-                  )}
-                </div>
+          <div className="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2 px-2">
+            {/* Properties Row */}
+            <div className="flex items-start flex-wrap gap-x-8 gap-y-4 shrink-0 pb-5 border-b border-slate-800/50">
+              {/* Status Field */}
+              <div className="flex flex-col gap-1.5 min-w-[120px]">
+                <span className="text-[10px] font-extrabold text-slate-400">Status</span>
+                {onStatusChange ? (
+                  <Select
+                    value={status}
+                    onChange={(val) => onStatusChange(task.id, val)}
+                    options={columns.length > 0 ? columns.map((col) => ({
+                      value: col.id,
+                      label: col.name
+                    })) : [
+                      { value: "todo", label: "To Do" },
+                      { value: "in_progress", label: "In Progress" },
+                      { value: "done", label: "Done" },
+                    ]}
+                  />
+                ) : (
+                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-medium shadow-2xs w-fit ${statusColor}`}>
+                    <StatusIcon size={12} />
+                    <span>{statusLabel}</span>
+                  </div>
+                )}
+              </div>
 
-                {/* Priority Field */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Priority</span>
-                  {onUpdateTask ? (
-                    <Select
-                      value={task.priority || "medium"}
-                      onChange={(val) => onUpdateTask(task.id, { priority: val as TaskPriority })}
-                      options={[
-                        { value: "low", label: "Low" },
-                        { value: "medium", label: "Medium" },
-                        { value: "high", label: "High" },
-                      ]}
+              {/* Assignee Field */}
+              <div className="flex flex-col gap-1.5 min-w-[140px]">
+                <span className="text-[10px] font-extrabold text-slate-400">Assignee</span>
+                <div className="flex items-center gap-2">
+                  <div className="relative z-0">
+                    <AssigneeSelector
+                      task={task}
+                      members={members}
+                      currentUserId={currentUserId}
+                      onChange={onAssigneeChange}
+                      size="large"
                     />
-                  ) : (
-                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-black px-2 py-1.5 rounded border uppercase tracking-wider w-fit ${priorityStyles.badge}`}>
-                      {priorityStyles.icon}
-                      <span>{priorityStyles.label} Priority</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Type Field */}
-                <div className="flex flex-col gap-1.5 mt-2">
-                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Type</span>
-                  {onUpdateTask ? (
-                    <Select
-                      value={task.type || "task"}
-                      onChange={(val) => onUpdateTask(task.id, { type: val as TaskType })}
-                      options={[
-                        { value: "task", label: "📋 Task" },
-                        { value: "feature", label: "🚀 Feature" },
-                        { value: "bug", label: "🐛 Bug" },
-                        { value: "enhancement", label: "✨ Enhancement" },
-                      ]}
-                    />
-                  ) : (
-                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-black px-2 py-1.5 rounded border tracking-wider w-fit ${typeStyles.badge}`}>
-                      <span>{typeStyles.icon}</span>
-                      <span>{typeStyles.label}</span>
-                    </span>
-                  )}
+                  </div>
+                  <span className="text-[12px] font-medium text-slate-300 truncate">
+                    {task.assignee ? (task.assignee.fullName || "Name not set") : "Unassigned"}
+                  </span>
                 </div>
               </div>
 
-              {/* Right Column */}
-              <div className="flex flex-col gap-4">
-                {/* Assignee Field */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Assignee</span>
-                  <div className="flex items-center gap-3">
-                    <div className="relative z-0">
-                      <AssigneeSelector
-                        task={task}
-                        members={members}
-                        currentUserId={currentUserId}
-                        onChange={onAssigneeChange}
-                        size="large"
-                      />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[11px] font-extrabold text-slate-300 truncate">
-                        {task.assignee ? (task.assignee.fullName || "Name not set") : "Unassigned"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              {/* Priority Field */}
+              <div className="flex flex-col gap-1.5 min-w-[120px]">
+                <span className="text-[10px] font-extrabold text-slate-400">Priority</span>
+                {onUpdateTask ? (
+                  <Select
+                    value={task.priority || "medium"}
+                    onChange={(val) => onUpdateTask(task.id, { priority: val as TaskPriority })}
+                    options={[
+                      { value: "low", label: "Low" },
+                      { value: "medium", label: "Medium" },
+                      { value: "high", label: "High" },
+                    ]}
+                  />
+                ) : (
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md border w-fit ${priorityStyles.badge}`}>
+                    {priorityStyles.icon}
+                    <span>{priorityStyles.label}</span>
+                  </span>
+                )}
+              </div>
 
-                {/* Date Created */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Created At</span>
-                  <div className="flex items-center gap-2 text-slate-400 h-[38px]">
-                    <Calendar size={14} className="text-slate-500" />
-                    <span className="text-[11px] font-bold">
-                      {new Date(task.createdAt).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
-                  </div>
+              {/* Type Field */}
+              <div className="flex flex-col gap-1.5 min-w-[100px]">
+                <span className="text-[10px] font-extrabold text-slate-400">Type</span>
+                {onUpdateTask ? (
+                  <Select
+                    value={task.type || "task"}
+                    onChange={(val) => onUpdateTask(task.id, { type: val as TaskType })}
+                    options={[
+                      { value: "task", label: "📋 Task" },
+                      { value: "feature", label: "🚀 Feature" },
+                      { value: "bug", label: "🐛 Bug" },
+                      { value: "enhancement", label: "✨ Enhancement" },
+                    ]}
+                  />
+                ) : (
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md border w-fit ${typeStyles.badge}`}>
+                    <span>{typeStyles.icon}</span>
+                    <span>{typeStyles.label}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Date Created */}
+              <div className="flex flex-col gap-1.5 min-w-[140px]">
+                <span className="text-[10px] font-extrabold text-slate-400">Created At</span>
+                <div className="flex items-center gap-2 text-slate-400 h-[30px]">
+                  <Calendar size={13} className="text-slate-500" />
+                  <span className="text-[11px] font-medium text-slate-300">
+                    {new Date(task.createdAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -449,15 +513,78 @@ export function TaskDetailsModal({
               )}
             </div>
             
+            {/* Tabs */}
+            <div className="flex items-center gap-6 border-b border-slate-800 shrink-0 mb-2 overflow-x-auto custom-scrollbar mt-2">
+              {[
+                { id: "subtasks", label: "Subtasks", count: subtaskCount },
+                { id: "attachments", label: "Attachments", count: attachments?.length || 0 },
+                { id: "tracker", label: "Time Tracker" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as "subtasks" | "attachments" | "tracker")}
+                  className={`pb-3 flex items-center gap-1.5 text-[13px] font-bold border-b-2 transition-all -mb-[1px] cursor-pointer whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-amber-500 text-amber-500"
+                      : "border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600"
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                      activeTab === tab.id ? "bg-amber-500/20 text-amber-500" : "bg-slate-800 text-slate-400"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
             {/* Subtasks */}
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div className={`flex flex-col shrink-0 animate-in fade-in duration-200 ${activeTab !== "subtasks" ? "hidden" : ""}`}>
               <TaskSubtasks 
                 taskId={task.id} 
                 members={members}
                 projectPrefix={projectPrefix}
                 parentTaskNumber={taskNumber || 1}
-                onChange={(subtasks) => onLocalTaskUpdate?.(task.id, { subtasks })}
+                onChange={(subtasks) => {
+                  setSubtaskCount(subtasks.length);
+                  onLocalTaskUpdate?.(task.id, { subtasks });
+                }}
               />
+            </div>
+
+            {/* Time Tracking */}
+            <div className={`flex flex-col shrink-0 animate-in fade-in duration-200 ${activeTab !== "tracker" ? "hidden" : ""}`}>
+              {renderedTabs.has("tracker") && (
+                <>
+                  <TaskTimeStatistics taskId={task.id} taskTitle={task.title} />
+                  <TimeLogList taskId={task.id} />
+                </>
+              )}
+            </div>
+
+            {/* Attachments */}
+            <div className={`flex flex-col gap-1 shrink-0 animate-in fade-in duration-200 ${activeTab !== "attachments" ? "hidden" : ""}`}>
+              {renderedTabs.has("attachments") && (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[13px] font-bold text-slate-300 tracking-wide">Attachments</span>
+                    <AttachmentUpload taskId={task.id} />
+                  </div>
+                  {isUploading && (
+                    <div className="flex items-center gap-3 p-2 rounded-lg border border-slate-800 bg-slate-800/20 animate-pulse mt-2">
+                      <div className="w-8 h-8 rounded bg-slate-800"></div>
+                      <div className="flex-1 flex flex-col gap-1.5">
+                        <div className="h-2.5 w-1/3 bg-slate-800 rounded"></div>
+                        <div className="h-2 w-1/4 bg-slate-800/50 rounded"></div>
+                      </div>
+                    </div>
+                  )}
+                  <AttachmentList taskId={task.id} currentUserId={currentUserId} />
+                </>
+              )}
             </div>
           </div>
 
@@ -468,10 +595,7 @@ export function TaskDetailsModal({
           <div className="shrink-0 flex justify-between items-center mt-auto pt-4 border-t border-slate-800">
             {onDeleteTask ? (
               <button
-                onClick={() => {
-                  onDeleteTask(task.id, task.title);
-                  onClose();
-                }}
+                onClick={() => setIsDeleteTaskModalOpen(true)}
                 className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 rounded-xl text-xs font-black transition-all cursor-pointer shadow-3xs hover:shadow-2xs active:scale-[0.98]"
               >
                 Delete Task
@@ -508,6 +632,23 @@ export function TaskDetailsModal({
         </div>
 
       </div>
+
+      {task && (
+        <DeleteConfirmModal
+          isOpen={isDeleteTaskModalOpen}
+          onClose={() => setIsDeleteTaskModalOpen(false)}
+          type="task"
+          name={task.title}
+          isPending={false}
+          onConfirm={() => {
+            if (onDeleteTask) {
+              onDeleteTask(task.id, task.title);
+              onClose();
+            }
+            setIsDeleteTaskModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

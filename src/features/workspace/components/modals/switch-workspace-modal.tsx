@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import { createPortal } from "react-dom"
 import { X, Loader2, Briefcase, ShieldCheck, User, Check, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,7 @@ export function SwitchWorkspaceModal({
   onSwitchWorkspace,
 }: SwitchWorkspaceModalProps) {
   const [mounted, setMounted] = useState(false)
+  const isMountedRef = useRef(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [switchingId, setSwitchingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -29,6 +30,10 @@ export function SwitchWorkspaceModal({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
   }, [])
 
   if (!isOpen || !mounted) return null
@@ -46,14 +51,29 @@ export function SwitchWorkspaceModal({
       onClose()
       return
     }
+    
+    if (switchingId !== null) return // prevent double click
+
     setSwitchingId(workspaceId)
     setErrorMsg(null)
+    console.log(`[WorkspaceSwitch] Workspace switch started. Target workspace id: ${workspaceId}`)
+    
     try {
       await onSwitchWorkspace(workspaceId)
-      onClose()
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to switch workspace.")
-      setSwitchingId(null)
+      console.log(`[WorkspaceSwitch] Switch success for target workspace id: ${workspaceId}`)
+      if (isMountedRef.current) {
+        onClose()
+      }
+    } catch (error) {
+      console.error(`[WorkspaceSwitch] Switch failure for target workspace id: ${workspaceId}`, error)
+      if (isMountedRef.current) {
+        setErrorMsg(error instanceof Error ? error.message : "Failed to switch workspace.")
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setSwitchingId(null)
+        console.log(`[WorkspaceSwitch] Loading state reset for target workspace id: ${workspaceId}`)
+      }
     }
   }
 

@@ -23,6 +23,10 @@ export async function leaveWorkspaceAction(workspaceId: string): Promise<ActionR
     const cookieStore = await cookies()
     cookieStore.delete("active_workspace_id")
 
+    // Validate if the leaving user's timer is now invalid
+    const { TimeTrackingService } = await import("@/features/time-tracking/services/time-tracking.service")
+    await TimeTrackingService.validateAndStopInvalidActiveTimers(user.id)
+
     revalidatePath("/", "layout")
     return { success: true }
   } catch (error: unknown) {

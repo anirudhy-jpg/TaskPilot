@@ -27,11 +27,10 @@ export async function createWorkspaceAction(
       return { success: false, error: "You must be logged in to create a workspace." }
     }
 
-    // Block workspace owners from creating new workspaces
+    // Block users from creating new workspaces if they already belong to one
     const workspaces = await WorkspaceHubService.getWorkspacesForUser(user.id)
-    const isOwnerOfAny = workspaces.some((w) => w.ownerId === user.id)
-    if (isOwnerOfAny) {
-      return { success: false, error: "Workspace owners are not allowed to create additional workspaces." }
+    if (workspaces.length > 0) {
+      return { success: false, error: "Users are restricted to a single workspace per account." }
     }
 
     const ws = await WorkspaceService.createWorkspace(validatedName, user.id)

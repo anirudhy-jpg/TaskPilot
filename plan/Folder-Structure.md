@@ -65,6 +65,10 @@ taskpilot/
 │   │       ├── label.tsx
 │   │       └── logo.tsx
 │   ├── features/                     # Feature-Based Modules (Business logic & UI live here)
+│   │   ├── attachments/              # Task file attachments feature
+│   │   │   ├── actions/              # Upload, delete, and fetch attachments
+│   │   │   ├── components/           # Attachment list, item, and upload UI
+│   │   │   └── hooks/                # React Query hooks for attachments
 │   │   ├── auth/                     # Authentication feature
 │   │   │   ├── actions/              # Auth server actions (login, signup, logout)
 │   │   │   │   ├── login.action.ts
@@ -89,6 +93,11 @@ taskpilot/
 │   │   │   ├── types/                # Project & task type definitions
 │   │   │   │   └── project.types.ts
 │   │   │   └── utils/                # Utilities (avatars, initials generators)
+│   │   ├── time-tracking/            # Task time tracking feature
+│   │   │   ├── actions/              # Timer start/stop and logging actions
+│   │   │   ├── components/           # Global timer, task statistics, manual logs
+│   │   │   ├── hooks/                # Time tracking state and polling hooks
+│   │   │   └── services/             # DB queries for time entries
 │   │   └── workspace/                # Workspace & membership feature
 │   │       ├── actions/              # Workspace management server actions
 │   │       ├── components/           # Sidebar, header, members-list, workspaces-client

@@ -20,6 +20,8 @@
 * **Task Management**: Create detailed tasks with titles, rich text descriptions, due dates, subtasks, and assignees.
 * **Drag & Drop Task Reordering**: Seamless drag-and-drop experience across columns and vertical reordering within columns.
 * **Task Attributes**: Categorize task urgency using Low, Medium, and High priorities, and classify work by type (e.g., Feature, Bug, Enhancement).
+* **Task Attachments**: Securely upload, preview, and manage file attachments (images, PDFs) associated with tasks via Supabase Storage.
+* **Time Tracking**: Built-in global timer and manual time logging per task, including visual statistics, progress comparison against estimates, and historical logs.
 * **Team Management & Invitations**: Robust member management with role-based access control (Owner, Admin, Member). Features secure workspace departure and sign-out confirmation flows.
 * **Global Search & Persistence**: Centralized search across dashboards (Projects, Kanban, Teams, Members) that persists via URL parameters for real-time filtering and link sharing.
 * **Comments & Collaboration**: Task-level comment threads with `@` user mentions to facilitate asynchronous communication.
@@ -53,7 +55,7 @@ TaskPilot employs a modern, server-first React architecture leveraging the lates
 | **TypeScript** | Language | End-to-end type safety catches bugs at compile time and improves developer experience. |
 | **Tailwind CSS** | Styling | Utility-first CSS allows for rapid UI development and a cohesive, semantic design system. |
 | **Shadcn/UI** | Component Library | Unstyled, accessible component primitives that can be completely customized to fit the app's aesthetic. |
-| **Supabase** | Backend-as-a-Service | Provides managed PostgreSQL, Auth, Storage, and Realtime WebSocket syncing out of the box. |
+| **Supabase** | Backend-as-a-Service | Provides managed PostgreSQL, Auth, Storage (for attachments and avatars), and Realtime WebSocket syncing out of the box. |
 | **PostgreSQL** | Relational Database | Reliable, ACID-compliant database perfect for complex relationships (workspaces, projects, tasks). |
 | **Zod** | Schema Validation | Type-safe schema validation ensures all incoming data through Server Actions is strictly verified. |
 | **React Hook Form** | Form Management | Highly performant form state management with easy Zod integration. |
@@ -72,7 +74,8 @@ The database schema is highly relational, designed for tenant isolation and real
   * `workspaces` & `workspace_members`: Top-level tenant isolation and access control.
   * `projects`: Groups of tasks within a workspace.
   * `columns` & `tasks`: Kanban board structure and task entities.
-  * `task_activities`, `task_comments`, `task_subtasks`: Detailed relational data for task tracking.
+  * `task_activities`, `task_comments`, `task_subtasks`, `task_attachments`: Detailed relational data for task tracking and file management.
+  * `time_entries`: Dedicated table for tracking time spent on tasks.
   * `notifications`: Unified table for in-app alerts (assignments, removals).
 * **Storage**: A secure Supabase Storage bucket (`avatars`) manages user-uploaded profile imagery.
 * **Relationships**: A Workspace has many Projects. A Project has many Columns and Tasks. Tasks belong to a Column and can be assigned to a Workspace Member.
@@ -89,6 +92,8 @@ erDiagram
     tasks ||--o{ task_subtasks : "has"
     tasks ||--o{ task_comments : "has"
     tasks ||--o{ task_activities : "tracks"
+    tasks ||--o{ task_attachments : "has"
+    tasks ||--o{ time_entries : "tracked_via"
     profiles ||--o{ notifications : "receives"
 ```
 
