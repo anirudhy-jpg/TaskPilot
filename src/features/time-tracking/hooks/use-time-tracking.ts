@@ -9,6 +9,7 @@ import {
   deleteTimeEntryAction,
   getTaskTimeStatsAction,
   updateTaskEstimateAction,
+  updateTimeEntryNoteAction,
 } from "../actions/time-tracking.action";
 import type { TimeEntry, TaskTimeStats } from "../types";
 
@@ -305,6 +306,28 @@ export function useDeleteTimeEntry() {
         } catch (e) {
           console.error(e);
           alert("Failed to delete time entry");
+        }
+      });
+    },
+    []
+  );
+
+  return { mutate, isPending };
+}
+
+export function useUpdateTimeEntryNote() {
+  const [isPending, startTransition] = useTransition();
+
+  const mutate = useCallback(
+    (variables: { entryId: string; taskId: string; note: string | null }, options?: { onSuccess?: () => void }) => {
+      startTransition(async () => {
+        try {
+          await updateTimeEntryNoteAction(variables.entryId, variables.note);
+          refetchTaskEntries(variables.taskId);
+          if (options?.onSuccess) options.onSuccess();
+        } catch (e) {
+          console.error(e);
+          alert("Failed to update time entry note");
         }
       });
     },

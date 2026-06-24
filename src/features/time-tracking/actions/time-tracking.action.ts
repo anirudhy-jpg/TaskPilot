@@ -61,6 +61,15 @@ export async function deleteTimeEntryAction(entryId: string): Promise<void> {
   }
 }
 
+export async function updateTimeEntryNoteAction(entryId: string, note: string | null): Promise<void> {
+  try {
+    return await TimeTrackingService.updateTimeEntryNote(entryId, note);
+  } catch (error) {
+    console.error("Failed to update time entry note:", error);
+    throw new Error("Failed to update time entry note");
+  }
+}
+
 export async function getTaskTimeStatsAction(taskId: string): Promise<TaskTimeStats> {
   try {
     return await TimeTrackingService.getTaskTimeStats(taskId);
