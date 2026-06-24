@@ -210,6 +210,20 @@ export function MembersListContent({
               })
             }
           })
+
+          const userChannel = supabase.channel(`user:${removingMember.userId}`)
+          userChannel.subscribe(async (status) => {
+            if (status === "SUBSCRIBED") {
+              await userChannel.send({
+                type: "broadcast",
+                event: "workspace_membership_revoked",
+                payload: { workspaceId }
+              })
+              setTimeout(() => {
+                supabase.removeChannel(userChannel)
+              }, 1000)
+            }
+          })
         } else {
           alert(res.error || "Failed to remove member.")
         }
@@ -284,7 +298,7 @@ export function MembersListContent({
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-800/60 max-h-[415px] overflow-y-auto scrollbar-thin rounded-b-xl">
+            <div className={`divide-y divide-slate-800/60 max-h-[415px] overflow-y-auto scrollbar-thin rounded-b-xl ${activeMenuId ? 'pb-12' : ''}`}>
               {filteredMembers.map((member, index) => {
                 const cfg = roleConfig[member.role] || roleConfig.member
                 const initials = member.profile?.fullName 
@@ -341,15 +355,21 @@ export function MembersListContent({
                             <MoreHorizontal size={16} />
                           </button>
                           {activeMenuId === member.id && (
-                            <div className="absolute right-0 mt-1 w-40 bg-slate-950 border border-slate-800 rounded-lg shadow-lg py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                            <div 
+                              className={`absolute right-0 ${
+                                index >= filteredMembers.length - 2 && filteredMembers.length > 2 
+                                  ? 'bottom-full mb-1' 
+                                  : 'top-full mt-1'
+                              } w-40 bg-slate-950 border border-slate-800 rounded-lg shadow-lg overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100`}
+                            >
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleRemoveMember(member.id, member.userId, member.profile?.fullName || member.profile?.email || "this member")
                                 }}
-                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                                className="w-full px-3.5 py-2.5 text-left text-xs font-semibold text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors cursor-pointer flex items-center gap-2 outline-none"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={14} />
                                 Remove member
                               </button>
                             </div>

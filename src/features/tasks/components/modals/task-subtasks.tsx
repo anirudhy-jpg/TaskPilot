@@ -18,9 +18,11 @@ interface TaskSubtasksProps {
   onChange?: (subtasks: TaskSubtask[]) => void
 }
 
+const subtasksCache: Record<string, TaskSubtask[]> = {};
+
 export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber, onChange }: TaskSubtasksProps) {
-  const [subtasks, setSubtasks] = useState<TaskSubtask[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [subtasks, setSubtasks] = useState<TaskSubtask[]>(subtasksCache[taskId] || [])
+  const [isLoading, setIsLoading] = useState(!subtasksCache[taskId])
   const [isAdding, setIsAdding] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [isOpen, setIsOpen] = useState(true)
@@ -48,6 +50,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
     const fetchSubtasks = async () => {
       try {
         const data = await getSubtasks(taskId)
+        subtasksCache[taskId] = data;
         if (mounted) {
           setSubtasks(data)
           onChange?.(data)

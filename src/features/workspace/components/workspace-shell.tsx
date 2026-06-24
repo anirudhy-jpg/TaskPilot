@@ -178,8 +178,23 @@ export function WorkspaceShell({
       })
       .subscribe();
 
+    const userChannel = supabase.channel(`user:${currentUserId}`);
+    userChannel
+      .on("broadcast", { event: "workspace_membership_revoked" }, (response) => {
+        const removedWorkspaceId = response.payload?.workspaceId;
+        if (removedWorkspaceId) {
+          if (removedWorkspaceId === workspaceId) {
+             setIsEvicted(true);
+          } else {
+             setLocalWorkspaces((prev) => prev.filter(w => w.id !== removedWorkspaceId));
+          }
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(userChannel);
     };
   }, [workspaceId, currentUserId, currentUserMemberId]);
 
@@ -297,63 +312,62 @@ export function WorkspaceShell({
       <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/3 blur-[120px] pointer-events-none" />
 
-      {/* ── Navbar ─────────────────────────────────────────── */}
-      <Header
-        profile={profile}
-        user={user}
-        isWorkspaceOwner={isWorkspaceOwner}
-        workspaceId={workspaceId}
-        workspaceName={localWorkspaceName}
-        workspaces={localWorkspaces}
-        currentUserId={currentUserId}
-        onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
-      />
+      {/* ── Main UI (Hidden when evicted) ──────────────────── */}
+      {!isEvicted && (
+        <>
+          <Header
+            profile={profile}
+            user={user}
+            isWorkspaceOwner={isWorkspaceOwner}
+            workspaceId={workspaceId}
+            workspaceName={localWorkspaceName}
+            workspaces={localWorkspaces}
+            currentUserId={currentUserId}
+            onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+          />
 
-      {/* ── Main Area ──────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden w-full relative z-10">
-        {/* Desktop Sidebar */}
-        <Sidebar
-          workspaceName={localWorkspaceName}
-          projects={localProjects}
-          ownerEmail={ownerEmail}
-          variant="desktop"
-          hasMultipleWorkspaces={localWorkspaces.length > 1}
-        />
-
-        {/* Mobile Sidebar Drawer */}
-        {isMobileSidebarOpen && (
-          <div className="fixed inset-0 z-50 md:hidden flex">
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
-              onClick={() => setIsMobileSidebarOpen(false)}
+          <div className="flex-1 flex overflow-hidden w-full relative z-10">
+            <Sidebar
+              workspaceName={localWorkspaceName}
+              projects={localProjects}
+              ownerEmail={ownerEmail}
+              variant="desktop"
+              hasMultipleWorkspaces={localWorkspaces.length > 1}
             />
-            {/* Drawer */}
-            <div className="relative w-64 bg-[#090d16]/95 backdrop-blur-md border-r border-slate-800 flex flex-col z-50 animate-in slide-in-from-left duration-250">
-              <div className="absolute top-4 right-4 z-50">
-                <button
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent hover:border-slate-850 transition-all cursor-pointer"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-              <Sidebar
-                workspaceName={localWorkspaceName}
-                projects={localProjects}
-                ownerEmail={ownerEmail}
-                variant="mobile"
-                onClose={() => setIsMobileSidebarOpen(false)}
-                hasMultipleWorkspaces={localWorkspaces.length > 1}
-              />
-            </div>
-          </div>
-        )}
 
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden bg-transparent flex flex-col relative w-full min-w-0">
-          {children}
-        </main>
-      </div>
+            {isMobileSidebarOpen && (
+              <div className="fixed inset-0 z-50 md:hidden flex">
+                <div
+                  className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                />
+                <div className="relative w-64 bg-[#090d16]/95 backdrop-blur-md border-r border-slate-800 flex flex-col z-50 animate-in slide-in-from-left duration-250">
+                  <div className="absolute top-4 right-4 z-50">
+                    <button
+                      onClick={() => setIsMobileSidebarOpen(false)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent hover:border-slate-850 transition-all cursor-pointer"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <Sidebar
+                    workspaceName={localWorkspaceName}
+                    projects={localProjects}
+                    ownerEmail={ownerEmail}
+                    variant="mobile"
+                    onClose={() => setIsMobileSidebarOpen(false)}
+                    hasMultipleWorkspaces={localWorkspaces.length > 1}
+                  />
+                </div>
+              </div>
+            )}
+
+            <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-hidden bg-transparent flex flex-col relative w-full min-w-0">
+              {children}
+            </main>
+          </div>
+        </>
+      )}
 
       <EvictedModal isOpen={isEvicted} />
     </div>

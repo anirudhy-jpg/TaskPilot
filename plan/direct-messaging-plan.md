@@ -1,4 +1,4 @@
-# Direct Messaging (1-to-1 Chat) Implementation Plan
+  # Direct Messaging (1-to-1 Chat) Implementation Plan
 
 This plan details the implementation of a 1-to-1 real-time messaging feature between project members within the same project.
 

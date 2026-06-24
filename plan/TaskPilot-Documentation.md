@@ -1,6 +1,6 @@
 # TaskPilot — Project Documentation
 
-> **Last Updated:** June 18, 2026 — Reflects full production state of the application.
+> **Last Updated:** June 24, 2026 — Reflects full production state of the application.
 
 ## Project Overview
 
@@ -16,6 +16,8 @@ The purpose of TaskPilot is to provide an adaptable workspace for managing tasks
 - **Task Collaboration** ✅: Task-level comments, interactive activity timelines, and progress tracking via subtasks.
 - **Project Management** ✅: Project creation, editing, deletion, and lifecycle tracking with kanban boards and custom columns.
 - **Workflow Tracking** ✅: Board-based workflow view with drag-and-drop task management and custom column workflows.
+- **Task Attachments** ✅: Securely upload, preview, and manage files associated with tasks using Supabase Storage and signed URLs.
+- **Time Tracking** ✅: Built-in active timers and manual time logs to track time spent on individual tasks, including visual statistics.
 - **Team Collaboration** ✅: Shared workspaces, member roles, email invitations, task assignments, and activity notifications.
 - **Realtime Sync** ✅: Instant board updates across all connected clients via Supabase Realtime WebSocket channels.
 - **Workspace Analytics** ✅: Live workspace overview dashboard with task distribution charts, member activity stats, and notification feed.
@@ -57,14 +59,8 @@ The purpose of TaskPilot is to provide an adaptable workspace for managing tasks
 
 - **SendGrid** (`@sendgrid/mail`) — transactional email delivery for workspace invitations
 
-### Development Tools
-
-- **GitHub** (version control)
-- **Supabase CLI** (migrations)
-
 ### Future Integrations
 
-- Supabase Storage (file attachments)
 - OpenAI / Gemini API (AI-enhanced task management)
 
 ---
@@ -89,6 +85,8 @@ Next.js Frontend
     (Email delivery)               ├── task_activities
                                    ├── task_comments
                                    ├── task_subtasks
+                                   ├── task_attachments
+                                   ├── time_entries
                                    ├── columns
                                    ├── workspace_invitations
                                    ├── project_members
@@ -164,6 +162,26 @@ task_activities
   ├─ old_value (JSONB)
   ├─ new_value (JSONB)
   ├─ metadata (JSONB)
+  └─ created_at
+
+task_attachments
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ uploaded_by (FK → profiles)
+  ├─ file_name
+  ├─ file_path
+  ├─ file_size (INTEGER)
+  ├─ mime_type
+  └─ created_at
+
+time_entries
+  ├─ id
+  ├─ task_id (FK → tasks)
+  ├─ user_id (FK → profiles)
+  ├─ start_time (TIMESTAMP)
+  ├─ end_time (TIMESTAMP, nullable)
+  ├─ duration_seconds (INTEGER)
+  ├─ note (TEXT, nullable)
   └─ created_at
 
 task_comments
@@ -284,12 +302,32 @@ notifications
 - [x] All server actions validate input with `safeParse()` before hitting the database
 - [x] Exported inferred Zod types replace raw/unsafe inputs across all mutations
 - [x] Vitest testing framework set up from scratch
-- [x] Business validation test suites in `tests/` for all 5 schemas
-- [x] Tests cover both valid and invalid input paths without mocking infrastructure
+- [x] Business validation test suites in `tests/` for schemas (Task, Project, Workspace, Kanban, Invitation)
+- [x] Unit testing for Server Actions using service-layer mocking (Time Tracking, Attachments)
 - [x] Removed unused `TaskPriority` imports from `create-task.action.ts` and `update-task.action.ts`
 - [x] Pagination UI made compact on the projects dashboard
 
-### 🔲 Phase 8: Search & Productivity — FUTURE
+### ✅ Phase 8: Task Attachments — COMPLETE
+
+- [x] Supabase Storage bucket configuration (`task-attachments`)
+- [x] Database schema for `task_attachments` and RLS policies
+- [x] Drag-and-drop file upload UI component
+- [x] Signed URL generation for secure file previews
+- [x] Activity feed integration for upload/delete events
+- [x] Delete confirmation modal and storage cleanup
+- [x] Test suite coverage for attachment server actions
+
+### ✅ Phase 9: Time Tracking — COMPLETE
+
+- [x] Database schema for `time_entries`
+- [x] Added `estimated_minutes` to `tasks` table
+- [x] Global active timer widget in header (optimistic ticking)
+- [x] Task-level statistics component with CSS pie chart
+- [x] Manual time entry logging modal
+- [x] Auto-stop existing timers when starting a new one
+- [x] Test suite coverage for time tracking actions
+
+### 🔲 Phase 10: Search & Productivity — FUTURE
 
 - [ ] Global search dialog (Command-K / `cmdk`)
 - [ ] Sidebar filter toggles (by assignee, priority, status)

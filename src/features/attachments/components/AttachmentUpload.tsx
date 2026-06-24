@@ -36,7 +36,7 @@ export function AttachmentUpload({ taskId }: { taskId: string }) {
         className="hidden"
       />
       <button
-        onClick={() => !isPending && fileInputRef.current?.click()}
+        onClick={() => !isPending && fileInputRef.current?.click()}      
         disabled={isPending}
         className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-700 hover:bg-slate-800 rounded-md text-xs font-medium text-slate-300 transition-colors disabled:opacity-50"
         title="Add attachment"

@@ -6,13 +6,17 @@ import type { Task, Column, TaskPriority, TaskType } from "@/features/project/ty
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { getVisualPriority } from "@/features/project/utils/avatar";
 import { AssigneeSelector } from "../assignee-selector";
+import { DeleteConfirmModal } from "@/features/project/components/modals/delete-confirm-modal";
 import { Select } from "@/components/ui/select";
 import { TaskTimeline } from "../timeline/task-timeline";
 import { TaskSubtasks } from "./task-subtasks";
 import { AttachmentUpload } from "@/features/attachments/components/AttachmentUpload";
 import { AttachmentList } from "@/features/attachments/components/AttachmentList";
 import { useUploadAttachment } from "@/features/attachments/hooks/use-upload-attachment";
+import { useTaskAttachments } from "@/features/attachments/hooks/use-task-attachments";
 import { UploadCloud } from "lucide-react";
+import { TaskTimeStatistics } from "@/features/time-tracking/components/TaskTimeStatistics";
+import { TimeLogList } from "@/features/time-tracking/components/TimeLogList";
 
 interface TaskDetailsModalProps {
   task: Task | null;
@@ -56,14 +60,29 @@ export function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const initialTaskRef = useRef<Task | null>(null);
-  const [editedTitle, setEditedTitle] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task?.title || "");
   const [isEditingDesc, setIsEditingDesc] = useState(false);
-  const [editedDesc, setEditedDesc] = useState("");
+  const [editedDesc, setEditedDesc] = useState(task?.description || "");
+  const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [activeTab, setActiveTabState] = useState<"subtasks" | "attachments" | "tracker">("subtasks");
+  const [renderedTabs, setRenderedTabs] = useState<Set<string>>(new Set(["subtasks"]));
+  const [subtaskCount, setSubtaskCount] = useState(0);
+
+  const setActiveTab = useCallback((tab: "subtasks" | "attachments" | "tracker") => {
+    setActiveTabState(tab);
+    setRenderedTabs(prev => {
+      if (prev.has(tab)) return prev;
+      const newSet = new Set(prev);
+      newSet.add(tab);
+      return newSet;
+    });
+  }, []);
   
   // Use the upload hook here so we can support drag-and-drop anywhere on the left pane
   const { mutate: uploadAttachment, isPending: isUploading } = useUploadAttachment(task?.id || "");
+  const { data: attachments } = useTaskAttachments(task?.id || "");
 
   // Capture initial state when modal opens
   useEffect(() => {
@@ -72,6 +91,9 @@ export function TaskDetailsModal({
     }
     if (!isOpen) {
       initialTaskRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRenderedTabs(new Set(["subtasks"]));
+      setActiveTabState("subtasks");
     }
   }, [isOpen, task]);
 
@@ -316,7 +338,7 @@ export function TaskDetailsModal({
           <div className="h-[1px] bg-slate-800 my-5" />
 
           {/* Content */}
-          <div className="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+          <div className="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 -mr-2 px-2">
             {/* Properties Row */}
             <div className="flex items-start flex-wrap gap-x-8 gap-y-4 shrink-0 pb-5 border-b border-slate-800/50">
               {/* Status Field */}
@@ -491,33 +513,78 @@ export function TaskDetailsModal({
               )}
             </div>
             
+            {/* Tabs */}
+            <div className="flex items-center gap-6 border-b border-slate-800 shrink-0 mb-2 overflow-x-auto custom-scrollbar mt-2">
+              {[
+                { id: "subtasks", label: "Subtasks", count: subtaskCount },
+                { id: "attachments", label: "Attachments", count: attachments?.length || 0 },
+                { id: "tracker", label: "Time Tracker" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as "subtasks" | "attachments" | "tracker")}
+                  className={`pb-3 flex items-center gap-1.5 text-[13px] font-bold border-b-2 transition-all -mb-[1px] cursor-pointer whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-amber-500 text-amber-500"
+                      : "border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600"
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                      activeTab === tab.id ? "bg-amber-500/20 text-amber-500" : "bg-slate-800 text-slate-400"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
             {/* Subtasks */}
-            <div className="flex flex-col shrink-0">
+            <div className={`flex flex-col shrink-0 animate-in fade-in duration-200 ${activeTab !== "subtasks" ? "hidden" : ""}`}>
               <TaskSubtasks 
                 taskId={task.id} 
                 members={members}
                 projectPrefix={projectPrefix}
                 parentTaskNumber={taskNumber || 1}
-                onChange={(subtasks) => onLocalTaskUpdate?.(task.id, { subtasks })}
+                onChange={(subtasks) => {
+                  setSubtaskCount(subtasks.length);
+                  onLocalTaskUpdate?.(task.id, { subtasks });
+                }}
               />
             </div>
 
-            {/* Attachments */}
-            <div className="flex flex-col gap-1 mt-4 shrink-0">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-bold text-slate-300 tracking-wide">Attachments</span>
-                <AttachmentUpload taskId={task.id} />
-              </div>
-              {isUploading && (
-                <div className="flex items-center gap-3 p-2 rounded-lg border border-slate-800 bg-slate-800/20 animate-pulse mt-2">
-                  <div className="w-8 h-8 rounded bg-slate-800"></div>
-                  <div className="flex-1 flex flex-col gap-1.5">
-                    <div className="h-2.5 w-1/3 bg-slate-800 rounded"></div>
-                    <div className="h-2 w-1/4 bg-slate-800/50 rounded"></div>
-                  </div>
-                </div>
+            {/* Time Tracking */}
+            <div className={`flex flex-col shrink-0 animate-in fade-in duration-200 ${activeTab !== "tracker" ? "hidden" : ""}`}>
+              {renderedTabs.has("tracker") && (
+                <>
+                  <TaskTimeStatistics taskId={task.id} taskTitle={task.title} />
+                  <TimeLogList taskId={task.id} />
+                </>
               )}
-              <AttachmentList taskId={task.id} currentUserId={currentUserId} />
+            </div>
+
+            {/* Attachments */}
+            <div className={`flex flex-col gap-1 shrink-0 animate-in fade-in duration-200 ${activeTab !== "attachments" ? "hidden" : ""}`}>
+              {renderedTabs.has("attachments") && (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[13px] font-bold text-slate-300 tracking-wide">Attachments</span>
+                    <AttachmentUpload taskId={task.id} />
+                  </div>
+                  {isUploading && (
+                    <div className="flex items-center gap-3 p-2 rounded-lg border border-slate-800 bg-slate-800/20 animate-pulse mt-2">
+                      <div className="w-8 h-8 rounded bg-slate-800"></div>
+                      <div className="flex-1 flex flex-col gap-1.5">
+                        <div className="h-2.5 w-1/3 bg-slate-800 rounded"></div>
+                        <div className="h-2 w-1/4 bg-slate-800/50 rounded"></div>
+                      </div>
+                    </div>
+                  )}
+                  <AttachmentList taskId={task.id} currentUserId={currentUserId} />
+                </>
+              )}
             </div>
           </div>
 
@@ -528,10 +595,7 @@ export function TaskDetailsModal({
           <div className="shrink-0 flex justify-between items-center mt-auto pt-4 border-t border-slate-800">
             {onDeleteTask ? (
               <button
-                onClick={() => {
-                  onDeleteTask(task.id, task.title);
-                  onClose();
-                }}
+                onClick={() => setIsDeleteTaskModalOpen(true)}
                 className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 rounded-xl text-xs font-black transition-all cursor-pointer shadow-3xs hover:shadow-2xs active:scale-[0.98]"
               >
                 Delete Task
@@ -568,6 +632,23 @@ export function TaskDetailsModal({
         </div>
 
       </div>
+
+      {task && (
+        <DeleteConfirmModal
+          isOpen={isDeleteTaskModalOpen}
+          onClose={() => setIsDeleteTaskModalOpen(false)}
+          type="task"
+          name={task.title}
+          isPending={false}
+          onConfirm={() => {
+            if (onDeleteTask) {
+              onDeleteTask(task.id, task.title);
+              onClose();
+            }
+            setIsDeleteTaskModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

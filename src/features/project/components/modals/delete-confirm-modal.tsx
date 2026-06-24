@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 interface DeleteConfirmModalProps {
   isOpen: boolean
   onClose: () => void
-  type: "project" | "task" | "subtask" | "member" | "workspace" | "leave_workspace" | "delete_workspace" | "attachment"
+  type: "project" | "task" | "subtask" | "member" | "workspace" | "leave_workspace" | "delete_workspace" | "attachment" | "time_log"
   name: string
   isPending: boolean
   onConfirm: () => void
@@ -59,7 +59,9 @@ export function DeleteConfirmModal({
                     ? "Delete Workspace"
                     : type === "attachment"
                       ? "Delete Attachment"
-                      : `Delete ${type === "project" ? "Project" : type === "subtask" ? "Subtask" : "Task"}`}
+                      : type === "time_log"
+                        ? "Delete Time Log"
+                        : `Delete ${type === "project" ? "Project" : type === "subtask" ? "Subtask" : "Task"}`}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">Are you sure you want to proceed?</p>
           </div>
@@ -75,6 +77,8 @@ export function DeleteConfirmModal({
             <>You are about to permanently delete the attachment <strong>&ldquo;{name}&rdquo;</strong>. This action cannot be undone.</>
           ) : type === "subtask" ? (
             <>You are about to permanently delete the subtask <strong>&ldquo;{name}&rdquo;</strong>. This action cannot be undone.</>
+          ) : type === "time_log" ? (
+            <>You are about to permanently delete this time log. This action cannot be undone.</>
           ) : (
             <>You are about to delete <strong>&ldquo;{name}&rdquo;</strong>. This will
           permanently remove it from the workspace.{" "}
@@ -107,6 +111,8 @@ export function DeleteConfirmModal({
                     ? "Delete Workspace"
                     : type === "attachment"
                       ? "Delete Attachment"
+                    : type === "time_log"
+                      ? "Delete Time Log"
                       : `Delete ${type === "project" ? "Project" : type === "subtask" ? "Subtask" : "Task"}`}
           </Button>
         </div>

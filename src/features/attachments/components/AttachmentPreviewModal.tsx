@@ -12,7 +12,17 @@ interface AttachmentPreviewModalProps {
 
 export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: AttachmentPreviewModalProps) {
   const isImage = attachment.mime_type.startsWith("image/");
+  const isVideo = attachment.mime_type.startsWith("video/");
+  const isAudio = attachment.mime_type.startsWith("audio/");
   const isPdf = attachment.mime_type === "application/pdf";
+  const isText = attachment.mime_type.startsWith("text/");
+  
+  const ext = attachment.file_name.split(".").pop()?.toLowerCase() || "";
+  const officeExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf', 'csv'];
+  const isOfficeDoc = officeExts.includes(ext);
+
+  const canPreviewIframe = isPdf || isText;
+  const useGoogleViewer = isOfficeDoc;
 
   // Close on Escape key
   useEffect(() => {
@@ -60,7 +70,7 @@ export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: Attachm
         <div 
           className="relative max-w-full max-h-full rounded-lg overflow-hidden shadow-2xl flex items-center justify-center bg-slate-900/50"
           onClick={(e) => e.stopPropagation()} // Prevent click from bubbling to backdrop
-          style={isPdf ? { width: '80vw', height: '85vh' } : undefined}
+          style={(canPreviewIframe || useGoogleViewer) ? { width: '80vw', height: '85vh' } : undefined}
         >
           {isImage ? (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -69,9 +79,26 @@ export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: Attachm
               alt={attachment.file_name} 
               className="max-w-full max-h-[85vh] object-contain rounded-lg"
             />
-          ) : isPdf ? (
+          ) : isVideo ? (
+            <video 
+              src={fileUrl} 
+              controls 
+              className="max-w-full max-h-[85vh] rounded-lg"
+            />
+          ) : isAudio ? (
+            <div className="w-full max-w-md p-8 bg-slate-800 rounded-lg flex flex-col items-center gap-4">
+               <FileText size={48} className="text-slate-400" />
+               <audio src={fileUrl} controls className="w-full" />
+            </div>
+          ) : canPreviewIframe ? (
             <iframe 
-              src={`${fileUrl}#toolbar=0`} 
+              src={isPdf ? `${fileUrl}#toolbar=0` : fileUrl} 
+              className="w-full h-full border-0 bg-white rounded-lg"
+              title={attachment.file_name}
+            />
+          ) : useGoogleViewer ? (
+            <iframe 
+              src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`} 
               className="w-full h-full border-0 bg-white rounded-lg"
               title={attachment.file_name}
             />
