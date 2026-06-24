@@ -17,6 +17,11 @@ export async function removeWorkspaceMemberAction(
   try {
     const { user } = await requireUser()
     await MemberService.removeMember(workspaceId, memberId, user.id)
+    
+    // Validate if the removed user's timer is now invalid
+    const { TimeTrackingService } = await import("@/features/time-tracking/services/time-tracking.service")
+    await TimeTrackingService.validateAndStopInvalidActiveTimers(memberId)
+
     revalidatePath("/members")
     revalidatePath("/workspace")
     revalidatePath("/projects", "layout")

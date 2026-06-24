@@ -1,7 +1,7 @@
 ---
 title: TaskPilot Technical Report
 author: Senior Software Architect & Engineering Manager
-date: 2026-06-22
+date: 2026-06-24
 version: 1.0.0
 ---
 
@@ -66,6 +66,8 @@ The following table outlines the core feature modules implemented within TaskPil
 | **Task Priorities** | Critical, High, Medium, and Low prioritization. | Implemented |
 | **Task Types** | Bug, Feature, Epic, and Task categorizations. | Implemented |
 | **Due Dates** | Chronological tracking and deadline alerts. | Implemented |
+| **Task Attachments** | File uploads and previews via Supabase Storage. | Implemented |
+| **Time Tracking** | Active timers and manual logs with visual statistics. | Implemented |
 | **Progress Tracking** | Automated completion calculation. | Implemented |
 | **Workspace Settings** | Configurable environments per organization. | Implemented |
 
@@ -154,6 +156,16 @@ The database schema is strictly normalized and relies on PostgreSQL's advanced r
     - *Key Columns:* `id`, `user_id`, `title`, `message`, `is_read`.
     - *Relationships:* Belongs to `users`.
 
+11. **`task_attachments`**
+    - *Purpose:* Stores metadata and storage references for files uploaded to tasks.
+    - *Key Columns:* `id`, `task_id`, `file_name`, `file_path`, `mime_type`.
+    - *Relationships:* Belongs to `tasks`.
+
+12. **`time_entries`**
+    - *Purpose:* Tracks precise time durations spent by users on specific tasks.
+    - *Key Columns:* `id`, `task_id`, `user_id`, `start_time`, `end_time`, `duration_seconds`.
+    - *Relationships:* Belongs to `tasks`, `users`.
+
 ```mermaid
 erDiagram
     USERS ||--o{ WORKSPACE_MEMBERS : "has"
@@ -162,6 +174,8 @@ erDiagram
     WORKSPACES ||--o{ TEAMS : "contains"
     PROJECTS ||--o{ TASKS : "contains"
     TASKS ||--o{ TASK_COMMENTS : "has"
+    TASKS ||--o{ TASK_ATTACHMENTS : "has"
+    TASKS ||--o{ TIME_ENTRIES : "tracked_via"
     USERS ||--o{ TASKS : "assigned_to"
     USERS ||--o{ TASK_COMMENTS : "writes"
     TEAMS ||--o{ TEAM_MEMBERS : "has"
@@ -208,6 +222,8 @@ The Task system is heavily engineered for deep detailing and flexibility.
 - **Status & Priority:** Granular control over the workflow state (`Todo`, `In Progress`, `In Review`, `Done`) and priority (`Low` to `Critical`).
 - **Types & Due Dates:** Tasks are classified contextually and tracked chronologically.
 - **Comments & History:** Each task maintains an immutable log of comments and state changes, providing total transparency.
+- **Attachments:** Integrated Supabase Storage allows users to securely upload, manage, and preview files associated with tasks using signed URLs.
+- **Time Tracking:** Features a built-in global timer and manual time logging per task, comparing actual time tracked against estimations with visual pie charts.
 
 ## 13. Kanban Board System
 
@@ -396,6 +412,7 @@ TaskPilot is optimized to handle large datasets seamlessly.
 
 TaskPilot enforces a rigorous quality assurance pipeline.
 - **Unit Testing:** Vitest is utilized for pure utility functions, authorization logic, and data transformation scripts.
+- **Action Testing:** Server actions for features like time tracking and attachments are rigorously tested using service-layer mocking to ensure fast and deterministic results.
 - **Integration Testing:** Ensuring Next.js Server Actions correctly interface with the Supabase PostgreSQL database using test environments.
 - **Validation Testing:** Extensive automated tests against Zod schemas to ensure edge-case payloads are correctly rejected.
 - **UI Testing:** Storybook for component isolation and manual cross-browser testing for the drag-and-drop and complex layout implementations.

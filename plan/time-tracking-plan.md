@@ -1,108 +1,103 @@
-# Implement Enterprise Time Tracking System for TaskPilot
+# TaskPilot Time Tracking - Technical Architecture & Implementation
 
-This implementation plan details the steps and architecture required to build a complete production-ready Time Tracking feature, similar to Jira or ClickUp, using Next.js 15, TypeScript, Supabase, Server Actions, React Query, and TailwindCSS. 
-
-**Note: Row Level Security (RLS) is disabled for this project.** All permission checks will be handled at the application level within Server Actions.
-
-## User Review Required
-
-> [!WARNING]
-> We will need to alter the existing `tasks` table to include the `estimated_minutes` column, and create a new `time_entries` table. Please confirm if you would like me to generate the SQL migration script for you to run, or if you will handle the database changes directly in the Supabase Dashboard.
-
-## Open Questions
-
-> [!IMPORTANT]
-> 1. For the Global Timer Widget in the Navbar, should we use Supabase Realtime subscriptions to listen for `time_entries` changes, or is a polling strategy / optimistic React Query update sufficient?
-> 2. How should we handle overlapping manual time entries? Should the system allow a user to log manual time that overlaps with an already recorded session, or should we strictly validate and prevent overlaps?
-
-## Proposed Changes
+This document provides a deep, comprehensive breakdown of how the Time Tracking system is implemented in TaskPilot. It explains the data flow, the database structure, the state management strategy, and how all the UI components interact to provide a seamless, enterprise-grade experience without relying on heavy external dependencies.
 
 ---
 
-### Database Schema
+## 1. The Database Architecture
 
-#### [MODIFY] `tasks` table
-- Add column: `estimated_minutes integer default 0`
+The time tracking system is built around two primary entities in our PostgreSQL database:
 
-#### [NEW] `time_entries` table
-- Columns: 
-  - `id` (uuid, primary key)
-  - `task_id` (uuid, references `tasks(id)` on delete cascade)
-  - `user_id` (uuid, references `profiles(id)`)
-  - `start_time` (timestamptz, not null)
-  - `end_time` (timestamptz)
-  - `duration_seconds` (integer)
-  - `note` (text)
-  - `created_at` (timestamptz, default now())
-- Indexes: `idx_time_entries_task` on `task_id`, `idx_time_entries_user` on `user_id`.
-- *Note: RLS is NOT used. Server actions will validate workspace membership and roles before allowing insert/update/delete operations.*
+### The `time_entries` Table
+This is a brand new table dedicated to storing every block of tracked time. 
+**Key Columns:**
+- `id` (UUID): Unique identifier for the log.
+- `task_id` (UUID): Links the time entry to a specific task. If the task is deleted, the time entries are cascade-deleted.
+- `user_id` (UUID): Links the entry to the user who tracked the time.
+- `start_time` (Timestamp): The exact moment the timer was started.
+- `end_time` (Timestamp): The moment the timer was stopped. **If this is `NULL`, it means the timer is currently actively running.**
+- `duration_seconds` (Integer): The total time tracked. Calculated automatically when the timer stops.
+- `note` (Text): Optional description (used mostly for manual time entries).
 
----
-
-### Features: Time Tracking (Types, Hooks, Actions, Components)
-
-#### [NEW] `src/features/time-tracking/types/index.ts`
-- Define `TimeEntry` interface.
-- Define `TaskTimeStats` interface.
-- Define `ProjectTimeStats` interface.
-
-#### [NEW] `src/features/time-tracking/actions/`
-- `start-timer.ts`: Stops any active timer for the user, starts a new timer for the given task.
-- `stop-timer.ts`: Updates `end_time` and `duration_seconds` for the active timer.
-- `get-active-timer.ts`: Fetches the timer where `end_time is null` for the current user.
-- `get-task-time-entries.ts`: Fetches all logs for a specific task.
-- `log-manual-time.ts`: Creates a completed time entry.
-- `update-time-entry.ts` / `delete-time-entry.ts`: Edits/removes existing logs. Validates creator or Workspace Admin role.
-- `get-project-time-stats.ts`: Aggregates team analytics and total project time.
-- `get-user-time-stats.ts`: Aggregates "My Time" for the dashboard.
-
-#### [NEW] `src/features/time-tracking/hooks/`
-- `useActiveTimer.ts`: Polls or listens for the active timer state.
-- `useTaskTimeEntries.ts`: Fetches and caches logs for a task.
-- `useStartTimer.ts`, `useStopTimer.ts`: Mutations for timer control with optimistic updates.
-- `useCreateManualEntry.ts`, `useUpdateTimeEntry.ts`, `useDeleteTimeEntry.ts`: Mutations for manual logs.
-
-#### [NEW] `src/features/time-tracking/components/`
-- `GlobalTimerWidget.tsx`: The navbar widget displaying active tracked time. Updates every second locally.
-- `TaskTimerControls.tsx`: The "Start Timer" / "Stop Timer" button in the task modal.
-- `ActiveTimerModal.tsx`: The confirmation modal asking to switch timers if one is already running.
-- `TimeLogList.tsx`: Displays the list of time entries (Today, Yesterday, etc.) with edit/delete actions.
-- `ManualTimeEntryModal.tsx`: Form to log time manually.
-- `TaskTimeStatistics.tsx`: Displays Estimated vs Tracked visually (progress bars, over-estimate warnings).
-- `ProjectTimeDashboard.tsx`: Displays aggregated project statistics and Team Analytics.
-
-#### [NEW] `src/features/time-tracking/utils/time-format.ts`
-- Helpers to convert seconds to `2h 15m` format, and parse `2d 4h` into minutes/seconds.
+### The `tasks` Table (Modified)
+We added a new column to the existing tasks table:
+- `estimated_minutes` (Integer): Stores the projected time a task should take. Defaults to `0`. This is used to calculate progress percentages on the UI.
 
 ---
 
-### Integration: Existing Features
+## 2. Server Actions (The Backend Logic)
 
-#### [MODIFY] `src/features/tasks/components/modals/task-details-modal.tsx`
-- Integrate `TaskTimerControls`, `TaskTimeStatistics`, and `TimeLogList`.
-- Add an editable field for `estimated_minutes`.
+Since TaskPilot uses Next.js 15, all backend operations are handled securely via Server Actions. We do not use Row Level Security (RLS) in the database; instead, we validate workspace membership and user sessions directly inside these actions.
 
-#### [MODIFY] `src/features/workspace/components/header-inbox.tsx` (or Navbar)
-- Integrate `GlobalTimerWidget` to show active tracking status globally.
+**Core Actions (`src/features/time-tracking/actions/`):**
 
-#### [MODIFY] `src/features/project/components/project-overview.tsx`
-- Integrate `ProjectTimeDashboard` to show tracked time, estimated time, and top contributors.
+1. **`startTimerAction(taskId)`**: 
+   - First, it checks if the user currently has an active timer (any entry where `end_time` is NULL).
+   - If they do, it instantly stops it (calculates the duration and sets the `end_time`). This enforces our **"Single Timer Rule"** — a user can only track one thing at a time.
+   - Then, it creates a new row in `time_entries` for the new task with `end_time = NULL`.
 
-#### [MODIFY] `src/features/workspace/components/dashboard/...`
-- Integrate user specific time stats ("My Time" widget).
+2. **`stopTimerAction()`**:
+   - Finds the user's active timer.
+   - Calculates the difference between `start_time` and `now()`.
+   - Updates the row, setting `end_time` to `now()` and saving the `duration_seconds`.
+
+3. **`getActiveTimerAction()`**:
+   - A simple query that looks for a row belonging to the user where `end_time` is NULL. Returns it so the UI knows a timer is running.
+
+4. **`logManualTimeAction()`**:
+   - Used when a user forgot to start a timer and wants to add time retroactively. It inserts a completed row immediately (calculating a past `start_time` based on the duration provided).
 
 ---
 
-## Verification Plan
+## 3. State Management (Event-Driven Reactivity)
 
-### Automated Tests
-- Run `npm run typecheck` and `npm run lint` to ensure type safety for new schemas and components.
+To keep the bundle size small and performance lightning-fast, we **did not use heavy libraries like `@tanstack/react-query`**. Instead, we built a custom event-driven reactivity system using native React Hooks and Browser CustomEvents.
 
-### Manual Verification
-1. **Timer Persistence**: Start a timer, refresh the page, close and reopen the browser. Verify the timer correctly resumes counting from the `start_time` without losing track.
-2. **Single Timer Rule**: Start a timer on Task A, then navigate to Task B and start a timer. Verify the switch modal appears, stops Task A's timer, and starts Task B's.
-3. **Manual Entry**: Log 2h 30m manually and verify it adds to the total tracked time for the task.
-4. **Permissions**: Verify a regular user cannot edit another user's time entry, while a Workspace Admin can.
-5. **Statistics**: Verify that if a task's tracked time exceeds its estimated time, a warning ("Over Estimate") correctly appears.
-6. **Activity Feed**: Start a timer and verify "User started tracking time on Task..." appears in the activity feed.
-7. **Global Widget**: Verify the timer ticks globally in the navbar and clicking it navigates to the tracked task.
+### How it works:
+Whenever a Server Action modifies data (like starting a timer), it triggers a successful response to the frontend. The frontend then dispatches a global window event:
+`window.dispatchEvent(new CustomEvent('refetch-active-timer'))`
+
+### Custom Hooks (`src/features/time-tracking/hooks/use-time-tracking.ts`):
+1. **`useActiveTimer`**: 
+   - Listens to the `refetch-active-timer` event. When heard, it calls `getActiveTimerAction()` in the background and updates the React state.
+   - **Polling:** It also features a lightweight `setInterval` that polls the server every 60 seconds. This ensures that if the user has TaskPilot open in multiple browser tabs, they all stay perfectly synchronized.
+
+2. **`useTaskTimeEntries` & `useTaskTimeStats`**:
+   - Fetch the list of historical logs and the aggregated statistics for a specific task. They listen to `refetch-task-entries` and `refetch-task-stats` events so the UI updates the exact millisecond a timer is stopped.
+
+---
+
+## 4. UI Components & UX
+
+The user interface is broken down into specific, highly optimized components that consume the hooks mentioned above.
+
+### `GlobalTimerWidget` (Located in the Header)
+- This is the floating timer visible at the top of the screen no matter where you navigate.
+- **Optimistic Ticking:** It uses `useActiveTimer` to get the `start_time` from the server. Once it has the start time, it uses a local JavaScript `setInterval` to tick the seconds up on the screen. This means the timer updates every second without making 60 API calls a minute.
+
+### `TaskTimeStatistics` (The "Time Tracker" Tab in Task Details)
+- This component houses the core tracking interface for a specific task.
+- **The Layout:** `[Estimate Input Modal] -> [Start/Stop Timer Button] -> [Doughnut Pie Chart]`.
+- **The Pie Chart:** Built entirely with CSS `conic-gradient`, making it extremely lightweight and performant without needing heavy charting libraries like D3 or Recharts. It calculates the percentage of `Tracked Time / Estimated Time`.
+- **Estimate Modal:** Clicking the edit icon opens a modal matching the styling of the manual entry modal, ensuring UI consistency across the app.
+
+### `TimeLogList` & `ManualTimeEntryModal`
+- Lists all historical sessions for the task. It joins the data with the `profiles` table to show the avatar and name of the person who tracked the time.
+- Allows users to retroactively add time using a sleek, focused modal, or delete erroneous logs.
+
+## Summary of the Flow
+1. User clicks **"Start Timer"**.
+2. Component calls `startTimerAction()`.
+3. Server stops any existing timers, creates a new entry, and returns success.
+4. Component dispatches `refetch-active-timer`.
+5. Both the `TaskTimeStatistics` and the `GlobalTimerWidget` instantly detect the event, fetch the new state, and the local JavaScript interval begins ticking the UI.
+6. The pie chart progresses visually as the user tracks time.
+
+---
+
+## 5. Testing Strategy
+
+The time tracking functionality is fully covered by automated tests using Vitest:
+- **Server Action Tests:** All time tracking server actions are tested by mocking the underlying `TimeTrackingService`.
+- **Validation:** Ensures actions return appropriate error objects (e.g., `success: false, error: '...'`) when the database operations fail or services throw.
+- **Determinism:** Mocking the service layer ensures tests run in milliseconds without requiring an active PostgreSQL connection.

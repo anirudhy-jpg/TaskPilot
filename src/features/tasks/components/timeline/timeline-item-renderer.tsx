@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState } from "react";
 import type { TimelineItem, TaskActivity, TaskComment } from "@/features/project/types/project.types";
-import { ArrowRight, Activity, Edit2, Trash2 } from "lucide-react";
+import { ArrowRight, Activity, Edit2, Trash2, PlusCircle, CheckCircle2, AlertCircle, Type, UserPlus, UserMinus, ListTodo, Paperclip } from "lucide-react";
+import { DeleteConfirmModal } from "@/features/project/components/modals/delete-confirm-modal";
 
 interface TimelineItemProps {
   item: TimelineItem;
@@ -41,10 +42,11 @@ export function TimelineItemRenderer({ item, currentUserId, onEditComment, onDel
 
 function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: { id: string; name: string }[] }) {
   const actorName = activity.actor?.fullName || activity.actor?.email?.split("@")[0] || "Unknown User";
-  const avatar = activity.actor?.avatarUrl;
   
   let actionText = "";
   let details = null;
+  let BadgeIcon = Activity;
+  let badgeColor = "bg-slate-600";
 
   const oldVal = activity.oldValue as ActivityValue | null;
   const newVal = activity.newValue as ActivityValue | null;
@@ -53,11 +55,15 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
   switch (activity.actionType) {
     case "TASK_CREATED":
       actionText = "created this task";
+      BadgeIcon = PlusCircle;
+      badgeColor = "blue";
       break;
     case "STATUS_CHANGED":
       const oldCol = columns.find(c => c.id === oldVal?.column_id)?.name || "Unknown";
       const newCol = columns.find(c => c.id === newVal?.column_id)?.name || "Unknown";
       actionText = "changed status";
+      BadgeIcon = CheckCircle2;
+      badgeColor = "emerald";
       details = (
         <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
           <span className="line-through">{oldCol}</span>
@@ -68,6 +74,8 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       break;
     case "PRIORITY_CHANGED":
       actionText = "changed priority";
+      BadgeIcon = AlertCircle;
+      badgeColor = "amber";
       details = (
         <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
           <span className="line-through capitalize">{oldVal?.priority}</span>
@@ -78,6 +86,8 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       break;
     case "TYPE_CHANGED":
       actionText = "changed task type";
+      BadgeIcon = Type;
+      badgeColor = "purple";
       details = (
         <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
           <span className="line-through capitalize">{oldVal?.type}</span>
@@ -88,17 +98,28 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       break;
     case "ASSIGNEE_ADDED":
       actionText = "assigned the task";
+      BadgeIcon = UserPlus;
+      badgeColor = "indigo";
       break;
     case "ASSIGNEE_REMOVED":
       actionText = "removed the assignee";
+      BadgeIcon = UserMinus;
+      badgeColor = "rose";
       break;
     case "TASK_UPDATED":
       if (meta?.subtask) {
         const sub = String(meta.subtask);
+        BadgeIcon = ListTodo;
         if (meta.action === 'added') {
           actionText = `added subtask "${sub}"`;
+          badgeColor = "blue";
+        } else if (meta.action === 'deleted') {
+          actionText = `deleted subtask "${sub}"`;
+          BadgeIcon = Trash2;
+          badgeColor = "rose";
         } else if (meta.action === 'status_changed') {
           actionText = `updated subtask "${sub}" status`;
+          badgeColor = "emerald";
           details = (
             <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-slate-400">
               <span className="line-through uppercase">{String(meta.old_status)?.replace('_', ' ')}</span>
@@ -108,15 +129,21 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
           );
         } else if (meta.action === 'assignee_changed') {
           actionText = `updated assignee for subtask "${sub}"`;
+          badgeColor = "indigo";
         } else {
           actionText = `updated subtask "${sub}"`;
+          badgeColor = "slate";
         }
       } else {
         actionText = "updated task details";
+        BadgeIcon = Edit2;
+        badgeColor = "slate";
       }
       break;
     case "ATTACHMENT_ADDED":
       actionText = "attached a file";
+      BadgeIcon = Paperclip;
+      badgeColor = "blue";
       if (meta?.file_name) {
         details = (
           <span className="text-[10px] font-bold text-slate-300 mt-1 block break-all">
@@ -127,6 +154,8 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       break;
     case "ATTACHMENT_REMOVED":
       actionText = "deleted an attachment";
+      BadgeIcon = Trash2;
+      badgeColor = "rose";
       if (meta?.file_name) {
         details = (
           <span className="text-[10px] font-bold text-slate-500 line-through mt-1 block break-all">
@@ -137,21 +166,31 @@ function ActivityItem({ activity, columns }: { activity: TaskActivity, columns: 
       break;
     default:
       actionText = "updated the task";
+      BadgeIcon = Activity;
+      badgeColor = "slate";
   }
 
   const dateStr = new Date(activity.createdAt).toLocaleString(undefined, {
     month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
   });
 
+  const colorMap: Record<string, string> = {
+    blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    indigo: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+    rose: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    slate: "bg-slate-800 text-slate-400 border-slate-700",
+  };
+
+  const styleClass = colorMap[badgeColor] || colorMap["slate"];
+
   return (
     <div className="flex gap-3 px-2">
-      <div className="relative mt-1">
-        <div className="w-6 h-6 rounded-full bg-slate-850 flex items-center justify-center border border-slate-800 text-slate-400 z-10 relative overflow-hidden">
-          {avatar ? (
-             <img src={avatar} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <Activity size={10} />
-          )}
+      <div className="relative mt-1 shrink-0">
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${styleClass} z-10 relative overflow-hidden`}>
+          <BadgeIcon size={12} />
         </div>
       </div>
       <div className="flex flex-col min-w-0 pb-4">
@@ -180,6 +219,7 @@ function CommentItem({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const isAuthor = currentUserId === comment.authorId;
   const authorName = comment.author?.fullName || comment.author?.email?.split("@")[0] || "Unknown User";
@@ -197,8 +237,8 @@ function CommentItem({
 
   return (
     <div className="flex gap-3 px-2 group">
-      <div className="relative">
-        <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-500 z-10 relative overflow-hidden shrink-0 mt-0.5">
+      <div className="relative shrink-0 mt-0.5">
+        <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-500 z-10 relative overflow-hidden">
           {avatar ? (
             <img src={avatar} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -217,10 +257,10 @@ function CommentItem({
           
           {isAuthor && !isEditing && (
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={() => setIsEditing(true)} className="p-1 text-slate-500 hover:text-amber-500 rounded cursor-pointer transition-colors">
+              <button onClick={() => setIsEditing(true)} className="p-1 text-slate-500 hover:text-amber-500 rounded cursor-pointer transition-colors" title="Edit comment">
                 <Edit2 size={12} />
               </button>
-              <button onClick={() => onDelete?.(comment.id)} className="p-1 text-slate-500 hover:text-rose-500 rounded cursor-pointer transition-colors">
+              <button onClick={() => setIsDeleteModalOpen(true)} className="p-1 text-slate-500 hover:text-rose-500 rounded cursor-pointer transition-colors" title="Delete comment">
                 <Trash2 size={12} />
               </button>
             </div>
@@ -252,6 +292,20 @@ function CommentItem({
           </div>
         )}
       </div>
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        type="task" // reuse task design for generic comment delete
+        name="this comment"
+        isPending={false}
+        onConfirm={() => {
+          if (onDelete) {
+            onDelete(comment.id);
+          }
+          setIsDeleteModalOpen(false);
+        }}
+      />
     </div>
   );
 }
