@@ -211,6 +211,22 @@ export class TimeTrackingService {
   }
 
   /**
+   * Updates the note for a time entry.
+   */
+  static async updateTimeEntryNote(entryId: string, note: string | null): Promise<void> {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("time_entries")
+      .update({ note })
+      .eq("id", entryId);
+
+    if (error) {
+      console.error("Error updating time entry note:", error);
+      throw new Error(error.message);
+    }
+  }
+
+  /**
    * Fetches stats for a task: tracked time vs estimated.
    */
   static async getTaskTimeStats(taskId: string): Promise<TaskTimeStats> {

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Trash2, Clock } from "lucide-react";
-import { useTaskTimeEntries, useDeleteTimeEntry } from "../hooks/use-time-tracking";
+import { Trash2, Clock, FileText, Check, X } from "lucide-react";
+import { useTaskTimeEntries, useDeleteTimeEntry, useUpdateTimeEntryNote } from "../hooks/use-time-tracking";
 import { formatSecondsToShortString } from "../utils/time-format";
 import { DeleteConfirmModal } from "@/features/project/components/modals/delete-confirm-modal";
 import Image from "next/image";
@@ -14,7 +14,16 @@ interface TimeLogListProps {
 export function TimeLogList({ taskId }: TimeLogListProps) {
   const { data: entries, isLoading } = useTaskTimeEntries(taskId);
   const { mutate: deleteEntry, isPending: isDeleting } = useDeleteTimeEntry();
+  const { mutate: updateNote, isPending: isUpdatingNote } = useUpdateTimeEntryNote();
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editNoteText, setEditNoteText] = useState("");
+
+  const handleSaveNote = (entryId: string) => {
+    updateNote({ entryId, taskId, note: editNoteText }, {
+      onSuccess: () => setEditingLogId(null)
+    });
+  };
 
   if (isLoading) {
     return (
@@ -106,15 +115,58 @@ export function TimeLogList({ taskId }: TimeLogListProps) {
                 </span>
               </div>
 
-              <div className="flex-1 text-[12px] text-slate-400 italic truncate">
-                {entry.note || "—"}
+              <div className="flex-1 text-[12px] text-slate-400 italic truncate pr-2">
+                {editingLogId === entry.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-200 outline-none focus:border-indigo-500"
+                      value={editNoteText}
+                      onChange={(e) => setEditNoteText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveNote(entry.id);
+                        if (e.key === "Escape") setEditingLogId(null);
+                      }}
+                      autoFocus
+                      disabled={isUpdatingNote}
+                    />
+                    <button
+                      onClick={() => handleSaveNote(entry.id)}
+                      className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded disabled:opacity-50"
+                      disabled={isUpdatingNote}
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      onClick={() => setEditingLogId(null)}
+                      className="p-1 text-slate-400 hover:bg-slate-700 rounded disabled:opacity-50"
+                      disabled={isUpdatingNote}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <span>{entry.note || "—"}</span>
+                )}
               </div>
 
-              <div className="w-[40px] flex justify-end">
+              <div className="w-[60px] flex justify-end gap-1">
+                <button
+                  onClick={() => {
+                    setEditingLogId(entry.id);
+                    setEditNoteText(entry.note || "");
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-md transition-all cursor-pointer disabled:opacity-0"
+                  title="Edit note"
+                  disabled={!!editingLogId}
+                >
+                  <FileText size={14} />
+                </button>
                 <button
                   onClick={() => setDeletingLogId(entry.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all cursor-pointer disabled:opacity-0"
                   title="Delete log"
+                  disabled={!!editingLogId}
                 >
                   <Trash2 size={14} />
                 </button>
