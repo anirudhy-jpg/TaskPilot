@@ -8,6 +8,7 @@ import type { TaskSubtask } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getSubtasks, addSubtask, updateSubtaskDetails, deleteSubtask } from "../../services/task-subtasks.service"
 import { AssigneeSelector } from "../assignee-selector"
+import { DeleteConfirmModal } from "@/features/project/components/modals/delete-confirm-modal"
 
 interface TaskSubtasksProps {
   taskId: string
@@ -17,14 +18,18 @@ interface TaskSubtasksProps {
   onChange?: (subtasks: TaskSubtask[]) => void
 }
 
+const subtasksCache: Record<string, TaskSubtask[]> = {};
+
 export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber, onChange }: TaskSubtasksProps) {
-  const [subtasks, setSubtasks] = useState<TaskSubtask[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [subtasks, setSubtasks] = useState<TaskSubtask[]>(subtasksCache[taskId] || [])
+  const [isLoading, setIsLoading] = useState(!subtasksCache[taskId])
   const [isAdding, setIsAdding] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [isOpen, setIsOpen] = useState(true)
   const [isComposing, setIsComposing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteSubtaskId, setDeleteSubtaskId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<{id: string, type: 'priority' | 'status', rect: DOMRect} | null>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -45,6 +50,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
     const fetchSubtasks = async () => {
       try {
         const data = await getSubtasks(taskId)
+        subtasksCache[taskId] = data;
         if (mounted) {
           setSubtasks(data)
           onChange?.(data)
@@ -132,14 +138,19 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
     }
   }
 
-  const handleDelete = async (id: string) => {
-    const newSubtasks = subtasks.filter(s => s.id !== id)
-    setSubtasks(newSubtasks)
-    onChange?.(newSubtasks)
+  const confirmDelete = async () => {
+    if (!deleteSubtaskId) return
+    setIsDeleting(true)
     try {
-      await deleteSubtask(id)
+      const newSubtasks = subtasks.filter(s => s.id !== deleteSubtaskId)
+      setSubtasks(newSubtasks)
+      onChange?.(newSubtasks)
+      await deleteSubtask(deleteSubtaskId)
     } catch (e) {
       console.error(e)
+    } finally {
+      setIsDeleting(false)
+      setDeleteSubtaskId(null)
     }
   }
 
@@ -272,7 +283,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
 
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                           <button onClick={() => setEditingId(task.id)} className="p-1 text-slate-500 hover:text-slate-300 rounded"><Pencil size={12} /></button>
-                          <button onClick={() => handleDelete(task.id)} className="p-1 text-slate-500 hover:text-rose-400 rounded"><Trash2 size={12} /></button>
+                          <button onClick={() => setDeleteSubtaskId(task.id)} className="p-1 text-slate-500 hover:text-rose-400 rounded"><Trash2 size={12} /></button>
                         </div>
                       </div>
 
@@ -377,6 +388,16 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
           )}
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={!!deleteSubtaskId}
+        onClose={() => !isDeleting && setDeleteSubtaskId(null)}
+        type="subtask"
+        name={subtasks.find(s => s.id === deleteSubtaskId)?.title || "Subtask"}
+        isPending={isDeleting}
+        onConfirm={confirmDelete}
+      />
+
       {activeDropdown && createPortal(
         <div 
           ref={dropdownRef} 

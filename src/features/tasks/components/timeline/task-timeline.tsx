@@ -7,6 +7,7 @@ import { CommentComposer } from "./comment-composer";
 import { addCommentAction } from "../../actions/add-comment.action";
 import { updateCommentAction } from "../../actions/update-comment.action";
 import { deleteCommentAction } from "../../actions/delete-comment.action";
+import { getTaskTimelineAction } from "../../actions/get-task-timeline.action";
 import { Loader2 } from "lucide-react";
 
 interface TaskTimelineProps {
@@ -16,23 +17,24 @@ interface TaskTimelineProps {
   columns?: { id: string; name: string }[];
 }
 
+const timelineCache: Record<string, TimelineItem[]> = {};
+
 export function TaskTimeline({ taskId, currentUserId, members, columns }: TaskTimelineProps) {
-  const [initialTimeline, setInitialTimeline] = useState<TimelineItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialTimeline, setInitialTimeline] = useState<TimelineItem[]>(timelineCache[taskId] || []);
+  const [isLoading, setIsLoading] = useState(!timelineCache[taskId]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const currentUser = members.find(m => m.userId === currentUserId);
 
-  // Fetch initial timeline
+  // Fetch initial timeline with static import for speed
   useEffect(() => {
     let mounted = true;
     const fetchTimeline = async () => {
-      setIsLoading(true);
       try {
-        const { getTaskTimelineAction } = await import("../../actions/get-task-timeline.action");
-        const timeline = await getTaskTimelineAction(taskId, 100); // 100 limit for now
-        if (mounted) {
+        const timeline = await getTaskTimelineAction(taskId, 100);
+        if (timeline) timelineCache[taskId] = timeline;
+        if (mounted && timeline) {
           setInitialTimeline(timeline);
         }
       } catch (err) {

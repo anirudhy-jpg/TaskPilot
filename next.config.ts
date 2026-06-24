@@ -3,6 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   devIndicators: false,
   allowedDevOrigins: ['192.168.0.105'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'zhvblqkewzvfvuwslwkw.supabase.co',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',

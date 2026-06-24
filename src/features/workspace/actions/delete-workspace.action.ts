@@ -24,6 +24,33 @@ export async function deleteWorkspaceAction(workspaceId: string): Promise<Action
       return { success: false, error: "Workspace owners are not allowed to delete workspaces." }
     }
 
+    const { createClient } = await import("@/lib/supabase/server")
+    const supabase = await createClient()
+
+    // 1. Find all users with an active timer in this workspace
+    const { data: activeTimers } = await supabase
+      .from("time_entries")
+      .select(`
+        user_id,
+        task:tasks!inner(
+          project:projects!inner(workspace_id)
+        )
+      `)
+      .eq("task.project.workspace_id", workspaceId)
+      .is("end_time", null)
+
+    // 2. Stop those timers before cascade-deletion
+    if (activeTimers && activeTimers.length > 0) {
+      const { TimeTrackingService } = await import("@/features/time-tracking/services/time-tracking.service")
+      for (const timer of activeTimers) {
+        await TimeTrackingService.validateAndStopInvalidActiveTimers(
+          timer.user_id, 
+          "System automatically stopped timer because the workspace was deleted."
+        )
+      }
+    }
+
+    // 3. Delete the workspace
     await WorkspaceService.deleteWorkspace(workspaceId, user.id)
 
     // Clear active workspace cookie

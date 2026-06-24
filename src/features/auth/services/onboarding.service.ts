@@ -85,6 +85,50 @@ export class OnboardingService {
       return
     }
 
+    // ── Step 3.5: Identity Linking Workaround ─────────────────────────────
+    // To enforce strictly 1 workspace per email (e.g. if the user signs in with GitHub
+    // but already has an email/password account with a workspace), we check if another
+    // profile with the same email is already in a workspace.
+    if (email) {
+      const { data: profilesWithSameEmail } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .neq("id", userId)
+
+      if (profilesWithSameEmail && profilesWithSameEmail.length > 0) {
+        const otherProfileIds = profilesWithSameEmail.map(p => p.id)
+
+        // Find if any of these alternate profiles belong to a workspace
+        const { data: sharedMembership } = await supabase
+          .from("workspace_members")
+          .select("workspace_id, role")
+          .in("user_id", otherProfileIds)
+          .limit(1)
+          .maybeSingle()
+
+        if (sharedMembership) {
+          console.warn(
+            `[Onboarding] Email ${email} already belongs to workspace ${sharedMembership.workspace_id}. Linking new identity ${userId}.`
+          )
+          // Add this new user identity to the exact same workspace
+          const { error: linkErr } = await supabase
+            .from("workspace_members")
+            .insert({
+              workspace_id: sharedMembership.workspace_id,
+              user_id: userId,
+              role: sharedMembership.role, // Inherit role from their other identity
+            })
+            
+          if (!linkErr) {
+            return // Successfully linked, onboarding complete!
+          } else {
+            console.error("[Onboarding] Failed to link identity to existing workspace:", linkErr)
+          }
+        }
+      }
+    }
+
     // ── Step 4: First-time user — create workspace + membership ──────────
     // No workspace and no membership exists yet. Create a default workspace.
     // WorkspaceService.createWorkspace now THROWS if membership creation fails,

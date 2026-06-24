@@ -11,12 +11,13 @@ import { LogOut, DoorOpen, ChevronDown, Briefcase, Menu } from "lucide-react"
 import type { UserProfile } from "@/features/auth/types/profile.types"
 import type { Workspace } from "../types/workspace.types"
 import { HeaderInbox } from "./header-inbox"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 import { LeaveWorkspaceConfirmModal } from "./modals/leave-workspace-confirm-modal"
 import { SwitchWorkspaceModal } from "./modals/switch-workspace-modal"
 import { SwitchingWorkspaceLoading } from "./switching-workspace-loading"
 import { SignOutConfirmModal } from "@/features/auth/components/modals/signout-confirm-modal"
+import { GlobalTimerWidget } from "@/features/time-tracking/components/GlobalTimerWidget"
 
 import { createClient } from "@/lib/supabase/client"
 
@@ -48,18 +49,18 @@ export function Header({
   onToggleSidebar,
 }: HeaderProps) {
   const router = useRouter()
-  const pathname = usePathname()
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
-  const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false)
   const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false)
 
-  const [prevRouteKey, setPrevRouteKey] = useState(`${workspaceId}:${pathname}`);
+  const [prevWorkspacesLength, setPrevWorkspacesLength] = useState(workspaces?.length || 0);
 
-  if (`${workspaceId}:${pathname}` !== prevRouteKey) {
-    setPrevRouteKey(`${workspaceId}:${pathname}`);
-    setIsSwitchingWorkspace(false);
+  if ((workspaces?.length || 0) !== prevWorkspacesLength) {
+    setPrevWorkspacesLength(workspaces?.length || 0);
+    if ((workspaces?.length || 0) <= 1) {
+      setIsSwitchModalOpen(false);
+    }
   }
 
   const handleLeaveConfirm = async () => {
@@ -109,16 +110,24 @@ export function Header({
     }
   }
 
-  const handleSwitchWorkspace = async (targetId: string) => {
-    setIsSwitchingWorkspace(true)
-    const res = await switchActiveWorkspaceAction(targetId)
-    if (res.success) {
-      router.push("/workspace")
-      router.refresh()
-    } else {
-      setIsSwitchingWorkspace(false)
-      throw new Error(res.error || "Failed to switch workspace.")
-    }
+  const [isPendingSwitch, startTransition] = React.useTransition();
+
+  const handleSwitchWorkspace = (targetId: string) => {
+    setIsSwitchModalOpen(false) // Close the modal immediately so user isn't stuck
+    
+    startTransition(async () => {
+      try {
+        const res = await switchActiveWorkspaceAction(targetId)
+        if (res.success) {
+          router.push("/workspace")
+          router.refresh()
+        } else {
+          alert(res.error || "Failed to switch workspace.")
+        }
+      } catch (err) {
+        console.error("Failed to switch workspace", err)
+      }
+    })
   }
 
   return (
@@ -155,6 +164,7 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">
+          <GlobalTimerWidget />
           {/* Notification Inbox Bell */}
           <HeaderInbox
             email={profile?.email || user.email}
@@ -230,9 +240,9 @@ export function Header({
         workspaces={workspaces}
         activeWorkspaceId={workspaceId}
         currentUserId={currentUserId}
-        onSwitchWorkspace={handleSwitchWorkspace}
+        onSwitchWorkspace={handleSwitchWorkspace as unknown as (id: string) => Promise<void>}
       />
-      {isSwitchingWorkspace && <SwitchingWorkspaceLoading />}
+      {isPendingSwitch && <SwitchingWorkspaceLoading />}
     </header>
   )
 }

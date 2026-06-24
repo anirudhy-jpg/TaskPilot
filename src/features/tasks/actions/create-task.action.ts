@@ -28,18 +28,20 @@ export async function createTaskAction(
 
     // Notify assignee if one was set and it's not the task creator
     if (result.data.assigneeId && result.data.assigneeId !== user.id) {
-      const [{ data: actorProfile }, { data: projectData }] = await Promise.all([
+      const [{ data: actorProfile }, { data: projectData }, { data: targetProfile }] = await Promise.all([
         supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
         supabase.from("projects").select("name, workspace_id").eq("id", result.data.projectId).maybeSingle(),
+        supabase.from("profiles").select("full_name, email").eq("id", result.data.assigneeId).maybeSingle(),
       ])
 
       const actorName = actorProfile?.full_name || actorProfile?.email || "Someone"
+      const targetName = targetProfile?.full_name || targetProfile?.email || "Someone"
 
       await createNotification({
         userId: result.data.assigneeId,
         workspaceId: projectData?.workspace_id,
-        title: "Task assigned to you",
-        message: `${actorName} assigned you to "${result.data.title}"${projectData ? ` in project "${projectData.name}"` : ""}.`,
+        title: "Task assigned",
+        message: `${actorName} assigned ${targetName} to "${result.data.title}"${projectData ? ` in project "${projectData.name}"` : ""}.`,
         type: "task_assigned",
         actorId: user.id,
         client: supabase,
