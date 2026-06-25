@@ -55,9 +55,17 @@ export function GlobalTimerWidget() {
     }
   }, [pathname, activeTimer]);
 
-  const currentDuration = activeTimer?.start_time
+  const currentDurationRaw = activeTimer?.start_time
     ? Math.floor((now - new Date(activeTimer.start_time).getTime()) / 1000)
     : 0;
+
+  const currentDuration = currentDurationRaw > 86400 ? 86400 : currentDurationRaw;
+
+  useEffect(() => {
+    if (currentDurationRaw >= 86400 && !isStopping) {
+      stopTimer();
+    }
+  }, [currentDurationRaw, isStopping, stopTimer]);
 
   if (isLoading || !activeTimer) {
     return null;

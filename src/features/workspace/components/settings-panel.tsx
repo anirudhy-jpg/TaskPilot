@@ -165,17 +165,7 @@ export function SettingsPanel({
                     : "N/A"
                 }
               />
-              {profile?.updatedAt && (
-                <InfoRow
-                  icon={<Calendar size={14} />}
-                  label="Profile Updated"
-                  value={new Date(profile.updatedAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                />
-              )}
+
             </div>
           </div>
 

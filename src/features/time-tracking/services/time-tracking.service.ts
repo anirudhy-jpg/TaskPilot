@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import type { TimeEntry, TaskTimeStats } from "../types";
 
+const MAX_TRACKING_DURATION_SECONDS = 86400; // 24 hours
+
 export class TimeTrackingService {
   /**
    * Starts a timer for a given task. Stops any currently running timer.
@@ -19,14 +21,21 @@ export class TimeTrackingService {
 
     if (activeTimers && activeTimers.length > 0) {
       // 2. Stop active timers
-      const now = new Date().toISOString();
+      const nowTime = new Date().getTime();
       for (const active of activeTimers) {
         const start = new Date(active.start_time).getTime();
-        const duration = Math.floor((new Date(now).getTime() - start) / 1000);
+        let duration = Math.floor((nowTime - start) / 1000);
+        let endTime = new Date(nowTime).toISOString();
+
+        if (duration > MAX_TRACKING_DURATION_SECONDS) {
+          duration = MAX_TRACKING_DURATION_SECONDS;
+          endTime = new Date(start + MAX_TRACKING_DURATION_SECONDS * 1000).toISOString();
+        }
+
         await supabase
           .from("time_entries")
           .update({
-            end_time: now,
+            end_time: endTime,
             duration_seconds: duration,
           })
           .eq("id", active.id);
@@ -75,14 +84,20 @@ export class TimeTrackingService {
       return null;
     }
 
-    const now = new Date().toISOString();
+    const nowTime = new Date().getTime();
     const start = new Date(activeTimer.start_time).getTime();
-    const duration = Math.floor((new Date(now).getTime() - start) / 1000);
+    let duration = Math.floor((nowTime - start) / 1000);
+    let endTime = new Date(nowTime).toISOString();
+
+    if (duration > MAX_TRACKING_DURATION_SECONDS) {
+      duration = MAX_TRACKING_DURATION_SECONDS;
+      endTime = new Date(start + MAX_TRACKING_DURATION_SECONDS * 1000).toISOString();
+    }
 
     const { data: updatedEntry, error: updateError } = await supabase
       .from("time_entries")
       .update({
-        end_time: now,
+        end_time: endTime,
         duration_seconds: duration,
       })
       .eq("id", activeTimer.id)
@@ -125,6 +140,38 @@ export class TimeTrackingService {
       return null;
     }
 
+    if (activeTimer) {
+      const now = new Date();
+      const start = new Date(activeTimer.start_time);
+      const elapsedSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
+
+      if (elapsedSeconds >= MAX_TRACKING_DURATION_SECONDS) {
+        const end = new Date(start.getTime() + MAX_TRACKING_DURATION_SECONDS * 1000).toISOString();
+        
+        await supabase
+          .from("time_entries")
+          .update({
+            end_time: end,
+            duration_seconds: MAX_TRACKING_DURATION_SECONDS,
+          })
+          .eq("id", activeTimer.id);
+
+        if (activeTimer.task_id) {
+          await supabase.from("task_activities").insert({
+            task_id: activeTimer.task_id,
+            actor_id: null,
+            action_type: "COMMENT_ADDED",
+            metadata: {
+              systemLog: true,
+              message: "Timer automatically stopped after reaching the 24-hour limit.",
+            },
+          });
+        }
+        
+        return null;
+      }
+    }
+
     return activeTimer as unknown as TimeEntry | null;
   }
 
@@ -161,6 +208,10 @@ export class TimeTrackingService {
     durationSeconds: number,
     note?: string
   ): Promise<TimeEntry> {
+    if (durationSeconds > MAX_TRACKING_DURATION_SECONDS) {
+      throw new Error("A single time entry cannot exceed 24 hours.");
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
