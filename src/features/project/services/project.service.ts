@@ -175,6 +175,16 @@ export class ProjectService {
           "Failed to auto-assign creator and admins to project members:",
           pmError.message,
         );
+      } else {
+        // Refresh messaging statuses for all new members of this project
+        try {
+          const { MessagingService } = await import("@/features/messages/services/messaging.service");
+          for (const uid of Array.from(membersToAssign)) {
+            await MessagingService.refreshConversationStatuses(workspaceId, uid);
+          }
+        } catch (msgErr) {
+          console.error("Failed to refresh conversation statuses:", msgErr);
+        }
       }
     } catch (pmErr) {
       console.error(
@@ -364,11 +374,26 @@ export class ProjectService {
       );
     }
 
+    // Fetch project members before deleting the project
+    const memberIds = await ProjectService.getProjectMemberUserIds(id);
+
     const { error } = await supabase.from("projects").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting project:", error);
       throw new Error(error.message);
+    }
+
+    // Refresh messaging conversation statuses for all affected members
+    if (memberIds.length > 0) {
+      try {
+        const { MessagingService } = await import("@/features/messages/services/messaging.service");
+        for (const uid of memberIds) {
+          await MessagingService.refreshConversationStatuses(project.workspace_id, uid);
+        }
+      } catch (msgErr) {
+        console.error("Failed to refresh conversation statuses:", msgErr);
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import { User } from "lucide-react";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
@@ -118,9 +118,11 @@ export function AssigneeSelector({
       >
         {task.assignee ? (
           task.assignee.avatarUrl ? (
-            <img
+            <Image
               src={task.assignee.avatarUrl}
               alt={task.assignee.fullName || task.assignee.email || "Assignee"}
+              width={isLarge ? 32 : 20}
+              height={isLarge ? 32 : 20}
               className={`${sizeClasses} rounded-full object-cover border border-slate-800 shadow-sm hover:border-amber-500 transition-colors`}
             />
           ) : (
@@ -194,9 +196,11 @@ export function AssigneeSelector({
                   }`}
                 >
                   {member.profile?.avatarUrl ? (
-                    <img
+                    <Image
                       src={member.profile.avatarUrl}
                       alt={displayName}
+                      width={24}
+                      height={24}
                       className="w-6 h-6 rounded-full object-cover border border-slate-800 shadow-sm"
                     />
                   ) : (

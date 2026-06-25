@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from "react"
 import { User, LogOut, Mail, Calendar, Shield, Lock, Lightbulb, DoorOpen, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
 import { deleteWorkspaceAction } from "../actions/delete-workspace.action"
@@ -107,8 +108,7 @@ export function SettingsPanel({
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-amber-700 overflow-hidden flex items-center justify-center text-white text-xl font-black shadow-md shadow-amber-555/15 uppercase border border-amber-600/30 relative">
                   {profile?.avatarUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    <Image src={profile.avatarUrl} alt="Avatar" width={56} height={56} className="w-full h-full object-cover" />
                   ) : (
                     profile?.fullName?.[0] ||
                     profile?.email?.[0] ||

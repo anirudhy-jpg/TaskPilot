@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Logo } from "@/components/ui/logo"
 import { Button } from "@/components/ui/button"
 
@@ -176,8 +177,7 @@ export function Header({
           <div className="flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-900 px-3.5 py-2 rounded-full border border-slate-800 transition-all duration-300">
             <div className="w-7 h-7 rounded-full bg-amber-500 overflow-hidden flex items-center justify-center text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm select-none">
               {profile?.avatarUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                <Image src={profile.avatarUrl} alt="Avatar" width={28} height={28} className="w-full h-full object-cover" />
               ) : (
                 profile?.fullName?.[0] ||
                 profile?.email?.[0] ||

@@ -46,7 +46,9 @@ export function AttachmentList({ taskId, currentUserId }: { taskId: string; curr
 
       {previewAttachment && (
         <AttachmentPreviewModal 
-          attachment={previewAttachment}
+          fileName={previewAttachment.file_name}
+          fileSize={previewAttachment.file_size}
+          mimeType={previewAttachment.mime_type}
           fileUrl={getFileUrl(previewAttachment)}
           onClose={() => setPreviewAttachment(null)}
         />

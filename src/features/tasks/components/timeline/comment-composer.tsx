@@ -1,5 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { MentionSelector } from "./mention-selector";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 import { Loader2, Send } from "lucide-react";
@@ -112,7 +112,7 @@ export function CommentComposer({ members, currentUser, onSubmit, isSubmitting }
       {/* Avatar */}
       <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-slate-950 font-black text-sm shrink-0 overflow-hidden">
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          <Image src={avatarUrl} alt="" width={32} height={32} className="w-full h-full object-cover" />
         ) : (
           userInitials.toUpperCase()
         )}

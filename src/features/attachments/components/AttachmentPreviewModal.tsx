@@ -5,19 +5,21 @@ import { X, Download, FileText } from "lucide-react";
 import type { TaskAttachment } from "../types/attachment";
 
 interface AttachmentPreviewModalProps {
-  attachment: TaskAttachment;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
   fileUrl: string;
   onClose: () => void;
 }
 
-export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: AttachmentPreviewModalProps) {
-  const isImage = attachment.mime_type.startsWith("image/");
-  const isVideo = attachment.mime_type.startsWith("video/");
-  const isAudio = attachment.mime_type.startsWith("audio/");
-  const isPdf = attachment.mime_type === "application/pdf";
-  const isText = attachment.mime_type.startsWith("text/");
+export function AttachmentPreviewModal({ fileName, fileSize, mimeType, fileUrl, onClose }: AttachmentPreviewModalProps) {
+  const isImage = mimeType.startsWith("image/");
+  const isVideo = mimeType.startsWith("video/");
+  const isAudio = mimeType.startsWith("audio/");
+  const isPdf = mimeType === "application/pdf";
+  const isText = mimeType.startsWith("text/");
   
-  const ext = attachment.file_name.split(".").pop()?.toLowerCase() || "";
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
   const officeExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf', 'csv'];
   const isOfficeDoc = officeExts.includes(ext);
 
@@ -38,9 +40,9 @@ export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: Attachm
       {/* Header Bar */}
       <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-slate-950/80 to-transparent flex items-center justify-between px-6 z-10 pointer-events-none">
         <div className="flex flex-col min-w-0 drop-shadow-md pointer-events-auto">
-          <span className="text-sm font-bold text-slate-200 truncate">{attachment.file_name}</span>
+          <span className="text-sm font-bold text-slate-200 truncate">{fileName}</span>
           <span className="text-[10px] text-slate-400 font-medium">
-            {(attachment.file_size / (1024 * 1024)).toFixed(2)} MB
+            {(fileSize / (1024 * 1024)).toFixed(2)} MB
           </span>
         </div>
         <div className="flex items-center gap-4 pointer-events-auto">
@@ -76,7 +78,7 @@ export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: Attachm
             /* eslint-disable-next-line @next/next/no-img-element */
             <img 
               src={fileUrl} 
-              alt={attachment.file_name} 
+              alt={fileName} 
               className="max-w-full max-h-[85vh] object-contain rounded-lg"
             />
           ) : isVideo ? (
@@ -94,13 +96,13 @@ export function AttachmentPreviewModal({ attachment, fileUrl, onClose }: Attachm
             <iframe 
               src={isPdf ? `${fileUrl}#toolbar=0` : fileUrl} 
               className="w-full h-full border-0 bg-white rounded-lg"
-              title={attachment.file_name}
+              title={fileName}
             />
           ) : useGoogleViewer ? (
             <iframe 
               src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`} 
               className="w-full h-full border-0 bg-white rounded-lg"
-              title={attachment.file_name}
+              title={fileName}
             />
           ) : (
             <div className="flex flex-col items-center gap-4 p-12 text-slate-400">
