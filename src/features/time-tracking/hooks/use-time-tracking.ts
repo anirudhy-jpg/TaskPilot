@@ -76,10 +76,19 @@ export function useActiveTimer() {
               // Timer was stopped automatically or elsewhere
               
               const isAuto = !isManualStopInProgress;
-              const title = isAuto ? "Timer Automatically Stopped" : "Timer Stopped";
-              const desc = isAuto 
-                ? "Your active timer was stopped because you no longer have access to the associated task or workspace."
-                : "Your active timer has been successfully stopped.";
+              const isLimitReached = isAuto && payload.new.duration_seconds >= 86400;
+
+              let title = "Timer Stopped";
+              let desc = "Your active timer has been successfully stopped.";
+
+              if (isLimitReached) {
+                title = "Timer Automatically Stopped";
+                desc = "Timer automatically stopped after reaching the 24-hour limit.";
+              } else if (isAuto) {
+                title = "Timer Automatically Stopped";
+                desc = "Your active timer was stopped because you no longer have access to the associated task or workspace.";
+              }
+
               const iconColor = isAuto ? "rose-500" : "emerald-500";
               const borderColor = isAuto ? "amber-500/30" : "emerald-500/30";
 

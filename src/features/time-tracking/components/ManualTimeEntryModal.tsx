@@ -18,6 +18,34 @@ export function ManualTimeEntryModal({ taskId, isOpen, onClose }: ManualTimeEntr
 
   if (!isOpen) return null;
 
+  const showToast = (title: string, desc: string, isError: boolean = false) => {
+    const iconColor = isError ? "rose-500" : "emerald-500";
+    const borderColor = isError ? "rose-500/30" : "emerald-500/30";
+    
+    const toast = document.createElement("div");
+    toast.className = `fixed bottom-6 right-6 z-[10000] bg-slate-900 border border-${borderColor} rounded-xl p-4 shadow-2xl flex flex-col gap-1 animate-in slide-in-from-bottom-5 fade-in duration-300 max-w-[340px]`;
+    
+    toast.innerHTML = `
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-${iconColor}/20 flex items-center justify-center shrink-0 mt-0.5">
+          <div class="w-2 h-2 rounded-full bg-${iconColor}"></div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <span class="text-[13px] font-black text-slate-200 tracking-wide leading-tight">${title}</span>
+          <span class="text-[12px] font-medium text-slate-400 leading-snug">${desc}</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(10px)";
+      toast.style.transition = "all 0.3s ease-out";
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const h = parseInt(hours || "0", 10);
@@ -25,7 +53,12 @@ export function ManualTimeEntryModal({ taskId, isOpen, onClose }: ManualTimeEntr
     const durationSeconds = h * 3600 + m * 60;
 
     if (durationSeconds <= 0) {
-      alert("Please enter a valid duration.");
+      showToast("Invalid Duration", "Please enter a valid duration greater than 0.", true);
+      return;
+    }
+
+    if (durationSeconds > 86400) {
+      showToast("Time Limit Exceeded", "A single time entry cannot exceed 24 hours.", true);
       return;
     }
 

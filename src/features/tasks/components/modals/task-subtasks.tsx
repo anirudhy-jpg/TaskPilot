@@ -115,18 +115,27 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
     onChange?.(newSubtasks)
 
     try {
-      await addSubtask(taskId, titleToUse)
+      const added = await addSubtask(taskId, titleToUse)
+      setSubtasks(prev => prev.map(s => s.id === tempId ? {
+        ...s,
+        id: added.id,
+        createdAt: added.created_at,
+        updatedAt: added.updated_at,
+      } : s))
+      // We don't call onChange here to avoid setState during render if React batches this.
+      // The realtime subscription will trigger a fresh fetch and call onChange anyway.
     } catch (e) {
       console.error(e)
       // Revert optimistic update on error
-      setSubtasks(subtasks)
-      onChange?.(subtasks)
+      setSubtasks(prev => prev.filter(s => s.id !== tempId))
     } finally {
       setIsAdding(false)
     }
   }
 
   const handleUpdate = async (id: string, updates: Partial<TaskSubtask>) => {
+    if (id.startsWith('temp-')) return
+
     // Optimistic
     const newSubtasks = subtasks.map(s => s.id === id ? { ...s, ...updates } : s)
     setSubtasks(newSubtasks)
@@ -140,6 +149,15 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
 
   const confirmDelete = async () => {
     if (!deleteSubtaskId) return
+    
+    if (deleteSubtaskId.startsWith('temp-')) {
+      const newSubtasks = subtasks.filter(s => s.id !== deleteSubtaskId)
+      setSubtasks(newSubtasks)
+      onChange?.(newSubtasks)
+      setDeleteSubtaskId(null)
+      return
+    }
+
     setIsDeleting(true)
     try {
       const newSubtasks = subtasks.filter(s => s.id !== deleteSubtaskId)
@@ -247,7 +265,7 @@ export function TaskSubtasks({ taskId, members, projectPrefix, parentTaskNumber,
                   const taskKey = `${projectPrefix}-${parentTaskNumber}.${i + 1}`
 
                   return (
-                    <div key={task.id} className={`flex items-stretch border-b border-slate-800/50 last:border-0 hover:bg-slate-900/50 transition-colors group ${!isComposing ? 'last:rounded-b-xl' : ''}`}>
+                    <div key={task.id} className={`flex items-stretch border-b border-slate-800/50 last:border-0 hover:bg-slate-900/50 transition-colors group ${!isComposing ? 'last:rounded-b-xl' : ''} ${task.id.startsWith('temp-') ? 'opacity-50 pointer-events-none' : ''}`}>
                       {/* Work Column */}
                       <div className="flex-1 flex items-center gap-3 px-4 py-2.5 min-w-0">
                         <div className="text-blue-500 shrink-0">
