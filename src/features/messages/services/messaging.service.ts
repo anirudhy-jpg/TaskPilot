@@ -11,46 +11,22 @@ export class MessagingService {
   }
 
   /**
-   * Check whether two users share at least one project in the given workspace.
+   * Check whether two users are in the given workspace.
    */
-  private static async usersShareProject(
+  private static async usersShareWorkspace(
     supabase: any,
     workspaceId: string,
     userA: string,
     userB: string
   ): Promise<boolean> {
-    // 1. Check if either user is a workspace owner
-    const { data: owners, error: ownerErr } = await supabase
+    const { data, error } = await supabase
       .from('workspace_members')
       .select('user_id')
       .eq('workspace_id', workspaceId)
-      .eq('role', 'owner')
       .in('user_id', [userA, userB]);
       
-    if (ownerErr) throw ownerErr;
-    if (owners && owners.length > 0) return true;
-
-    // 2. Check shared projects
-    const { data, error } = await supabase
-      .from('project_members')
-      .select('project_id, projects!inner(workspace_id)')
-      .in('user_id', [userA, userB])
-      .eq('projects.workspace_id', workspaceId);
-      
     if (error) throw error;
-    
-    // Build a map of project -> count of members from the two users
-    const projectCounts = new Map<string, number>();
-    data?.forEach((row: any) => {
-      const cnt = projectCounts.get(row.project_id) ?? 0;
-      projectCounts.set(row.project_id, cnt + 1);
-    });
-    
-    // Any project with count === 2 means both users are on it
-    for (const cnt of projectCounts.values()) {
-      if (cnt === 2) return true;
-    }
-    return false;
+    return data && data.length === 2;
   }
 
   /** Verify that a user is a member of a conversation. */
@@ -111,64 +87,15 @@ export class MessagingService {
   ): Promise<ConversationUser[]> {
     const supabase = await createClient();
     
-    // 1. Check if current user is owner
-    const { data: currentUserMember, error: roleErr } = await supabase
+    // Everyone can chat with everyone in the workspace
+    const { data: allMembers, error: allErr } = await supabase
       .from('workspace_members')
-      .select('role')
+      .select('user_id')
       .eq('workspace_id', workspaceId)
-      .eq('user_id', currentUserId)
-      .single();
+      .neq('user_id', currentUserId);
       
-    if (roleErr && roleErr.code !== 'PGRST116') throw roleErr;
-    const isOwner = currentUserMember?.role === 'owner';
-
-    let eligibleUserIds: string[] = [];
-
-    if (isOwner) {
-      // Owner can chat with everyone in workspace
-      const { data: allMembers, error: allErr } = await supabase
-        .from('workspace_members')
-        .select('user_id')
-        .eq('workspace_id', workspaceId)
-        .neq('user_id', currentUserId);
-        
-      if (allErr) throw allErr;
-      eligibleUserIds = (allMembers || []).map((m: any) => m.user_id);
-    } else {
-      // Non-owners can chat with owners AND shared project members
-      const { data: owners, error: ownerErr } = await supabase
-        .from('workspace_members')
-        .select('user_id')
-        .eq('workspace_id', workspaceId)
-        .eq('role', 'owner')
-        .neq('user_id', currentUserId);
-        
-      if (ownerErr) throw ownerErr;
-      const ownerIds = (owners || []).map((m: any) => m.user_id);
-
-      const { data: myProjects, error: projErr } = await supabase
-        .from('project_members')
-        .select('project_id, projects!inner(workspace_id)')
-        .eq('projects.workspace_id', workspaceId)
-        .eq('user_id', currentUserId);
-        
-      if (projErr) throw projErr;
-
-      let sharedUserIds: string[] = [];
-      if (myProjects && myProjects.length > 0) {
-        const projectIds = myProjects.map((p: any) => p.project_id);
-        const { data: members, error: memErr } = await supabase
-          .from('project_members')
-          .select('user_id')
-          .in('project_id', projectIds)
-          .neq('user_id', currentUserId);
-          
-        if (memErr) throw memErr;
-        sharedUserIds = (members || []).map((m: any) => m.user_id);
-      }
-      
-      eligibleUserIds = Array.from(new Set([...ownerIds, ...sharedUserIds]));
-    }
+    if (allErr) throw allErr;
+    const eligibleUserIds = (allMembers || []).map((m: any) => m.user_id);
 
     if (eligibleUserIds.length === 0) return [];
 
@@ -215,8 +142,8 @@ export class MessagingService {
       return existing as Conversation;
     }
 
-    // Verify shared project before creating
-    const share = await this.usersShareProject(
+    // Verify workspace membership before creating
+    const share = await this.usersShareWorkspace(
       supabase,
       workspaceId,
       currentUserId,
@@ -224,7 +151,7 @@ export class MessagingService {
     );
     
     if (!share) {
-      throw new Error('Cannot start a conversation: users do not share a project.');
+      throw new Error('Cannot start a conversation: both users must be in the same workspace.');
     }
 
     // Insert conversation and two membership rows
@@ -426,7 +353,7 @@ export class MessagingService {
       if (members?.length !== 2) continue;
       
       const [uidA, uidB] = members.map((m: any) => m.user_id);
-      const share = await this.usersShareProject(supabase, workspaceId, uidA, uidB);
+      const share = await this.usersShareWorkspace(supabase, workspaceId, uidA, uidB);
       
       await supabase
         .from('conversations')
@@ -446,7 +373,7 @@ export class MessagingService {
     const supabase = await createClient();
     const query = supabase
       .from('messages')
-      .select('*, profiles!inner(id, email, full_name, avatar_url)')
+      .select('*, profiles!inner(id, email, full_name, avatar_url), message_reactions(id, message_id, user_id, emoji, created_at, profiles!inner(id, email, full_name, avatar_url))')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -456,26 +383,74 @@ export class MessagingService {
     if (error) throw error;
     
     const hasMore = (data?.length ?? 0) === limit;
-    const messages = data?.map((msg: any) => ({
-      id: msg.id,
-      conversationId: msg.conversation_id,
-      senderId: msg.sender_id,
-      content: msg.content,
-      attachmentName: msg.attachment_name,
-      attachmentPath: msg.attachment_path,
-      attachmentSize: msg.attachment_size,
-      attachmentMimeType: msg.attachment_mime_type,
-      attachmentUploadedAt: msg.attachment_uploaded_at,
-      editedAt: msg.edited_at,
-      deletedAt: msg.deleted_at,
-      createdAt: msg.created_at,
-      sender: {
-        id: msg.profiles.id,
-        email: msg.profiles.email,
-        fullName: msg.profiles.full_name,
-        avatarUrl: msg.profiles.avatar_url,
+    
+    // Batch load replied messages
+    const replyIds = [...new Set(data?.map((m: any) => m.reply_to_message_id).filter(Boolean))] as string[];
+    const replyMap = new Map();
+    if (replyIds.length > 0) {
+      const { data: replies, error: replyErr } = await supabase
+        .from('messages')
+        .select('id, content, deleted_at, profiles!inner(id, email, full_name, avatar_url)')
+        .in('id', replyIds);
+      if (!replyErr && replies) {
+        replies.forEach((r: any) => {
+          const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+          replyMap.set(r.id, {
+            id: r.id,
+            content: r.content,
+            deletedAt: r.deleted_at,
+            sender: {
+              id: profile.id,
+              email: profile.email,
+              fullName: profile.full_name,
+              avatarUrl: profile.avatar_url,
+            }
+          });
+        });
       }
-    })) as Message[];
+    }
+
+    const messages = data?.map((msg: any) => {
+      const profile = Array.isArray(msg.profiles) ? msg.profiles[0] : msg.profiles;
+      return {
+        id: msg.id,
+        conversationId: msg.conversation_id,
+        senderId: msg.sender_id,
+        content: msg.content,
+        attachmentName: msg.attachment_name,
+        attachmentPath: msg.attachment_path,
+        attachmentSize: msg.attachment_size,
+        attachmentMimeType: msg.attachment_mime_type,
+        attachmentUploadedAt: msg.attachment_uploaded_at,
+        replyToMessageId: msg.reply_to_message_id,
+        replyToMessage: msg.reply_to_message_id ? replyMap.get(msg.reply_to_message_id) || null : null,
+        editedAt: msg.edited_at,
+        deletedAt: msg.deleted_at,
+        createdAt: msg.created_at,
+        reactions: msg.message_reactions?.map((r: any) => {
+          const rProfile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+          return {
+            id: r.id,
+            messageId: r.message_id,
+            userId: r.user_id,
+            emoji: r.emoji,
+            createdAt: r.created_at,
+            user: {
+              id: rProfile.id,
+              email: rProfile.email,
+              fullName: rProfile.full_name,
+              avatarUrl: rProfile.avatar_url,
+            }
+          };
+        }) || [],
+        sender: {
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          avatarUrl: profile.avatar_url,
+        }
+      };
+    }) as Message[];
 
     return { messages, hasMore };
   }
@@ -489,7 +464,8 @@ export class MessagingService {
       path: string;
       size: number;
       mimeType: string;
-    }
+    },
+    replyToMessageId?: string
   ): Promise<Message> {
     const supabase = await createClient();
     const member = await this.verifyConversationMembership(supabase, conversationId, senderId);
@@ -503,14 +479,14 @@ export class MessagingService {
       
     if (convErr) throw convErr;
     if (!conv.is_active) {
-      throw new Error('You and this user no longer share any project. This conversation is read‑only.');
+      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
     }
     
     const otherUserId = conv.pair_key.split(':').find((id: string) => id !== senderId)!;
-    const share = await this.usersShareProject(supabase, conv.workspace_id, senderId, otherUserId);
+    const share = await this.usersShareWorkspace(supabase, conv.workspace_id, senderId, otherUserId);
     if (!share) {
       await supabase.from('conversations').update({ is_active: false }).eq('id', conversationId);
-      throw new Error('You and this user no longer share any project. This conversation is read‑only.');
+      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
     }
     
     if (!content?.trim() && !attachment) throw new Error('Message must contain at least text or an attachment.');
@@ -528,11 +504,39 @@ export class MessagingService {
         attachment_size: attachment?.size,
         attachment_mime_type: attachment?.mimeType,
         attachment_uploaded_at: attachment ? new Date().toISOString() : null,
+        reply_to_message_id: replyToMessageId || null,
       })
       .select('*, profiles!inner(id, email, full_name, avatar_url)')
       .single();
       
     if (msgErr) throw msgErr;
+    
+    let replyToMessage = null;
+    if (msg.reply_to_message_id) {
+      const { data } = await supabase
+        .from('messages')
+        .select('id, content, deleted_at, profiles!inner(id, email, full_name, avatar_url)')
+        .eq('id', msg.reply_to_message_id)
+        .single();
+        
+      if (data) {
+        const rMsg = data as any;
+        const profile = Array.isArray(rMsg.profiles) ? rMsg.profiles[0] : rMsg.profiles;
+        replyToMessage = {
+          id: rMsg.id,
+          content: rMsg.content,
+          deletedAt: rMsg.deleted_at,
+          sender: {
+            id: profile.id,
+            email: profile.email,
+            fullName: profile.full_name,
+            avatarUrl: profile.avatar_url,
+          }
+        };
+      }
+    }
+    
+    const profile = Array.isArray(msg.profiles) ? msg.profiles[0] : msg.profiles;
     
     return {
       id: msg.id,
@@ -544,14 +548,16 @@ export class MessagingService {
       attachmentSize: msg.attachment_size,
       attachmentMimeType: msg.attachment_mime_type,
       attachmentUploadedAt: msg.attachment_uploaded_at,
+      replyToMessageId: msg.reply_to_message_id,
+      replyToMessage,
       editedAt: msg.edited_at,
       deletedAt: msg.deleted_at,
       createdAt: msg.created_at,
       sender: {
-        id: msg.profiles.id,
-        email: msg.profiles.email,
-        fullName: msg.profiles.full_name,
-        avatarUrl: msg.profiles.avatar_url,
+        id: profile.id,
+        email: profile.email,
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url,
       }
     } as Message;
   }
@@ -583,7 +589,7 @@ export class MessagingService {
       
     if (convErr) throw convErr;
     if (!conv.is_active) {
-      throw new Error('You and this user no longer share any project. This conversation is read‑only.');
+      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
     }
     
     const { data: updated, error: updErr } = await supabase
@@ -594,20 +600,49 @@ export class MessagingService {
       .single();
       
     if (updErr) throw updErr;
+
+    let replyToMessage = null;
+    if (updated.reply_to_message_id) {
+      const { data } = await supabase
+        .from('messages')
+        .select('id, content, deleted_at, profiles!inner(id, email, full_name, avatar_url)')
+        .eq('id', updated.reply_to_message_id)
+        .single();
+        
+      if (data) {
+        const rMsg = data as any;
+        const profile = Array.isArray(rMsg.profiles) ? rMsg.profiles[0] : rMsg.profiles;
+        replyToMessage = {
+          id: rMsg.id,
+          content: rMsg.content,
+          deletedAt: rMsg.deleted_at,
+          sender: {
+            id: profile.id,
+            email: profile.email,
+            fullName: profile.full_name,
+            avatarUrl: profile.avatar_url,
+          }
+        };
+      }
+    }
     
+    const profile = Array.isArray(updated.profiles) ? updated.profiles[0] : updated.profiles;
+
     return {
       id: updated.id,
       conversationId: updated.conversation_id,
       senderId: updated.sender_id,
       content: updated.content,
+      replyToMessageId: updated.reply_to_message_id,
+      replyToMessage,
       editedAt: updated.edited_at,
       deletedAt: updated.deleted_at,
       createdAt: updated.created_at,
       sender: {
-        id: updated.profiles.id,
-        email: updated.profiles.email,
-        fullName: updated.profiles.full_name,
-        avatarUrl: updated.profiles.avatar_url,
+        id: profile.id,
+        email: profile.email,
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url,
       }
     } as Message;
   }
@@ -631,7 +666,7 @@ export class MessagingService {
       
     if (convErr) throw convErr;
     if (!conv.is_active) {
-      throw new Error('You and this user no longer share any project. This conversation is read‑only.');
+      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
     }
     
     const { error: delErr } = await supabase
@@ -640,5 +675,64 @@ export class MessagingService {
       .eq('id', messageId);
       
     if (delErr) throw delErr;
+  }
+
+  // -------------------------------------------------------------------
+  // REACTIONS
+  // -------------------------------------------------------------------
+  static async toggleReaction(messageId: string, emoji: string, userId: string): Promise<void> {
+    const supabase = await createClient();
+    
+    // First check if the user is a member of the conversation this message belongs to
+    const { data: msg, error: msgErr } = await supabase
+      .from('messages')
+      .select('conversation_id')
+      .eq('id', messageId)
+      .single();
+      
+    if (msgErr) throw msgErr;
+    
+    const member = await this.verifyConversationMembership(supabase, msg.conversation_id, userId);
+    if (!member) throw new Error('You are not a member of this conversation.');
+
+    // Check if reaction exists
+    const { data: existing, error: existErr } = await supabase
+      .from('message_reactions')
+      .select('id, emoji')
+      .eq('message_id', messageId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existErr && existErr.code !== 'PGRST116') {
+      throw existErr;
+    }
+
+    if (existing) {
+      if (existing.emoji === emoji) {
+        // Remove if it's the same emoji
+        const { error: delErr } = await supabase
+          .from('message_reactions')
+          .delete()
+          .eq('id', existing.id);
+        if (delErr) throw delErr;
+      } else {
+        // Update if it's a different emoji
+        const { error: updErr } = await supabase
+          .from('message_reactions')
+          .update({ emoji })
+          .eq('id', existing.id);
+        if (updErr) throw updErr;
+      }
+    } else {
+      // Insert new reaction
+      const { error: insErr } = await supabase
+        .from('message_reactions')
+        .insert({
+          message_id: messageId,
+          user_id: userId,
+          emoji,
+        });
+      if (insErr) throw insErr;
+    }
   }
 }

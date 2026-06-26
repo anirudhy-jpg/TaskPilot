@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react"
-import { Send, Plus, X, FileText, Archive, FileIcon, Image as ImageIcon } from "lucide-react"
+import { Send, Plus, X, FileText, Archive, FileIcon, Image as ImageIcon, Reply, Smile } from "lucide-react"
+import { EmojiPicker } from "./emoji-picker"
+import type { Message } from "../types"
 import { CHAT_LIMITS } from "../constants"
 
 const showWarningPopup = (message: string) => {
@@ -32,12 +34,15 @@ interface MessageInputProps {
   onTypingStart?: () => void
   onTypingStop?: () => void
   isUploading?: boolean
+  replyingToMessage?: Message | null
+  onCancelReply?: () => void
 }
 
-export function MessageInput({ onSend, disabled, disabledReason, onTypingStart, onTypingStop, isUploading }: MessageInputProps) {
+export function MessageInput({ onSend, disabled, disabledReason, onTypingStart, onTypingStop, isUploading, replyingToMessage, onCancelReply }: MessageInputProps) {
   const [content, setContent] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lastTypingTime = useRef<number>(0)
@@ -139,6 +144,32 @@ export function MessageInput({ onSend, disabled, disabledReason, onTypingStart, 
     }
   }
 
+  const handleEmojiSelect = (emoji: string) => {
+    if (textareaRef.current) {
+      const start = textareaRef.current.selectionStart;
+      const end = textareaRef.current.selectionEnd;
+      const newContent = content.substring(0, start) + emoji + content.substring(end);
+      
+      if (newContent.length > CHAT_LIMITS.MAX_MESSAGE_LENGTH) {
+        showWarningPopup(`Message cannot exceed ${CHAT_LIMITS.MAX_MESSAGE_LENGTH} characters.`);
+        return;
+      }
+      
+      setContent(newContent);
+      
+      // Set cursor position after emoji
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          const newCursorPos = start + emoji.length;
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 0);
+    } else {
+      setContent(prev => prev + emoji);
+    }
+  }
+
   const getFileIcon = (mimeType: string, fileName: string) => {
     if (mimeType === "application/pdf") return <FileText size={24} className="text-red-400" />;
     const ext = fileName.split(".").pop()?.toLowerCase();
@@ -176,6 +207,31 @@ export function MessageInput({ onSend, disabled, disabledReason, onTypingStart, 
         </div>
       )}
 
+      {/* Reply Preview Area */}
+      {replyingToMessage && (
+        <div className="relative self-start mb-2 w-full max-w-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="bg-[#121826] border border-amber-500/50 rounded-xl p-3 pr-10 shadow-lg flex flex-col gap-1 border-l-4 border-l-amber-500">
+            <div className="flex items-center gap-2 text-amber-500 text-xs font-bold">
+              <Reply size={12} />
+              <span>Replying to {replyingToMessage.sender?.fullName || replyingToMessage.sender?.email || "Unknown"}</span>
+            </div>
+            <div className="text-sm text-slate-300 truncate pl-5">
+              {replyingToMessage.deletedAt ? (
+                <span className="italic text-slate-500">This message was deleted</span>
+              ) : (
+                replyingToMessage.content || "Attachment"
+              )}
+            </div>
+          </div>
+          <button 
+            onClick={onCancelReply}
+            className="absolute top-2 right-2 p-1.5 bg-slate-800/80 text-slate-400 rounded-full hover:bg-rose-500/20 hover:text-rose-400 transition-colors shadow-sm z-10"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <div className="relative flex items-center gap-3 w-full bg-[#121826] border border-slate-800/80 rounded-full p-1.5 shadow-xl transition-all hover:border-slate-700">
         <input 
           type="file" 
@@ -205,10 +261,27 @@ export function MessageInput({ onSend, disabled, disabledReason, onTypingStart, 
         />
 
         <div className="flex items-center gap-1 shrink-0 pr-1">
+          <div className="relative flex items-center justify-center mr-1">
+            <button
+              className="w-10 h-10 shrink-0 rounded-full text-slate-400 hover:text-amber-500 hover:bg-slate-800/50 flex items-center justify-center transition-colors outline-none"
+              disabled={disabled || isUploading}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              title="Add emoji"
+              type="button"
+            >
+              <Smile size={20} />
+            </button>
+            <EmojiPicker 
+              isOpen={showEmojiPicker} 
+              onClose={() => setShowEmojiPicker(false)} 
+              onSelect={handleEmojiSelect} 
+              position="top" 
+            />
+          </div>
           <button
             onClick={handleSend}
             disabled={(!content.trim() && !selectedFile) || disabled || isUploading}
-            className="w-10 h-10 ml-1 rounded-full bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:opacity-50 disabled:hover:bg-amber-500 transition-all shadow-md active:scale-95 flex items-center justify-center outline-none"
+            className="w-10 h-10 rounded-full bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:opacity-50 disabled:hover:bg-amber-500 transition-all shadow-md active:scale-95 flex items-center justify-center outline-none"
           >
             {isUploading ? (
               <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />

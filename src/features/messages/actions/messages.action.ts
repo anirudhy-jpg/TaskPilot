@@ -29,13 +29,14 @@ export async function sendMessageAction(
     path: string;
     size: number;
     mimeType: string;
-  }
+  },
+  replyToMessageId?: string
 ) {
   const { user } = await requireUser();
   if (!user) return { success: false, error: "Unauthorized" };
 
   try {
-    const message = await MessagingService.sendMessage(conversationId, content, user.id, attachment);
+    const message = await MessagingService.sendMessage(conversationId, content, user.id, attachment, replyToMessageId);
     return { success: true, data: message };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -60,6 +61,18 @@ export async function deleteMessageAction(messageId: string) {
 
   try {
     await MessagingService.deleteMessage(messageId, user.id);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function toggleMessageReactionAction(messageId: string, emoji: string) {
+  const { user } = await requireUser();
+  if (!user) return { success: false, error: "Unauthorized" };
+
+  try {
+    await MessagingService.toggleReaction(messageId, emoji, user.id);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

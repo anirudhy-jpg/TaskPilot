@@ -1,19 +1,21 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Message } from "../types";
+import type { Message, MessageReaction } from "../types";
 
 interface UseChatRealtimeProps {
   conversationId: string;
   onMessageInsert: (message: Message) => void;
   onMessageUpdate: (message: Message) => void;
   onMessageDelete: (messageId: string) => void;
+  onReactionChange?: (reaction: MessageReaction, eventType: 'INSERT' | 'UPDATE' | 'DELETE') => void;
 }
 
 export function useChatRealtime({
   conversationId,
   onMessageInsert,
   onMessageUpdate,
-  onMessageDelete
+  onMessageDelete,
+  onReactionChange
 }: UseChatRealtimeProps) {
   useEffect(() => {
     if (!conversationId) return;
@@ -67,10 +69,30 @@ export function useChatRealtime({
           }
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "message_reactions" },
+        (payload) => {
+          if (!onReactionChange) return;
+          const { eventType, new: newRow, old: oldRow } = payload;
+          if (eventType === "INSERT" || eventType === "UPDATE") {
+            onReactionChange({
+              id: newRow.id,
+              messageId: newRow.message_id,
+              userId: newRow.user_id,
+              emoji: newRow.emoji,
+              createdAt: newRow.created_at,
+            }, eventType);
+          } else if (eventType === "DELETE") {
+            // we only get id in oldRow for deletes
+            onReactionChange({ id: oldRow.id } as MessageReaction, eventType);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, onMessageInsert, onMessageUpdate, onMessageDelete]);
+  }, [conversationId, onMessageInsert, onMessageUpdate, onMessageDelete, onReactionChange]);
 }

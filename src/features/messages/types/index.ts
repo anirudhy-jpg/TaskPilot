@@ -22,6 +22,15 @@ export interface MessagePreview {
   senderId: string;
 }
 
+export interface MessageReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+  user?: ConversationUser;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -32,9 +41,17 @@ export interface Message {
   attachmentSize?: number;
   attachmentMimeType?: string;
   attachmentUploadedAt?: string;
+  replyToMessageId?: string | null;
+  replyToMessage?: {
+    id: string;
+    content: string;
+    deletedAt: string | null;
+    sender: ConversationUser;
+  } | null;
   editedAt: string | null;
   deletedAt: string | null;
   createdAt: string;
   sender?: ConversationUser;
   status?: "pending" | "error";
+  reactions?: MessageReaction[];
 }

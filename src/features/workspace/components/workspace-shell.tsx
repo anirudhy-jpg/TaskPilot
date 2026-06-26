@@ -335,10 +335,21 @@ export function WorkspaceShell({
             return;
           }
 
-          setHasUnreadMessages(true);
-
-          const showToast = async () => {
+          const processMessage = async () => {
             const supabase = createClient();
+            
+            // 1. Verify user is in this conversation
+            const { data: memberData } = await supabase
+              .from("conversation_members")
+              .select("id")
+              .eq("conversation_id", msg.conversation_id)
+              .eq("user_id", currentUserId)
+              .maybeSingle();
+
+            if (!memberData) return; // User is not part of this conversation
+
+            setHasUnreadMessages(true);
+
             const [profileRes, conversationRes] = await Promise.all([
               supabase.from("profiles").select("full_name, email").eq("id", msg.sender_id).single(),
               supabase.from("conversations").select("workspace_id").eq("id", msg.conversation_id).single()
@@ -392,7 +403,7 @@ export function WorkspaceShell({
             }, 5000);
           };
           
-          showToast();
+          processMessage();
         }
       }
     }

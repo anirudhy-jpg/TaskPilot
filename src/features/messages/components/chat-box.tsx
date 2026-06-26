@@ -10,6 +10,7 @@ import {
   sendMessageAction,
   editMessageAction,
   deleteMessageAction,
+  toggleMessageReactionAction,
 } from "../actions/messages.action";
 import {
   markConversationReadAction,
@@ -22,6 +23,30 @@ import { MessageInput } from "./message-input";
 import { Avatar } from "@/components/ui/avatar";
 import { useUploadMessageAttachment } from "../hooks/use-upload-message-attachment";
 import { CHAT_LIMITS } from "../constants";
+
+function formatDateSeparator(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  const isToday = date.getDate() === now.getDate() && 
+                  date.getMonth() === now.getMonth() && 
+                  date.getFullYear() === now.getFullYear();
+                  
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.getDate() === yesterday.getDate() && 
+                      date.getMonth() === yesterday.getMonth() && 
+                      date.getFullYear() === yesterday.getFullYear();
+
+  if (isToday) return "Today";
+  if (isYesterday) return "Yesterday";
+  
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+  });
+}
 
 export const ChatBox = React.memo(function ChatBox({
   workspaceId,
@@ -57,7 +82,32 @@ export const ChatBox = React.memo(function ChatBox({
   const [, startTransition] = useTransition();
   const { uploadMessageAttachment, deleteMessageAttachment, isUploading } = useUploadMessageAttachment();
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
   const [isSendLocked, setIsSendLocked] = useState(false);
+  const [showUserDetailDropdown, setShowUserDetailDropdown] = useState(false);
+  const pendingReactions = useRef<Set<string>>(new Set());
+
+  const scrollToMessage = (messageId: string) => {
+    const el = document.getElementById(`message-${messageId}`);
+    if (el && scrollRef.current) {
+      const container = scrollRef.current;
+      
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      
+      const targetScrollTop = container.scrollTop + (elRect.top - containerRect.top) - (container.clientHeight / 2) + (elRect.height / 2);
+      
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth'
+      });
+      
+      el.classList.add('bg-amber-500/20', 'rounded-2xl', '-mx-2', 'px-2', 'py-1', '-my-1', 'transition-all', 'duration-500');
+      setTimeout(() => {
+        el.classList.remove('bg-amber-500/20', 'rounded-2xl', '-mx-2', 'px-2', 'py-1', '-my-1');
+      }, 1500);
+    }
+  };
 
   // Lock sending if pending messages reach the limit, unlock when all are sent
   useEffect(() => {
@@ -163,6 +213,43 @@ export const ChatBox = React.memo(function ChatBox({
         ),
       );
     },
+    onReactionChange: (reaction, eventType) => {
+      setMessages((prev) => prev.map(m => {
+        if (eventType === 'DELETE') {
+          const existingReaction = m.reactions?.find(r => r.id === reaction.id);
+          if (!existingReaction) return m;
+          
+          if (pendingReactions.current.has(`${m.id}:${existingReaction.userId}`)) {
+            return m; // ignore delete if we have pending local changes
+          }
+          
+          return {
+            ...m,
+            reactions: m.reactions!.filter(r => r.id !== reaction.id)
+          };
+        }
+        
+        if (m.id !== reaction.messageId) return m;
+        
+        if (pendingReactions.current.has(`${reaction.messageId}:${reaction.userId}`)) {
+          return m; // ignore insert/update while we have pending local changes
+        }
+        
+        const existing = m.reactions || [];
+        const existingIdx = existing.findIndex(r => r.userId === reaction.userId);
+        
+        if (existingIdx !== -1) {
+          const newReactions = [...existing];
+          newReactions[existingIdx] = reaction;
+          return { ...m, reactions: newReactions };
+        }
+        
+        return {
+          ...m,
+          reactions: [...existing, reaction]
+        };
+      }));
+    }
   });
 
   // Auto-scroll to bottom when messages change
@@ -191,8 +278,22 @@ export const ChatBox = React.memo(function ChatBox({
         email: "",
         avatarUrl: currentUserAvatarUrl,
       },
+      replyToMessageId: replyingToMessage?.id,
+      replyToMessage: replyingToMessage ? {
+        id: replyingToMessage.id,
+        content: replyingToMessage.content,
+        deletedAt: replyingToMessage.deletedAt,
+        sender: replyingToMessage.sender || {
+          id: replyingToMessage.senderId,
+          fullName: "",
+          email: "",
+          avatarUrl: null,
+        }
+      } : null,
       status: "pending",
     };
+
+    setReplyingToMessage(null); // Clear reply state immediately
 
     // Optimistic UI update: instantly show message
     setMessages((prev) => [...prev, optimisticMessage]);
@@ -220,7 +321,8 @@ export const ChatBox = React.memo(function ChatBox({
         path: attachmentMetadata.path,
         size: attachmentMetadata.fileSize,
         mimeType: attachmentMetadata.mimeType,
-      } : undefined
+      } : undefined,
+      optimisticMessage.replyToMessageId || undefined
     );
 
     if (!res.success && attachmentMetadata) {
@@ -291,16 +393,111 @@ export const ChatBox = React.memo(function ChatBox({
     });
   };
 
+  const handleToggleReaction = async (messageId: string, emoji: string) => {
+    const pendingKey = `${messageId}:${currentUserId}`;
+    pendingReactions.current.add(pendingKey);
+
+    // Optimistic UI
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      
+      const reactions = m.reactions || [];
+      const existingIdx = reactions.findIndex(r => r.userId === currentUserId && r.emoji === emoji);
+      const otherReactionIdx = reactions.findIndex(r => r.userId === currentUserId && r.emoji !== emoji);
+      
+      let newReactions = [...reactions];
+      
+      if (existingIdx !== -1) {
+        // Toggle off
+        newReactions.splice(existingIdx, 1);
+      } else {
+        // Add or change
+        if (otherReactionIdx !== -1) {
+          // Changed reaction
+          newReactions[otherReactionIdx] = { ...newReactions[otherReactionIdx], emoji };
+        } else {
+          // New reaction
+          newReactions.push({
+            id: `temp-${Date.now()}`,
+            messageId,
+            userId: currentUserId,
+            emoji,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+      
+      return { ...m, reactions: newReactions };
+    }));
+    
+    // Server action
+    try {
+      await toggleMessageReactionAction(messageId, emoji);
+    } finally {
+      // Keep ignored for a brief moment to allow realtime events to flush
+      setTimeout(() => {
+        pendingReactions.current.delete(pendingKey);
+      }, 1000);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full relative bg-[#090d16]">
       {/* Header */}
       <div className="h-[88px] shrink-0 border-b border-slate-800/80 bg-[#0b0f19] flex items-center px-4 md:px-6 z-20 shadow-sm justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Avatar
-              user={conversation.otherUser as any}
-              className="w-11 h-11 border border-slate-700/50 shadow-sm"
-            />
+            <button 
+              onClick={() => setShowUserDetailDropdown(!showUserDetailDropdown)}
+              className="relative outline-none rounded-full focus-visible:ring-2 focus-visible:ring-amber-500 hover:ring-2 hover:ring-amber-500/50 transition-all cursor-pointer"
+            >
+              <Avatar
+                user={conversation.otherUser as any}
+                className="w-11 h-11 border border-slate-700/50 shadow-sm"
+              />
+            </button>
+            
+            {showUserDetailDropdown && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowUserDetailDropdown(false)}
+                />
+                <div className="absolute top-14 left-0 w-72 bg-[#121826] border border-slate-700/50 rounded-xl shadow-2xl p-4 z-50 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center gap-3">
+                    <Avatar user={conversation.otherUser as any} className="w-12 h-12 shrink-0 border border-slate-700/50" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-bold text-slate-100 truncate">
+                        {conversation.otherUser?.fullName || conversation.otherUser?.email}
+                      </span>
+                      <span className="text-xs text-slate-400 truncate">
+                        {conversation.otherUser?.email}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="h-[1px] bg-slate-800/80 w-full" />
+                  
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Shared Projects ({sharedProjects.count})
+                    </span>
+                    {sharedProjects.names.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto scrollbar-thin">
+                        {sharedProjects.names.map((name, idx) => (
+                          <div key={idx} className="text-sm text-slate-300 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span className="truncate">{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-slate-500">No shared projects</span>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex flex-col">
@@ -322,24 +519,9 @@ export const ChatBox = React.memo(function ChatBox({
 
             <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 truncate max-w-[400px]">
               {sharedProjects.count > 0 ? (
-                <>
-                  <span>
-                    {sharedProjects.count} Shared Project
-                    {sharedProjects.count !== 1 ? "s" : ""}
-                  </span>
-                  {sharedProjects.names.slice(0, 3).map((name, idx) => (
-                    <React.Fragment key={idx}>
-                      <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0"></span>
-                      <span className="truncate">{name}</span>
-                    </React.Fragment>
-                  ))}
-                  {sharedProjects.count > 3 && (
-                    <>
-                      <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0"></span>
-                      <span>+{sharedProjects.count - 3} more</span>
-                    </>
-                  )}
-                </>
+                <span>
+                  {sharedProjects.count} Shared Project{sharedProjects.count !== 1 ? "s" : ""}
+                </span>
               ) : (
                 <span>No shared projects</span>
               )}
@@ -352,7 +534,7 @@ export const ChatBox = React.memo(function ChatBox({
       {!isActive && (
         <div className="shrink-0 bg-rose-500/10 border-b border-rose-500/20 px-6 py-2 flex items-center justify-center gap-2 text-rose-400 text-xs font-bold z-10 shadow-sm">
           <Lock size={12} />
-          You and this user no longer share any project. This conversation is
+          You and this user are no longer in the same workspace. This conversation is
           read-only.
         </div>
       )}
@@ -390,22 +572,41 @@ export const ChatBox = React.memo(function ChatBox({
           </div>
         ) : (
           <div className="flex flex-col w-full pt-4 pb-2">
-            {messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                isOwn={msg.senderId === currentUserId}
-                isReadOnly={!isActive}
-                isEditing={editingMessageId === msg.id}
-                onSetEditing={(isEditing) => setEditingMessageId(isEditing ? msg.id : null)}
-                onEdit={(id, content) => {
-                  handleEdit(id, content);
-                  setEditingMessageId(null);
-                }}
-                onDelete={handleDelete}
-                onRetry={handleRetry}
-              />
-            ))}
+            {messages.map((msg, index) => {
+              const prevMsg = index > 0 ? messages[index - 1] : null;
+              const msgDate = new Date(msg.createdAt).toDateString();
+              const prevDate = prevMsg ? new Date(prevMsg.createdAt).toDateString() : null;
+              const showDateSeparator = msgDate !== prevDate;
+
+              return (
+                <React.Fragment key={msg.id}>
+                  {showDateSeparator && (
+                    <div className="flex justify-center my-6 relative z-10 pointer-events-none">
+                      <span className="bg-[#1e293b] border border-slate-700/50 text-slate-300 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
+                        {formatDateSeparator(msg.createdAt)}
+                      </span>
+                    </div>
+                  )}
+                  <MessageBubble
+                    message={msg}
+                    isOwn={msg.senderId === currentUserId}
+                    isReadOnly={!isActive}
+                    isEditing={editingMessageId === msg.id}
+                    onSetEditing={(isEditing) => setEditingMessageId(isEditing ? msg.id : null)}
+                    onEdit={(id, content) => {
+                      handleEdit(id, content);
+                      setEditingMessageId(null);
+                    }}
+                    onDelete={handleDelete}
+                    onRetry={handleRetry}
+                    onReplyClick={() => setReplyingToMessage(msg)}
+                    onReplyPreviewClick={scrollToMessage}
+                    currentUserId={currentUserId}
+                    onToggleReaction={handleToggleReaction}
+                  />
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
       </div>
@@ -420,6 +621,8 @@ export const ChatBox = React.memo(function ChatBox({
           onTypingStart={startTyping}
           onTypingStop={stopTyping}
           isUploading={isUploading}
+          replyingToMessage={replyingToMessage}
+          onCancelReply={() => setReplyingToMessage(null)}
         />
       </div>
     </div>

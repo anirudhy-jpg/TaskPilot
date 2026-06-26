@@ -114,9 +114,6 @@ export function ConversationList({
             onChange={(e) => {
               const value = e.target.value;
               setSearch(value);
-              if (value.length > 0 && value.length < CHAT_LIMITS.SEARCH_MIN_CHARS) {
-                showWarningPopup(`Please enter at least ${CHAT_LIMITS.SEARCH_MIN_CHARS} characters to search.`);
-              }
             }}
           />
         </div>
