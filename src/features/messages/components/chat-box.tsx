@@ -400,12 +400,16 @@ export const ChatBox = React.memo(function ChatBox({
   };
 
   const handleEdit = (id: string, content: string) => {
+    // Optimistic UI update
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, content, editedAt: new Date().toISOString() } : m));
     startTransition(async () => {
       await editMessageAction(id, content);
     });
   };
 
   const handleDelete = (id: string) => {
+    // Optimistic UI update
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, deletedAt: new Date().toISOString() } : m));
     startTransition(async () => {
       await deleteMessageAction(id);
     });

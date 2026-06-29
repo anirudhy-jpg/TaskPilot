@@ -4,6 +4,7 @@
 import { requireUser } from "@/lib/supabase/server";
 import { MessagingService } from "../services/messaging.service";
 import { CHAT_LIMITS } from "../constants";
+import { revalidatePath } from "next/cache";
 
 export async function getMessagesAction(conversationId: string, cursor?: string, limit?: number) {
   if (limit && limit > CHAT_LIMITS.MESSAGES_PER_PAGE) {
@@ -50,6 +51,7 @@ export async function editMessageAction(messageId: string, content: string) {
 
   try {
     const message = await MessagingService.editMessage(messageId, content, user.id);
+    revalidatePath("/", "layout");
     return { success: true, data: message };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -62,6 +64,7 @@ export async function deleteMessageAction(messageId: string) {
 
   try {
     await MessagingService.deleteMessage(messageId, user.id);
+    revalidatePath("/", "layout");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
