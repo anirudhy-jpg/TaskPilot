@@ -21,6 +21,8 @@ The purpose of TaskPilot is to provide an adaptable workspace for managing tasks
 - **Team Collaboration** ✅: Shared workspaces, member roles, email invitations, task assignments, and activity notifications.
 - **Realtime Sync** ✅: Instant board updates across all connected clients via Supabase Realtime WebSocket channels.
 - **Workspace Analytics** ✅: Live workspace overview dashboard with task distribution charts, member activity stats, and notification feed.
+- **Direct Messaging** ✅: Real-time 1-to-1 chat with project-based access boundaries, auto-link detection, and soft-delete capabilities.
+- **Global Pinning** ✅: Pin favorite projects to the top of the unified dashboard for quick access.
 
 ---
 
@@ -327,7 +329,24 @@ notifications
 - [x] Auto-stop existing timers when starting a new one
 - [x] Test suite coverage for time tracking actions
 
-### 🔲 Phase 10: Search & Productivity — FUTURE
+### ✅ Phase 10: Direct Messaging & Communication — COMPLETE
+
+- [x] Real-time 1-to-1 direct messaging between workspace members
+- [x] Project-based communication boundaries (members must share a project)
+- [x] Read-only UI state for users who no longer share projects
+- [x] Soft-delete mechanism to hide chat history for the deleter while preserving it for the other member
+- [x] Chat deletion confirmation modal
+- [x] Auto-link detection for URLs within message content
+- [x] Supabase Realtime synchronization for messages and conversation statuses
+
+### ✅ Phase 11: Workspace & Dashboard Enhancements — COMPLETE
+
+- [x] Global project pinning system (unified dashboard grid with pinned projects sorted first)
+- [x] Refined workspace header profile dropdown (View Profile, Sign Out)
+- [x] Enhanced member details modal showing assigned projects and quick chat button
+- [x] Loading state transitions for authenticated landing page redirects
+
+### 🔲 Phase 12: Search & Productivity — FUTURE
 
 - [ ] Global search dialog (Command-K / `cmdk`)
 - [ ] Sidebar filter toggles (by assignee, priority, status)

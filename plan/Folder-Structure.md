@@ -93,6 +93,15 @@ taskpilot/
 │   │   │   ├── types/                # Project & task type definitions
 │   │   │   │   └── project.types.ts
 │   │   │   └── utils/                # Utilities (avatars, initials generators)
+│   │   ├── messages/                 # Direct messaging & 1-to-1 chat feature
+│   │   │   ├── actions/              # Conversation and message mutations
+│   │   │   ├── components/           # Chat box, conversation list, message bubbles
+│   │   │   ├── hooks/                # Real-time subscriptions and status hooks
+│   │   │   ├── services/             # Messaging and membership queries
+│   │   │   └── types/                # Conversation and message types
+│   │   ├── pins/                     # Global project pinning feature
+│   │   │   ├── actions/              # Server actions for toggling pins
+│   │   │   └── types/                # Pin type definitions
 │   │   ├── time-tracking/            # Task time tracking feature
 │   │   │   ├── actions/              # Timer start/stop and logging actions
 │   │   │   ├── components/           # Global timer, task statistics, manual logs
