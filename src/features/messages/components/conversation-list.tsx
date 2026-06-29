@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useTransition, useEffect } from "react"
+import React, { useState, useMemo, useTransition, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { Search, Plus, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import type { TypingUser } from "../hooks/use-typing-indicator"
@@ -153,6 +153,20 @@ function ConversationItem({
   setDeleteTarget: (conv: Conversation) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
   const { isPinned, togglePin } = usePin({
     entityType: "conversation",
     entityId: conv.id,
@@ -169,7 +183,7 @@ function ConversationItem({
         isActive
           ? "bg-[#1e1915] border border-amber-500/30"
           : "hover:bg-slate-800/30 border border-transparent"
-      }`}
+      } ${menuOpen ? "z-50" : "z-10"}`}
       onClick={() => onSelectConversation(conv.id)}
     >
       {/* Avatar */}
@@ -216,8 +230,8 @@ function ConversationItem({
       </div>
 
       {/* Action Menu — shown on hover */}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity">
-        <div className="relative">
+      <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity ${menuOpen ? "opacity-100" : "opacity-0 group-hover/item:opacity-100 focus-within:opacity-100"}`}>
+        <div className="relative" ref={menuRef}>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -230,10 +244,6 @@ function ConversationItem({
           
           {menuOpen && (
             <>
-              <div 
-                className="fixed inset-0 z-40" 
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
-              />
               <div className="absolute right-0 top-8 w-32 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden text-left py-1">
                 <button
                   onClick={(e) => {

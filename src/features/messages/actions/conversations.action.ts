@@ -3,6 +3,7 @@
 
 import { requireUser } from "@/lib/supabase/server";
 import { MessagingService } from "../services/messaging.service";
+import { revalidatePath } from "next/cache";
 
 /**
  * Returns all users the current user can chat with
@@ -120,6 +121,7 @@ export async function deleteConversationAction(conversationId: string) {
 
   try {
     await MessagingService.deleteConversation(conversationId, user.id);
+    revalidatePath("/", "layout");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
