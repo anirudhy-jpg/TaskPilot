@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react"
 import type { Project, Task } from "../../project/types/project.types"
 
@@ -35,6 +36,11 @@ const navItems = [
     href: "/members",
     icon: Users,
   },
+  {
+    label: "Chat",
+    href: "/chat",
+    icon: MessageSquare,
+  },
 ]
 
 interface SidebarProps {
@@ -44,6 +50,7 @@ interface SidebarProps {
   variant?: "desktop" | "mobile"
   onClose?: () => void
   hasMultipleWorkspaces?: boolean
+  hasUnreadMessages?: boolean
 }
 
 function SidebarContent({
@@ -52,6 +59,7 @@ function SidebarContent({
   variant = "desktop",
   onClose,
   hasMultipleWorkspaces = false,
+  ...props
 }: SidebarProps) {
   const pathname = usePathname()
   const params = useParams()
@@ -120,7 +128,7 @@ function SidebarContent({
               href={href}
               onClick={handleLinkClick}
               className={`
-                flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-black transition-all duration-250 group
+                flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black transition-all duration-250 group
                 ${
                   active
                     ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-[1.03]"
@@ -128,11 +136,16 @@ function SidebarContent({
                 }
               `}
             >
-              <Icon
-                size={16}
-                className={active ? "text-slate-950" : "text-slate-400 group-hover:text-slate-350"}
-              />
-              <span>{label}</span>
+              <div className="flex items-center gap-3">
+                <Icon
+                  size={16}
+                  className={active ? "text-slate-950" : "text-slate-400 group-hover:text-slate-350"}
+                />
+                <span>{label}</span>
+              </div>
+              {href === "/chat" && props.hasUnreadMessages && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)] shrink-0" />
+              )}
             </Link>
           )
         })}
@@ -197,10 +210,11 @@ function SidebarContent({
                     <div className="pl-5 flex flex-col gap-1 border-l border-slate-800 ml-5 py-1.5">
                       {project.tasks && project.tasks.length > 0 ? (
                         project.tasks.map((task) => {
+                          const isDone = task.status === "done" || task.columnId === "done" || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("done")) || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("complete")) || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("finish"))
                           const statusDotColor =
-                            task.status === "done"
+                            isDone
                               ? "bg-rose-500"
-                              : task.status === "in_progress"
+                              : task.status === "in_progress" || task.columnId === "in_progress" || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("progress")) || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("doing"))
                               ? "bg-amber-500"
                               : "bg-slate-400"
                           return (

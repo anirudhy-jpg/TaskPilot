@@ -21,6 +21,8 @@ export interface Project {
   tasks?: Task[]
   columns?: Column[]
   memberUserIds?: string[]
+  isPinned?: boolean
+  pinnedAt?: string
 }
 
 export type TaskStatus = string // @deprecated
@@ -54,6 +56,8 @@ export interface Task {
     avatarUrl: string | null
   }
   subtasks?: TaskSubtask[]
+  isPinned?: boolean
+  pinnedAt?: string
 }
 
 export interface TaskSubtask {

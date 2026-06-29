@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser, createClient } from "@/lib/supabase/server";
 import { AddProjectMemberSchema } from "@/lib/validations/project.schema";
 import { createNotification } from "@/lib/notifications/notification.service";
+import { MessagingService } from "@/features/messages/services/messaging.service";
 
 export interface ActionResponse {
   success: boolean;
@@ -121,6 +122,9 @@ export async function addProjectMemberAction(
       actorId: user.id,
       client: supabase,
     });
+
+    // 6. Re-evaluate conversation active statuses for this user
+    await MessagingService.refreshConversationStatuses(validatedUserId);
 
     revalidatePath("/projects", "layout");
     revalidatePath("/workspace");

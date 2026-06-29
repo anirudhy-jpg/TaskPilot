@@ -225,6 +225,16 @@ export class MemberService {
       console.error("Error removing member:", error)
       throw new Error(error.message)
     }
+
+    // 5. Refresh messaging statuses to disable chats if they no longer share a workspace
+    if (memberRow?.user_id) {
+      try {
+        const { MessagingService } = await import("@/features/messages/services/messaging.service")
+        await MessagingService.refreshConversationStatuses(memberRow.user_id)
+      } catch (msgErr) {
+        console.error("Failed to refresh conversation statuses:", msgErr)
+      }
+    }
   }
 
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, createClient } from "@/lib/supabase/server";
+import { MessagingService } from "@/features/messages/services/messaging.service";
 
 export interface ActionResponse {
   success: boolean;
@@ -67,6 +68,9 @@ export async function removeProjectMemberAction(
       .eq("user_id", userId);
 
     if (deleteErr) throw deleteErr;
+
+    // Re-evaluate conversation active statuses for this user
+    await MessagingService.refreshConversationStatuses(userId);
 
     revalidatePath("/projects", "layout");
     revalidatePath("/workspace");

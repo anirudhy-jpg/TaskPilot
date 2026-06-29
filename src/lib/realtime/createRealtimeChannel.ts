@@ -53,7 +53,14 @@ export function createRealtimeChannel({
     if (status === "SUBSCRIBED") {
       console.log(`[Supabase Realtime] Subscribed to table: ${table}`);
     } else if (status === "CHANNEL_ERROR") {
-      console.error(`[Supabase Realtime] Subscription error for table: ${table}:`, err);
+      const errStr = String(err?.message || err || "");
+      if (errStr.includes("1006") || errStr.includes("socket closed")) {
+        // 1006 is an abnormal closure (common during dev HMR, sleep, or network drops). 
+        // Supabase Realtime auto-reconnects, so we just log it as a warning or debug.
+        console.warn(`[Supabase Realtime] Socket closed (1006) for table: ${table}. Auto-reconnecting...`);
+      } else {
+        console.error(`[Supabase Realtime] Subscription error for table: ${table}:`, err);
+      }
     }
   });
 

@@ -1,5 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import React from "react";
+import Image from "next/image";
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types";
 
 interface MentionSelectorProps {
@@ -26,7 +26,7 @@ export function MentionSelector({ members, onSelect, selectedIndex }: MentionSel
           }`}
         >
           {member.profile?.avatarUrl ? (
-            <img src={member.profile.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-slate-800" />
+            <Image src={member.profile.avatarUrl} alt="" width={20} height={20} className="w-5 h-5 rounded-full object-cover border border-slate-800" />
           ) : (
             <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase border border-slate-700">
               {member.profile?.email.charAt(0)}

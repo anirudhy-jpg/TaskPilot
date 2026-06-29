@@ -5,9 +5,12 @@ import {
   AlertCircle,
   AlertTriangle,
   Info,
+  MoreVertical,
 } from "lucide-react";
+import { Pin, PinOff } from "lucide-react";
 import { AssigneeSelector } from "@/features/tasks/components/assignee-selector";
 import { getVisualPriority } from "@/features/project/utils/avatar";
+import { usePin } from "@/features/pins/hooks/use-pin";
 import type { TaskCardProps } from "./types";
 
 
@@ -27,6 +30,14 @@ export const TaskCard = React.memo(
     onAssigneeChange,
     onSelectTask,
   }: TaskCardProps) {
+    const [activeMenu, setActiveMenu] = React.useState(false);
+    
+    const { isPinned, togglePin } = usePin({
+      entityType: "task",
+      entityId: task.id,
+      initialIsPinned: !!task.isPinned,
+    });
+
     const visualPriority = getVisualPriority(task);
     const priorityStyles = {
       high: {
@@ -84,14 +95,51 @@ export const TaskCard = React.memo(
         }`}
       >
         {/* Title and ID */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">
+        <div className="flex items-start justify-between gap-3 relative">
+          <div className="flex flex-col gap-0.5 pr-6">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-1.5">
+              {isPinned && <Pin size={10} className="text-amber-500 fill-amber-500/20" />}
               {projectPrefix}-{taskNumber || "???"}
             </span>
             <h4 className="text-xs font-bold text-slate-200 leading-snug mt-1 hover:text-amber-400 transition-colors break-all line-clamp-2">
               {task.title}
             </h4>
+          </div>
+          
+          <div className="absolute top-0 right-0 z-10 flex">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenu(!activeMenu);
+              }}
+              className="p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"
+            >
+              <MoreVertical size={14} />
+            </button>
+            {activeMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-20" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenu(false);
+                  }}
+                />
+                <div className="absolute right-0 top-6 w-32 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 overflow-hidden text-left">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePin();
+                      setActiveMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 flex items-center gap-2"
+                  >
+                    {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                    {isPinned ? "Unpin" : "Pin"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -163,6 +211,7 @@ export const TaskCard = React.memo(
       prevProps.taskNumber === nextProps.taskNumber &&
       prevProps.isDragOverlay === nextProps.isDragOverlay &&
       prevProps.members === nextProps.members &&
+      prevProps.task.isPinned === nextProps.task.isPinned &&
       JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks)
     );
   }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { PermissionsService } from "@/lib/permissions";
 import type { Project } from "../types/project.types";
 
 export class ProjectService {
@@ -9,78 +10,124 @@ export class ProjectService {
   ): Promise<Project[]> {
     const supabase = await createClient();
 
-    // 1. Fetch projects along with their project members (for regular member filtering) in one query
-    const { data: projectsData, error } = await supabase
-      .from("projects")
-      .select(`
-        id,
-        workspace_id,
-        name,
-        description,
-        created_by,
-        created_at,
-        profiles:created_by(email, full_name),
-        project_members!left(user_id)
-      `)
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching projects:", error);
-      throw new Error(error.message);
+    // 1. Identify the active user ID
+    let activeUserId = userId;
+    if (!activeUserId) {
+      activeUserId = await PermissionsService.getCurrentUserId(supabase).catch(() => undefined);
     }
-
-    if (!projectsData || projectsData.length === 0) {
+    
+    if (!activeUserId) {
       return [];
     }
 
-    // 2. Identify the active user ID
-    let activeUserId = userId;
-    if (!activeUserId) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        activeUserId = user?.id;
-      } catch (err) {
-        console.error("Error retrieving user inside getProjectsByWorkspace:", err);
-      }
+    // 2. Identify the user role
+    let role = userRole;
+    if (!role) {
+      role = await PermissionsService.getWorkspaceRole(supabase, activeUserId, workspaceId) || undefined;
     }
 
-    // 3. Filter projects based on user permissions
-    if (activeUserId) {
-      try {
-        let role = userRole;
-        if (!role) {
-          // Fetch user workspace role (owner is registered as 'owner' member row)
-          const { data: memberInfo } = await supabase
-            .from("workspace_members")
-            .select("role")
-            .eq("workspace_id", workspaceId)
-            .eq("user_id", activeUserId)
-            .maybeSingle();
-          role = memberInfo?.role;
-        }
+    const isOwnerOrAdmin = role === "owner" || role === "admin";
 
-        const isOwner = role === "owner";
-        const isAdmin = role === "admin";
+    let projectsData;
+    
+    // 3. Backend-filtered query based on role
+    if (isOwnerOrAdmin) {
+      const { data, error } = await supabase
+        .from("projects")
+        .select(`
+          id,
+          workspace_id,
+          name,
+          description,
+          created_by,
+          created_at,
+          profiles:created_by(email, full_name)
+        `)
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
 
-        // If regular member, only return projects they created or are assigned to
-        if (!isOwner && !isAdmin) {
-          return projectsData
-            .filter((project: Record<string, unknown>) => {
-              const isCreator = project.created_by === activeUserId;
-              const isAssigned = ((project.project_members as Record<string, unknown>[]) || []).some(
-                (pm: Record<string, unknown>) => pm.user_id === activeUserId
-              );
-              return isCreator || isAssigned;
-            })
-            .map(mapProject);
-        }
-      } catch (filterErr) {
-        console.error("Error filtering projects for user:", filterErr);
-      }
+      if (error) throw new Error(error.message);
+      projectsData = data;
+    } else {
+      // Members only see projects they created or are assigned to
+      // We use two queries and merge them to avoid complex OR logic which can be tricky in PostgREST
+      
+      const { data: createdProjects, error: err1 } = await supabase
+        .from("projects")
+        .select(`
+          id,
+          workspace_id,
+          name,
+          description,
+          created_by,
+          created_at,
+          profiles:created_by(email, full_name)
+        `)
+        .eq("workspace_id", workspaceId)
+        .eq("created_by", activeUserId)
+        .order("created_at", { ascending: false });
+        
+      if (err1) throw new Error(err1.message);
+      
+      const { data: assignedProjects, error: err2 } = await supabase
+        .from("projects")
+        .select(`
+          id,
+          workspace_id,
+          name,
+          description,
+          created_by,
+          created_at,
+          profiles:created_by(email, full_name),
+          project_members!inner(user_id)
+        `)
+        .eq("workspace_id", workspaceId)
+        .eq("project_members.user_id", activeUserId)
+        .order("created_at", { ascending: false });
+
+      if (err2) throw new Error(err2.message);
+      
+      // Merge and deduplicate
+      const allProjects = [...(createdProjects || []), ...(assignedProjects || [])];
+      const uniqueProjects = Array.from(new Map(allProjects.map(p => [p.id, p])).values());
+      
+      // Sort again by created_at desc
+      uniqueProjects.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      projectsData = uniqueProjects;
     }
 
-    return projectsData.map(mapProject);
+    // Fetch user pins for projects
+    const pinnedProjectIds = new Map<string, string>(); // projectId -> createdAt
+    try {
+      const { PinService } = await import("@/features/pins/services/pin.service");
+      const userPins = await PinService.getUserPins(activeUserId, "project");
+      userPins.forEach(pin => pinnedProjectIds.set(pin.entityId, pin.createdAt));
+    } catch (error) {
+      console.error("Failed to fetch project pins:", error);
+    }
+
+    const mappedProjects = (projectsData || []).map(p => {
+      const mapped = mapProject(p);
+      if (pinnedProjectIds.has(mapped.id)) {
+        mapped.isPinned = true;
+        mapped.pinnedAt = pinnedProjectIds.get(mapped.id);
+      }
+      return mapped;
+    });
+
+    // Sort: Pinned first (by pinnedAt desc), then created_at desc
+    mappedProjects.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isPinned && b.isPinned && a.pinnedAt && b.pinnedAt) {
+        return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
+      }
+      // If we are here, neither is pinned or we fall back
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return mappedProjects;
   }
 
 
@@ -94,31 +141,10 @@ export class ProjectService {
   ): Promise<Project> {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error("Unauthorized");
-    }
+    const userId = await PermissionsService.getCurrentUserId(supabase);
+    const isAdmin = await PermissionsService.isWorkspaceAdmin(supabase, userId, workspaceId);
 
-    // Check permissions: Only workspace owners and admins can create projects
-    const { data: ws } = await supabase
-      .from("workspaces")
-      .select("owner_id")
-      .eq("id", workspaceId)
-      .maybeSingle();
-
-    const { data: memberInfo } = await supabase
-      .from("workspace_members")
-      .select("role")
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const isOwner = ws?.owner_id === user.id;
-    const userRole = memberInfo?.role || (isOwner ? "owner" : null);
-
-    if (userRole === "member" || !userRole) {
+    if (!isAdmin) {
       throw new Error(
         "Unauthorized: Workspace members are not allowed to create projects.",
       );
@@ -128,7 +154,7 @@ export class ProjectService {
     const insertData: Record<string, unknown> = {
       workspace_id: workspaceId,
       name,
-      created_by: user.id,
+      created_by: userId,
     };
     if (description) insertData.description = description;
 
@@ -152,11 +178,18 @@ export class ProjectService {
         .in("role", ["admin", "owner"]);
 
       const membersToAssign = new Set<string>();
-      membersToAssign.add(user.id);
+      membersToAssign.add(userId);
       
       if (adminMembers) {
          adminMembers.forEach(m => membersToAssign.add(m.user_id));
       }
+
+      // Fetch the workspace to get the owner_id
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("owner_id")
+        .eq("id", workspaceId)
+        .maybeSingle();
 
       // Also add the workspace owner specifically, just in case they aren't in workspace_members (though they should be)
       if (ws?.owner_id) {
@@ -175,6 +208,16 @@ export class ProjectService {
           "Failed to auto-assign creator and admins to project members:",
           pmError.message,
         );
+      } else {
+        // Refresh messaging statuses for all new members of this project
+        try {
+          const { MessagingService } = await import("@/features/messages/services/messaging.service");
+          for (const uid of Array.from(membersToAssign)) {
+            await MessagingService.refreshConversationStatuses(uid);
+          }
+        } catch (msgErr) {
+          console.error("Failed to refresh conversation statuses:", msgErr);
+        }
       }
     } catch (pmErr) {
       console.error(
@@ -213,6 +256,21 @@ export class ProjectService {
   static async getProjectById(id: string): Promise<Project | null> {
     const supabase = await createClient();
 
+    // 1. Authenticate user
+    let userId: string;
+    try {
+      userId = await PermissionsService.getCurrentUserId(supabase);
+    } catch {
+      return null;
+    }
+
+    // 2. Authorize
+    const canView = await PermissionsService.canViewProject(supabase, userId, id);
+    if (!canView) {
+      return null; // Silent deny
+    }
+
+    // 3. Fetch data
     const { data, error } = await supabase
       .from("projects")
       .select(
@@ -228,45 +286,6 @@ export class ProjectService {
 
     if (!data) return null;
 
-    // Filter project access if user is regular member
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: ws } = await supabase
-          .from("workspaces")
-          .select("owner_id")
-          .eq("id", data.workspace_id)
-          .maybeSingle();
-
-        const { data: memberInfo } = await supabase
-          .from("workspace_members")
-          .select("role")
-          .eq("workspace_id", data.workspace_id)
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        const isOwner = ws?.owner_id === user.id;
-        const isAdmin = memberInfo?.role === "admin";
-
-        if (!isOwner && !isAdmin) {
-          const { data: isProjMem } = await supabase
-            .from("project_members")
-            .select("id")
-            .eq("project_id", data.id)
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-          if (!isProjMem && data.created_by !== user.id) {
-            return null; // Not allowed to access this project
-          }
-        }
-      }
-    } catch (filterErr) {
-      console.error("Error validating project access for user:", filterErr);
-    }
-
     return mapProject(data);
   }
 
@@ -279,11 +298,11 @@ export class ProjectService {
     description?: string,
   ): Promise<Project> {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const userId = await PermissionsService.getCurrentUserId(supabase);
+    
+    // Check if can manage
+    const canManage = await PermissionsService.canManageProject(supabase, userId, id);
+    if (!canManage) {
       throw new Error("Unauthorized");
     }
 
@@ -312,13 +331,7 @@ export class ProjectService {
    */
   static async deleteProject(id: string): Promise<void> {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      throw new Error("Unauthorized");
-    }
+    const userId = await PermissionsService.getCurrentUserId(supabase);
 
     // Fetch project to find its workspace and creator
     const { data: project, error: projErr } = await supabase
@@ -331,44 +344,36 @@ export class ProjectService {
       throw new Error("Project not found");
     }
 
-    // Check permissions: Only workspace owners and admins can delete projects
-    const { data: ws } = await supabase
-      .from("workspaces")
-      .select("owner_id")
-      .eq("id", project.workspace_id)
-      .maybeSingle();
+    // Check permissions
+    const isWorkspaceAdmin = await PermissionsService.isWorkspaceAdmin(supabase, userId, project.workspace_id);
+    const isProjectCreator = project.created_by === userId;
 
-    const { data: memberInfo } = await supabase
-      .from("workspace_members")
-      .select("role")
-      .eq("workspace_id", project.workspace_id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const isWorkspaceOwner = ws?.owner_id === user.id;
-    const userRole =
-      memberInfo?.role || (isWorkspaceOwner ? "owner" : "member");
-
-    if (userRole === "member") {
-      throw new Error(
-        "Unauthorized: Workspace members are not allowed to delete projects.",
-      );
-    }
-
-    const isWorkspaceAdmin = userRole === "admin" || userRole === "owner";
-    const isProjectCreator = project.created_by === user.id;
-
-    if (!isWorkspaceOwner && !isWorkspaceAdmin && !isProjectCreator) {
+    if (!isWorkspaceAdmin && !isProjectCreator) {
       throw new Error(
         "Unauthorized: Only workspace admins or the project creator can delete this project.",
       );
     }
+
+    // Fetch project members before deleting the project
+    const memberIds = await ProjectService.getProjectMemberUserIds(id);
 
     const { error } = await supabase.from("projects").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting project:", error);
       throw new Error(error.message);
+    }
+
+    // Refresh messaging conversation statuses for all affected members
+    if (memberIds.length > 0) {
+      try {
+        const { MessagingService } = await import("@/features/messages/services/messaging.service");
+        for (const uid of memberIds) {
+          await MessagingService.refreshConversationStatuses(uid);
+        }
+      } catch (msgErr) {
+        console.error("Failed to refresh conversation statuses:", msgErr);
+      }
     }
   }
 

@@ -1,5 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import React, { useState } from "react";
+import Image from "next/image";
 import type { TimelineItem, TaskActivity, TaskComment } from "@/features/project/types/project.types";
 import { ArrowRight, Activity, Edit2, Trash2, PlusCircle, CheckCircle2, AlertCircle, Type, UserPlus, UserMinus, ListTodo, Paperclip } from "lucide-react";
 import { DeleteConfirmModal } from "@/features/project/components/modals/delete-confirm-modal";
@@ -240,7 +240,7 @@ function CommentItem({
       <div className="relative shrink-0 mt-0.5">
         <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-500 z-10 relative overflow-hidden">
           {avatar ? (
-            <img src={avatar} alt="" className="w-full h-full object-cover" />
+            <Image src={avatar} alt="" width={28} height={28} className="w-full h-full object-cover" />
           ) : (
             <span className="text-[10px] font-black uppercase">{authorName.charAt(0)}</span>
           )}

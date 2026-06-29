@@ -33,7 +33,8 @@ export class TaskService {
       return (fallbackData || []).map((row) => mapTask(row, null))
     }
 
-    return (data || []).map((row) => mapTask(row, row.assignee))
+    const mappedTasks = (data || []).map((row) => mapTask(row, row.assignee));
+    return await applyTaskPins(mappedTasks);
   }
 
   /**
@@ -61,7 +62,8 @@ export class TaskService {
       throw new Error(error.message)
     }
 
-    return (data || []).map((row) => mapTask(row, null))
+    const mappedTasks = (data || []).map((row) => mapTask(row, null));
+    return await applyTaskPins(mappedTasks);
   }
 
   /**
@@ -298,5 +300,46 @@ export function mapTask(row: TaskRow, assigneeDataRaw: AssigneeRow | AssigneeRow
         }
       : undefined,
     subtasks: row.subtasks as Task['subtasks'],
+  }
+}
+
+async function applyTaskPins(tasks: Task[]): Promise<Task[]> {
+  if (tasks.length === 0) return tasks;
+
+  try {
+    const supabase = await createClient();
+    const { PermissionsService } = await import("@/lib/permissions");
+    const activeUserId = await PermissionsService.getCurrentUserId(supabase).catch(() => undefined);
+    
+    if (!activeUserId) return tasks;
+
+    const { PinService } = await import("@/features/pins/services/pin.service");
+    const userPins = await PinService.getUserPins(activeUserId, "task");
+    
+    const pinnedTaskIds = new Map<string, string>();
+    userPins.forEach(pin => pinnedTaskIds.set(pin.entityId, pin.createdAt));
+
+    const mappedTasks = tasks.map(t => {
+      if (pinnedTaskIds.has(t.id)) {
+        t.isPinned = true;
+        t.pinnedAt = pinnedTaskIds.get(t.id);
+      }
+      return t;
+    });
+
+    // Sort: Pinned first (by pinnedAt desc), then position asc
+    mappedTasks.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isPinned && b.isPinned && a.pinnedAt && b.pinnedAt) {
+        return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
+      }
+      return a.position - b.position;
+    });
+
+    return mappedTasks;
+  } catch (error) {
+    console.error("Failed to apply task pins:", error);
+    return tasks;
   }
 }

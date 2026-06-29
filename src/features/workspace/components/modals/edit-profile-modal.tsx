@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { X, Loader2, Image as ImageIcon } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import type { UserProfile } from "@/features/auth/types/profile.types"
 import { updateProfileAction } from "@/features/auth/actions/update-profile.action"
@@ -111,8 +112,7 @@ export function EditProfileModal({
             <div className="relative group">
               <div className="w-20 h-20 rounded-full bg-slate-800 overflow-hidden flex items-center justify-center border-2 border-slate-700">
                 {avatarPreview ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  <Image src={avatarPreview} unoptimized={avatarPreview.startsWith('blob:')} alt="Avatar" width={80} height={80} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-2xl font-bold text-slate-500 uppercase">
                     {fullName?.[0] || user.email?.[0] || "?"}
