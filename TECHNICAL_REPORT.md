@@ -70,6 +70,8 @@ The following table outlines the core feature modules implemented within TaskPil
 | **Time Tracking** | Active timers and manual logs with visual statistics. | Implemented |
 | **Progress Tracking** | Automated completion calculation. | Implemented |
 | **Workspace Settings** | Configurable environments per organization. | Implemented |
+| **Direct Messaging** | Real-time 1-to-1 chat with project-based access boundaries and auto-link detection. | Implemented |
+| **Global Pinning** | Pin favorite projects to the top of the unified dashboard. | Implemented |
 
 ## 6. System Architecture
 
@@ -166,12 +168,33 @@ The database schema is strictly normalized and relies on PostgreSQL's advanced r
     - *Key Columns:* `id`, `task_id`, `user_id`, `start_time`, `end_time`, `duration_seconds`.
     - *Relationships:* Belongs to `tasks`, `users`.
 
+13. **`conversations`**
+    - *Purpose:* Tracks 1-to-1 direct messaging channels between users within a workspace.
+    - *Key Columns:* `id`, `workspace_id`, `pair_key`, `is_active`.
+    - *Relationships:* Belongs to `workspaces`.
+
+14. **`conversation_members`**
+    - *Purpose:* Maps users to conversations, tracking read states and soft-delete boundaries.
+    - *Key Columns:* `id`, `conversation_id`, `user_id`, `joined_at`, `last_read_at`.
+    - *Relationships:* Belongs to `conversations`, `users`.
+
+15. **`messages`**
+    - *Purpose:* The individual chat messages within a conversation.
+    - *Key Columns:* `id`, `conversation_id`, `sender_id`, `content`, `deleted_at`.
+    - *Relationships:* Belongs to `conversations`, `users`.
+
+16. **`user_pins`**
+    - *Purpose:* Tracks user-specific pinned items (projects, tasks, conversations) for quick access.
+    - *Key Columns:* `id`, `user_id`, `entity_type`, `entity_id`.
+    - *Relationships:* Belongs to `users`.
+
 ```mermaid
 erDiagram
     USERS ||--o{ WORKSPACE_MEMBERS : "has"
     WORKSPACES ||--o{ WORKSPACE_MEMBERS : "has"
     WORKSPACES ||--o{ PROJECTS : "contains"
     WORKSPACES ||--o{ TEAMS : "contains"
+    WORKSPACES ||--o{ CONVERSATIONS : "hosts"
     PROJECTS ||--o{ TASKS : "contains"
     TASKS ||--o{ TASK_COMMENTS : "has"
     TASKS ||--o{ TASK_ATTACHMENTS : "has"
@@ -180,6 +203,9 @@ erDiagram
     USERS ||--o{ TASK_COMMENTS : "writes"
     TEAMS ||--o{ TEAM_MEMBERS : "has"
     USERS ||--o{ TEAM_MEMBERS : "belongs_to"
+    CONVERSATIONS ||--o{ CONVERSATION_MEMBERS : "has"
+    CONVERSATIONS ||--o{ MESSAGES : "contains"
+    USERS ||--o{ USER_PINS : "pins"
 ```
 
 ## 8. Authentication & Authorization
@@ -213,14 +239,15 @@ Projects encapsulate focused initiatives.
 - **Project Lifecycle:** Projects transition through logical states (Planning, Active, Completed, Archived).
 - **Creation & Updates:** Project managers define scopes, timelines, and default parameters.
 - **Analytics & Progress:** The system automatically aggregates nested task statuses to provide real-time completion percentages and velocity metrics.
+- **Global Pinning:** Users can pin important projects for immediate access at the top of their dashboard, implemented using personalized `user_pins` tracking.
 
-## 12. Task Management Module
+## 12. Task & Messaging Modules
 
-The Task system is heavily engineered for deep detailing and flexibility.
-- **Creation & Editing:** Complex forms built with React Hook Form ensure clean data entry.
-- **Assignment:** Tasks can be assigned and reassigned, triggering notification workflows.
+The Task and Communication systems are heavily engineered for deep detailing and flexibility.
+- **Task Creation & Editing:** Complex forms built with React Hook Form ensure clean data entry.
+- **Direct Messaging (1-to-1):** Real-time project-scoped chat system. It utilizes soft-deletion for conversation management (removing history for the deleting user while preserving it for the other) and handles member-removal by gracefully downgrading chats to a read-only state.
+- **Auto-Link Detection:** The messaging module automatically parses and safely renders plain-text URLs into clickable links.
 - **Status & Priority:** Granular control over the workflow state (`Todo`, `In Progress`, `In Review`, `Done`) and priority (`Low` to `Critical`).
-- **Types & Due Dates:** Tasks are classified contextually and tracked chronologically.
 - **Comments & History:** Each task maintains an immutable log of comments and state changes, providing total transparency.
 - **Attachments:** Integrated Supabase Storage allows users to securely upload, manage, and preview files associated with tasks using signed URLs.
 - **Time Tracking:** Features a built-in global timer and manual time logging per task, comparing actual time tracked against estimations with visual pie charts.

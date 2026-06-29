@@ -522,6 +522,17 @@ export class MessagingService {
 - Chat box displays the banner: *"You and this user no longer share any project. This conversation is read‑only."*
 - Message input receives a `disabled` prop when `isActive === false`.
 - All edit/delete UI controls are hidden when the conversation is read‑only.
+- **Auto-Link Detection**: Messages automatically convert plain-text URLs into clickable links that open safely in a new tab, preserving existing message formatting.
+- **Delete Chat Confirmation**: A confirmation modal is displayed before a conversation is deleted to prevent accidental data loss.
+
+---
+
+### 7. Chat Deletion Logic (Soft-Delete)
+
+To prevent one user from deleting a chat for all participants, a soft-delete mechanism is used:
+- When a user deletes a chat, their `joined_at` timestamp in the `conversation_members` table is updated to the current time.
+- Message fetching logic is restricted to only display messages where `created_at > joined_at` for that specific user.
+- This effectively hides the conversation history for the initiator while preserving the chat and its history for the other participant.
 
 ---
 
