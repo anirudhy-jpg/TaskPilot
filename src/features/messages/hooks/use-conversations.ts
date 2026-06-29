@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Conversation } from "../types";
 
+/**
+ * Manages the global conversation list state and Realtime updates.
+ * Workspace-independent — switching workspaces never reloads conversations.
+ */
 export function useConversations(
-  workspaceId: string,
   currentUserId: string | undefined,
   initialConversations: Conversation[],
   activeConversationId: string | null
@@ -11,20 +14,23 @@ export function useConversations(
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(initialConversations);
   }, [initialConversations]);
 
   useEffect(() => {
-    if (!workspaceId || !currentUserId) return;
+    if (!currentUserId) return;
     
     const supabase = createClient();
-    const channelName = `conversations-${workspaceId}-${currentUserId}:${Math.random().toString(36).substring(2, 9)}`;
+    // Use a stable channel name that doesn't depend on workspaceId
+    const channelName = `conversations-global-${currentUserId}:${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase.channel(channelName);
     
-    // Listen for conversation isActive updates
+    // Listen for conversation isActive updates (for any conversation the user is in)
+    // We listen without a workspace_id filter since conversations are now global
     channel.on(
       "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "conversations", filter: `workspace_id=eq.${workspaceId}` },
+      { event: "UPDATE", schema: "public", table: "conversations" },
       (payload) => {
         const newRow = payload.new;
         setConversations(prev => prev.map(c => 
@@ -66,7 +72,9 @@ export function useConversations(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [workspaceId, currentUserId, activeConversationId]);
+  // NOTE: workspaceId intentionally excluded — conversation list must not
+  // reload or re-subscribe when the active workspace changes.
+  }, [currentUserId, activeConversationId]);
 
   return { conversations, setConversations };
 }

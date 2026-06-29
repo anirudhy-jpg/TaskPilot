@@ -7,16 +7,21 @@ import { MessagingService } from "@/features/messages/services/messaging.service
 
 export const dynamic = "force-dynamic"
 
-export default async function ChatPage() {
+export default async function ChatPage(props: { searchParams: Promise<{ userId?: string }> }) {
+  const searchParams = await props.searchParams;
   const { user } = await requireUser()
 
+  // We still need a workspace to exist (for the shell layout and storage paths),
+  // but conversation loading is now workspace-independent.
   const workspace = await getCachedWorkspaceForUser(user.id)
   if (!workspace) redirect("/workspaces")
 
   const [profile, members, initialConversations] = await Promise.all([
     getCachedProfile(user.id).catch(() => null),
-    MessagingService.getChateableMembers(workspace.id, user.id),
-    MessagingService.getUserConversations(workspace.id, user.id),
+    // Global: all users sharing any workspace with the current user
+    MessagingService.getChateableMembers(user.id),
+    // Global: all conversations the current user is in, regardless of workspace
+    MessagingService.getUserConversations(user.id),
   ]);
 
   return (
@@ -27,6 +32,7 @@ export default async function ChatPage() {
       currentUserAvatarUrl={profile?.avatarUrl || user.user_metadata?.avatar_url || null}
       members={members}
       initialConversations={initialConversations}
+      autoStartUserId={searchParams?.userId}
     />
   )
 }

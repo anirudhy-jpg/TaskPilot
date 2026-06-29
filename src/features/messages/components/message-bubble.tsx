@@ -1,6 +1,6 @@
-import React, { useState } from "react"
-import { Pencil, Trash2, MoreHorizontal, AlertCircle, RefreshCw, Reply, SmilePlus, Copy, Check } from "lucide-react"
-import type { Message, MessageReaction } from "../types"
+import React from "react"
+import { Pencil, Trash2, AlertCircle, RefreshCw, Reply, SmilePlus, Copy, Check } from "lucide-react"
+import type { Message } from "../types"
 import { EmojiPicker } from "./emoji-picker"
 import { Avatar } from "@/components/ui/avatar"
 import { SharedAttachmentCard } from "@/features/attachments/components/shared-attachment-card"
@@ -67,7 +67,6 @@ export function MessageBubble({ message, isOwn, isReadOnly, isEditing: externalI
   }, [onSetEditing])
 
   const [editContent, setEditContent] = React.useState(message.content)
-  const [showOptions, setShowOptions] = React.useState(false)
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
   const [showDeleteModal, setShowDeleteModal] = React.useState(false)
@@ -114,6 +113,7 @@ export function MessageBubble({ message, isOwn, isReadOnly, isEditing: externalI
 
   // Reset content when entering edit mode
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isEditing) setEditContent(message.content)
   }, [isEditing, message.content])
 
@@ -152,7 +152,7 @@ export function MessageBubble({ message, isOwn, isReadOnly, isEditing: externalI
       <div className={`flex items-start gap-3 w-full ${isOwn ? "flex-row-reverse" : "flex-row"} max-w-[75%]`}>
         {/* Avatar aligned to top */}
         <div className="shrink-0 mt-1">
-          <Avatar user={message.sender as any} className="w-8 h-8 shadow-sm" />
+          <Avatar user={message.sender as NonNullable<Message["sender"]>} className="w-8 h-8 shadow-sm" />
         </div>
         
         <div className={`flex flex-col min-w-0 ${isOwn ? "items-end" : "items-start"} max-w-full relative`}>

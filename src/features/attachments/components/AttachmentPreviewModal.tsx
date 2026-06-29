@@ -2,7 +2,6 @@
 
 import React, { useEffect } from "react";
 import { X, Download, FileText } from "lucide-react";
-import type { TaskAttachment } from "../types/attachment";
 
 interface AttachmentPreviewModalProps {
   fileName: string;

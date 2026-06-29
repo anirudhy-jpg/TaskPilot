@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react"
-import { Send, Plus, X, FileText, Archive, FileIcon, Image as ImageIcon, Reply, Smile } from "lucide-react"
+import { Send, Plus, X, FileText, Archive, FileIcon, Reply, Smile } from "lucide-react"
 import { EmojiPicker } from "./emoji-picker"
 import type { Message } from "../types"
 import { CHAT_LIMITS } from "../constants"
@@ -185,6 +185,7 @@ export function MessageInput({ onSend, disabled, disabledReason, onTypingStart, 
           <div className="bg-[#1e2333] border border-slate-700/50 rounded-xl p-2 pr-10 flex items-center gap-3 shadow-lg max-w-sm">
             {localPreview ? (
               <div className="w-12 h-12 rounded-lg bg-black overflow-hidden shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={localPreview} alt="Preview" className="w-full h-full object-cover" />
               </div>
             ) : (

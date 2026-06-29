@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { PermissionsService } from "@/lib/permissions"
 import { mapTask } from "@/features/tasks/services/task.service"
 import type { Task, Project } from "@/features/project/types/project.types"
 
@@ -17,6 +18,12 @@ export async function getMemberDetailsAction(
 ): Promise<MemberDetailsResponse> {
   try {
     const supabase = await createClient()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const activeUserId = await PermissionsService.getCurrentUserId(supabase).catch(() => null)
+    
+    // Note: Project memberships and tasks are safe to return because the initial
+    // `supabase.from("projects")` query uses the active user's session.
+    // RLS ensures the active user only sees projects they have access to.
 
     // 1. Fetch all projects in the workspace along with their project members (respects RLS)
     const { data: projectsData, error: projErr } = await supabase

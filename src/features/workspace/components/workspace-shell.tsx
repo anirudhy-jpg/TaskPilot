@@ -331,6 +331,7 @@ export function WorkspaceShell({
         // Don't notify if the user sent it themselves
         if (msg.sender_id !== currentUserId) {
           // If the user is actively looking at this conversation, do not show toast or indicator
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (typeof window !== 'undefined' && (window as any).activeConversationId === msg.conversation_id) {
             return;
           }
@@ -350,22 +351,13 @@ export function WorkspaceShell({
 
             setHasUnreadMessages(true);
 
-            const [profileRes, conversationRes] = await Promise.all([
-              supabase.from("profiles").select("full_name, email").eq("id", msg.sender_id).single(),
-              supabase.from("conversations").select("workspace_id").eq("id", msg.conversation_id).single()
-            ]);
+            const profileRes = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", msg.sender_id)
+              .single();
             
             const sender = profileRes.data;
-            const conversation = conversationRes.data;
-            
-            let workspaceNameStr = "";
-            if (conversation && conversation.workspace_id !== workspaceId) {
-               const msgWorkspace = localWorkspaces.find(w => w.id === conversation.workspace_id);
-               if (msgWorkspace) {
-                 workspaceNameStr = ` in ${msgWorkspace.name}`;
-               }
-            }
-            
             const senderName = sender?.full_name || sender?.email || "Someone";
             
             const toast = document.createElement("div");
@@ -381,7 +373,7 @@ export function WorkspaceShell({
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div class="flex flex-col overflow-hidden w-full">
-                <span class="text-[13px] font-bold text-slate-200">${senderName} sent a message${workspaceNameStr}</span>
+                <span class="text-[13px] font-bold text-slate-200">${senderName} sent you a message</span>
                 <span class="text-xs font-medium text-slate-400 truncate w-full">${contentStr}</span>
               </div>
             `;

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useTransition } from "react";
-import { Lock, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { Conversation, Message } from "../types";
 import { useConversationStatus } from "../hooks/use-conversation-status";
 import { useChatRealtime } from "../hooks/use-chat-realtime";
@@ -14,7 +14,8 @@ import {
 } from "../actions/messages.action";
 import {
   markConversationReadAction,
-  getSharedProjectsInfoAction,
+  getSharedWorkspacesInfoAction,
+  refreshConversationStatusAction,
 } from "../actions/conversations.action";
 import { TypingIndicator } from "./typing-indicator";
 import type { TypingUser } from "../hooks/use-typing-indicator";
@@ -69,10 +70,12 @@ export const ChatBox = React.memo(function ChatBox({
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [sharedProjects, setSharedProjects] = useState<{
-    count: number;
-    names: string[];
-  }>({ count: 0, names: [] });
+  const [sharedContext, setSharedContext] = useState<{
+    workspaceCount: number;
+    workspaceNames: string[];
+    projectCount: number;
+    projectNames: string[];
+  }>({ workspaceCount: 0, workspaceNames: [], projectCount: 0, projectNames: [] });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const isActive = useConversationStatus(
@@ -126,14 +129,14 @@ export const ChatBox = React.memo(function ChatBox({
 
     Promise.all([
       getMessagesAction(conversation.id, undefined, 50),
-      getSharedProjectsInfoAction(workspaceId, conversation.otherUser!.id),
-    ]).then(([msgRes, projRes]) => {
+      getSharedWorkspacesInfoAction(conversation.otherUser!.id),
+    ]).then(([msgRes, wsRes]) => {
       if (mounted) {
         if (msgRes.success && msgRes.data) {
           setMessages(msgRes.data.messages.reverse());
         }
-        if (projRes.success && projRes.data) {
-          setSharedProjects(projRes.data);
+        if (wsRes.success && wsRes.data) {
+          setSharedContext(wsRes.data);
         }
         setIsLoading(false);
       }
@@ -148,6 +151,7 @@ export const ChatBox = React.memo(function ChatBox({
 
     // Expose active conversation for global listeners (like toasts)
     if (typeof window !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).activeConversationId = conversation.id;
     }
 
@@ -155,12 +159,24 @@ export const ChatBox = React.memo(function ChatBox({
       mounted = false;
       if (
         typeof window !== "undefined" &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).activeConversationId === conversation.id
       ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).activeConversationId = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation.id, workspaceId, conversation.otherUser?.id]);
+
+  // Self-heal: if conversation is marked inactive but users share a workspace,
+  // re-evaluate and re-activate. The useConversationStatus Realtime listener
+  // will pick up the DB UPDATE and re-enable the input automatically.
+  useEffect(() => {
+    if (!isActive) {
+      refreshConversationStatusAction(conversation.id).catch(() => {});
+    }
+  }, [conversation.id, isActive]);
 
   // Realtime subscription
   useChatRealtime({
@@ -176,7 +192,7 @@ export const ChatBox = React.memo(function ChatBox({
             }
           : conversation.otherUser;
 
-      const completeMsg = { ...msg, sender: msg.sender || (sender as any) };
+      const completeMsg = { ...msg, sender: msg.sender || (sender as NonNullable<Conversation["otherUser"]>) };
 
       setMessages((prev) => {
         if (prev.find((p) => p.id === completeMsg.id)) return prev;
@@ -341,7 +357,8 @@ export const ChatBox = React.memo(function ChatBox({
           return prev.map((m) => (m.id === tempId ? res.data! : m));
         }
       } else {
-        console.error(res.error);
+        // Silently mark as error in UI
+        // console.error(res.error);
         // Mark as error
         return prev.map((m) =>
           m.id === tempId ? { ...m, status: "error" } : m,
@@ -373,7 +390,8 @@ export const ChatBox = React.memo(function ChatBox({
           return prev.map((m) => (m.id === tempId ? res.data! : m));
         }
       } else {
-        console.error(res.error);
+        // Silently mark as error in UI
+        // console.error(res.error);
         return prev.map((m) =>
           m.id === tempId ? { ...m, status: "error" } : m,
         );
@@ -405,7 +423,7 @@ export const ChatBox = React.memo(function ChatBox({
       const existingIdx = reactions.findIndex(r => r.userId === currentUserId && r.emoji === emoji);
       const otherReactionIdx = reactions.findIndex(r => r.userId === currentUserId && r.emoji !== emoji);
       
-      let newReactions = [...reactions];
+      const newReactions = [...reactions];
       
       if (existingIdx !== -1) {
         // Toggle off
@@ -452,7 +470,7 @@ export const ChatBox = React.memo(function ChatBox({
               className="relative outline-none rounded-full focus-visible:ring-2 focus-visible:ring-amber-500 hover:ring-2 hover:ring-amber-500/50 transition-all cursor-pointer"
             >
               <Avatar
-                user={conversation.otherUser as any}
+                user={conversation.otherUser as NonNullable<Conversation["otherUser"]>}
                 className="w-11 h-11 border border-slate-700/50 shadow-sm"
               />
             </button>
@@ -465,7 +483,7 @@ export const ChatBox = React.memo(function ChatBox({
                 />
                 <div className="absolute top-14 left-0 w-72 bg-[#121826] border border-slate-700/50 rounded-xl shadow-2xl p-4 z-50 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
                   <div className="flex items-center gap-3">
-                    <Avatar user={conversation.otherUser as any} className="w-12 h-12 shrink-0 border border-slate-700/50" />
+                    <Avatar user={conversation.otherUser as NonNullable<Conversation["otherUser"]>} className="w-12 h-12 shrink-0 border border-slate-700/50" />
                     <div className="flex flex-col min-w-0">
                       <span className="text-sm font-bold text-slate-100 truncate">
                         {conversation.otherUser?.fullName || conversation.otherUser?.email}
@@ -480,13 +498,31 @@ export const ChatBox = React.memo(function ChatBox({
                   
                   <div className="flex flex-col gap-2">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      Shared Projects ({sharedProjects.count})
+                      Shared Workspaces ({sharedContext.workspaceCount})
                     </span>
-                    {sharedProjects.names.length > 0 ? (
-                      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto scrollbar-thin">
-                        {sharedProjects.names.map((name, idx) => (
-                          <div key={idx} className="text-sm text-slate-300 flex items-center gap-2">
+                    {sharedContext.workspaceNames.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-32 overflow-y-auto scrollbar-thin">
+                        {sharedContext.workspaceNames.map((name, idx) => (
+                          <div key={`ws-${idx}`} className="text-sm text-slate-300 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span className="truncate">{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-slate-500">No shared workspaces</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col gap-2 mt-2">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Shared Projects ({sharedContext.projectCount})
+                    </span>
+                    {sharedContext.projectNames.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-32 overflow-y-auto scrollbar-thin">
+                        {sharedContext.projectNames.map((name, idx) => (
+                          <div key={`p-${idx}`} className="text-sm text-slate-300 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
                             <span className="truncate">{name}</span>
                           </div>
                         ))}
@@ -506,21 +542,20 @@ export const ChatBox = React.memo(function ChatBox({
                 {conversation.otherUser?.fullName ||
                   conversation.otherUser?.email}
               </h3>
-              {isActive ? (
-                <span className="text-xs font-medium text-emerald-500 flex items-center gap-1.5 leading-tight">
-                  Active
-                </span>
-              ) : (
-                <span className="text-xs font-medium text-rose-500 flex items-center gap-1.5 leading-tight">
-                  <Lock size={10} /> Read Only
-                </span>
-              )}
             </div>
 
             <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 truncate max-w-[400px]">
-              {sharedProjects.count > 0 ? (
+              {sharedContext.workspaceCount > 0 ? (
                 <span>
-                  {sharedProjects.count} Shared Project{sharedProjects.count !== 1 ? "s" : ""}
+                  {sharedContext.workspaceCount} Shared Workspace{sharedContext.workspaceCount !== 1 ? "s" : ""}
+                </span>
+              ) : (
+                <span>No shared workspaces</span>
+              )}
+              <span className="text-slate-600">•</span>
+              {sharedContext.projectCount > 0 ? (
+                <span>
+                  {sharedContext.projectCount} Shared Project{sharedContext.projectCount !== 1 ? "s" : ""}
                 </span>
               ) : (
                 <span>No shared projects</span>
@@ -530,14 +565,7 @@ export const ChatBox = React.memo(function ChatBox({
         </div>
       </div>
 
-      {/* Read Only Banner */}
-      {!isActive && (
-        <div className="shrink-0 bg-rose-500/10 border-b border-rose-500/20 px-6 py-2 flex items-center justify-center gap-2 text-rose-400 text-xs font-bold z-10 shadow-sm">
-          <Lock size={12} />
-          You and this user are no longer in the same workspace. This conversation is
-          read-only.
-        </div>
-      )}
+      {/* Read Only Banner Removed */}
 
       {/* Message List */}
       <div
@@ -590,7 +618,7 @@ export const ChatBox = React.memo(function ChatBox({
                   <MessageBubble
                     message={msg}
                     isOwn={msg.senderId === currentUserId}
-                    isReadOnly={!isActive}
+                    isReadOnly={false}
                     isEditing={editingMessageId === msg.id}
                     onSetEditing={(isEditing) => setEditingMessageId(isEditing ? msg.id : null)}
                     onEdit={(id, content) => {
@@ -611,19 +639,28 @@ export const ChatBox = React.memo(function ChatBox({
         )}
       </div>
 
-      {/* Input */}
+      {/* Input or Read-Only Banner */}
       <div className="shrink-0 flex flex-col">
         <TypingIndicator typingUsers={typingUsers} />
-        <MessageInput
-          onSend={handleSend}
-          disabled={!isActive || isSendLocked}
-          disabledReason={isSendLocked ? "Please wait until all messages are sent..." : undefined}
-          onTypingStart={startTyping}
-          onTypingStop={stopTyping}
-          isUploading={isUploading}
-          replyingToMessage={replyingToMessage}
-          onCancelReply={() => setReplyingToMessage(null)}
-        />
+        {!isActive ? (
+          <div className="p-6 flex items-center justify-center border-t border-slate-800/80 bg-[#090d16] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)] z-20">
+            <div className="flex items-center gap-3 px-5 py-3.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-slate-400 max-w-md w-full justify-center shadow-sm">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span className="text-sm font-medium">This member is no longer in the workspace</span>
+            </div>
+          </div>
+        ) : (
+          <MessageInput
+            onSend={handleSend}
+            disabled={isSendLocked}
+            disabledReason={isSendLocked ? "Please wait until all messages are sent..." : undefined}
+            onTypingStart={startTyping}
+            onTypingStop={stopTyping}
+            isUploading={isUploading}
+            replyingToMessage={replyingToMessage}
+            onCancelReply={() => setReplyingToMessage(null)}
+          />
+        )}
       </div>
     </div>
   );

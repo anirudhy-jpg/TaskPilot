@@ -8,8 +8,15 @@ export interface TypingUser {
   lastTypedAt: number;
 }
 
+/**
+ * Manages typing indicator state and Realtime broadcast.
+ *
+ * The channel is keyed by currentUserId (not workspaceId) so that
+ * it survives workspace switches without tearing down and re-creating
+ * the subscription, and so that both participants in a global DM can
+ * always communicate typing events regardless of which workspace is active.
+ */
 export function useTypingIndicator(
-  workspaceId: string,
   currentUserId: string,
   currentUserName: string
 ) {
@@ -19,11 +26,11 @@ export function useTypingIndicator(
   const lastBroadcastRef = useRef<Record<string, number>>({});
   const [supabase] = useState(() => createClient());
 
-  // Setup Realtime Channel
+  // Setup Realtime Channel — keyed by user ID, not workspace ID
   useEffect(() => {
-    if (!workspaceId || !currentUserId) return;
+    if (!currentUserId) return;
 
-    const channel = supabase.channel(`typing:workspace:${workspaceId}`, {
+    const channel = supabase.channel(`typing:global:${currentUserId}`, {
       config: { broadcast: { self: false } },
     });
 
@@ -63,7 +70,7 @@ export function useTypingIndicator(
       channelRef.current = null;
       setTypingState({});
     };
-  }, [workspaceId, currentUserId, currentUserName, supabase]);
+  }, [currentUserId, currentUserName, supabase]);
 
   // Prune stale typing indicators (disappear after 3 seconds)
   useEffect(() => {
@@ -87,34 +94,85 @@ export function useTypingIndicator(
   }, []);
 
   // Broadcast Actions
-  const startTyping = useCallback((conversationId: string) => {
-    if (!channelRef.current || !conversationId) return;
+
+  /**
+   * The other user needs to receive our typing event on their channel.
+   * We broadcast to THEIR channel key `typing:global:{otherUserId}`.
+   */
+  const startTyping = useCallback((conversationId: string, otherUserId?: string) => {
+    if (!conversationId) return;
 
     const now = Date.now();
     const lastBroadcast = lastBroadcastRef.current[conversationId] || 0;
     
     // Debounce: Only broadcast every 2 seconds if continuously typing
     if (now - lastBroadcast > 2000) {
+      const payload = { conversationId, userId: currentUserId, userName: currentUserName, isTyping: true };
+      
+      // Broadcast on our own channel (for any listeners on our channel)
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "typing",
+          payload,
+        });
+      }
+      
+      // Also broadcast on the other user's channel if we know their ID
+      if (otherUserId) {
+        const supabaseClient = supabase;
+        const otherChannel = supabaseClient.channel(`typing:global:${otherUserId}`, {
+          config: { broadcast: { self: false } },
+        });
+        // We need a subscribed channel to broadcast. Use a one-shot approach.
+        otherChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            otherChannel.send({
+              type: "broadcast",
+              event: "typing",
+              payload,
+            });
+          }
+        });
+        // Clean up after a short time
+        setTimeout(() => supabase.removeChannel(otherChannel), 3000);
+      }
+      
+      lastBroadcastRef.current[conversationId] = now;
+    }
+  }, [currentUserId, currentUserName, supabase]);
+
+  const stopTyping = useCallback((conversationId: string, otherUserId?: string) => {
+    const payload = { conversationId, userId: currentUserId, userName: currentUserName, isTyping: false };
+    
+    if (channelRef.current) {
       channelRef.current.send({
         type: "broadcast",
         event: "typing",
-        payload: { conversationId, userId: currentUserId, userName: currentUserName, isTyping: true },
+        payload,
       });
-      lastBroadcastRef.current[conversationId] = now;
     }
-  }, [currentUserId, currentUserName]);
 
-  const stopTyping = useCallback((conversationId: string) => {
-    if (!channelRef.current || !conversationId) return;
-
-    channelRef.current.send({
-      type: "broadcast",
-      event: "typing",
-      payload: { conversationId, userId: currentUserId, userName: currentUserName, isTyping: false },
-    });
+    if (otherUserId) {
+      const supabaseClient = supabase;
+      const otherChannel = supabaseClient.channel(`typing:global:${otherUserId}`, {
+        config: { broadcast: { self: false } },
+      });
+      otherChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          otherChannel.send({
+            type: "broadcast",
+            event: "typing",
+            payload,
+          });
+        }
+      });
+      setTimeout(() => supabase.removeChannel(otherChannel), 3000);
+    }
+    
     // Reset the broadcast ref so we can instantly broadcast a start again
     lastBroadcastRef.current[conversationId] = 0;
-  }, [currentUserId, currentUserName]);
+  }, [currentUserId, currentUserName, supabase]);
 
   return { typingState, startTyping, stopTyping };
 }

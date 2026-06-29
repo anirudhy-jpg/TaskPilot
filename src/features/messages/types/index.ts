@@ -7,6 +7,8 @@ export interface Conversation {
   otherUser?: ConversationUser;
   lastMessage?: MessagePreview | null;
   unreadCount?: number;
+  isPinned?: boolean;
+  pinnedAt?: string;
 }
 
 export interface ConversationUser {

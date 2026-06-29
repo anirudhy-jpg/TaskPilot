@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import { FileIcon, Trash2, Download, FileText, Archive } from "lucide-react";
 import type { TaskAttachment } from "../types/attachment";
 import { SharedAttachmentCard } from "./shared-attachment-card";
 import { useDeleteAttachment } from "../hooks/use-delete-attachment";
@@ -16,16 +14,11 @@ interface AttachmentItemProps {
 
 export function AttachmentItem({ attachment, currentUserId, onPreview }: AttachmentItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { mutate: deleteAttachment } = useDeleteAttachment(attachment.task_id);
-  const isImage = attachment.mime_type.startsWith("image/");
-  const isPdf = attachment.mime_type === "application/pdf";
-  const fileUrl = attachment.signed_url || "";
 
   const handleDelete = () => {
     setIsDeleteDialogOpen(true);
-    setIsMenuOpen(false);
   };
 
   const confirmDelete = () => {

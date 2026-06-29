@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import { X, Calendar, FolderKanban, CheckSquare, AlertCircle, AlertTriangle, Info, Shield } from "lucide-react"
+import { X, Calendar, FolderKanban, CheckSquare, AlertCircle, AlertTriangle, Info, Shield, MessageSquare } from "lucide-react"
 import type { Project, Task, TaskPriority } from "@/features/project/types/project.types"
 import type { WorkspaceMember } from "@/features/workspace/types/workspace.types"
 import { getMemberDetailsAction } from "@/features/workspace/actions/get-member-details.action"
@@ -321,13 +321,21 @@ export function MemberDetailsModal({ isOpen, onClose, member, workspaceId }: Mem
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900 flex justify-end shrink-0">
+        <div className="p-4 border-t border-slate-800 bg-slate-900 flex justify-end items-center gap-3 shrink-0">
           <button
             onClick={onClose}
             className="px-4.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-[0.98]"
           >
             Close
           </button>
+          <Link
+            href={`/chat?userId=${member.userId}`}
+            onClick={onClose}
+            className="px-4.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-[0.98] flex items-center gap-2"
+          >
+            <MessageSquare size={14} />
+              Chat
+          </Link>
         </div>
       </div>
     </div>

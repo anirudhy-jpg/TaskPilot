@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { requireUser } from "@/lib/supabase/server";
@@ -14,7 +15,7 @@ export async function getMessagesAction(conversationId: string, cursor?: string,
   if (!user) return { success: false, error: "Unauthorized" };
 
   try {
-    const result = await MessagingService.getMessages(conversationId, cursor, limit);
+    const result = await MessagingService.getMessages(conversationId, user.id, cursor, limit);
     return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message };

@@ -69,8 +69,8 @@ export async function removeProjectMemberAction(
 
     if (deleteErr) throw deleteErr;
 
-    // Refresh messaging conversation statuses
-    await MessagingService.refreshConversationStatuses(project.workspace_id, userId);
+    // Re-evaluate conversation active statuses for this user
+    await MessagingService.refreshConversationStatuses(userId);
 
     revalidatePath("/projects", "layout");
     revalidatePath("/workspace");

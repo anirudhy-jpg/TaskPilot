@@ -210,10 +210,11 @@ function SidebarContent({
                     <div className="pl-5 flex flex-col gap-1 border-l border-slate-800 ml-5 py-1.5">
                       {project.tasks && project.tasks.length > 0 ? (
                         project.tasks.map((task) => {
+                          const isDone = task.status === "done" || task.columnId === "done" || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("done")) || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("complete")) || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("finish"))
                           const statusDotColor =
-                            task.status === "done"
+                            isDone
                               ? "bg-rose-500"
-                              : task.status === "in_progress"
+                              : task.status === "in_progress" || task.columnId === "in_progress" || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("progress")) || (project.columns?.find(c => c.id === task.columnId || c.id === task.status)?.name.toLowerCase().includes("doing"))
                               ? "bg-amber-500"
                               : "bg-slate-400"
                           return (

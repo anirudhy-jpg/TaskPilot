@@ -5,6 +5,7 @@ export function useConversationStatus(conversationId: string, initialStatus: boo
   const [isActive, setIsActive] = useState(initialStatus);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsActive(initialStatus);
   }, [initialStatus]);
 

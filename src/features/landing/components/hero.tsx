@@ -1,8 +1,8 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import Link from "next/link"
-import { ArrowRight, CheckCircle2, Shield, Zap } from "lucide-react"
+import { ArrowRight, CheckCircle2, Shield, Zap, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface HeroProps {
@@ -10,6 +10,7 @@ interface HeroProps {
 }
 
 export function Hero({ user }: HeroProps) {
+  const [isNavigating, setIsNavigating] = useState(false)
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-[#0b0f19]">
       {/* Ambient glow behind mockup */}
@@ -31,10 +32,26 @@ export function Hero({ user }: HeroProps) {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center w-full sm:w-auto mb-16">
             {user ? (
-              <Link href="/workspace" className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm shadow-amber-500/10">
-                  Enter Workspace
-                  <ArrowRight className="w-4 h-4 text-slate-950" />
+              <Link 
+                href="/workspace" 
+                className="w-full sm:w-auto"
+                onClick={() => setIsNavigating(true)}
+              >
+                <Button 
+                  disabled={isNavigating}
+                  className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-5 rounded-lg transition-colors text-sm flex items-center justify-center gap-1.5 border-0 h-11 cursor-pointer shadow-sm shadow-amber-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isNavigating ? (
+                    <>
+                      Entering Workspace
+                      <Loader2 className="w-4 h-4 text-slate-950 animate-spin" />
+                    </>
+                  ) : (
+                    <>
+                      Enter Workspace
+                      <ArrowRight className="w-4 h-4 text-slate-950" />
+                    </>
+                  )}
                 </Button>
               </Link>
             ) : (

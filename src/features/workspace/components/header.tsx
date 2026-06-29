@@ -1,14 +1,13 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Logo } from "@/components/ui/logo"
-import { Button } from "@/components/ui/button"
 
 import { switchActiveWorkspaceAction } from "../actions/switch-active-workspace.action"
 import { leaveWorkspaceAction } from "../actions/leave-workspace.action"
-import { LogOut, DoorOpen, ChevronDown, Briefcase, Menu } from "lucide-react"
+import { LogOut, DoorOpen, ChevronDown, Briefcase, Menu, Settings } from "lucide-react"
 import type { UserProfile } from "@/features/auth/types/profile.types"
 import type { Workspace } from "../types/workspace.types"
 import { HeaderInbox } from "./header-inbox"
@@ -54,6 +53,18 @@ export function Header({
   const [isLeaving, setIsLeaving] = useState(false)
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
   const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false)
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
+  const profileDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const [prevWorkspacesLength, setPrevWorkspacesLength] = useState(workspaces?.length || 0);
 
@@ -173,65 +184,88 @@ export function Header({
             userId={currentUserId}
           />
 
-          {/* User chip */}
-          <div className="flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-900 px-3.5 py-2 rounded-full border border-slate-800 transition-all duration-300">
-            <div className="w-7 h-7 rounded-full bg-amber-500 overflow-hidden flex items-center justify-center text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm select-none">
-              {profile?.avatarUrl ? (
-                <Image src={profile.avatarUrl} alt="Avatar" width={28} height={28} className="w-full h-full object-cover" />
-              ) : (
-                profile?.fullName?.[0] ||
-                profile?.email?.[0] ||
-                user.email?.[0] ||
-                "?"
-              )}
-            </div>
-            <span className="text-base font-semibold text-slate-200 hidden sm:inline-block truncate max-w-[160px]">
-              {profile?.fullName || profile?.email || user.email}
-            </span>
+          {/* User Profile Dropdown */}
+          <div className="relative" ref={profileDropdownRef}>
+            <button
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-900 px-3.5 py-2 rounded-full border border-slate-800 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-700"
+            >
+              <div className="w-7 h-7 rounded-full bg-amber-500 overflow-hidden flex items-center justify-center text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm select-none shrink-0">
+                {profile?.avatarUrl ? (
+                  <Image src={profile.avatarUrl} alt="Avatar" width={28} height={28} className="w-full h-full object-cover" />
+                ) : (
+                  profile?.fullName?.[0] ||
+                  profile?.email?.[0] ||
+                  user.email?.[0] ||
+                  "?"
+                )}
+              </div>
+              <span className="text-base font-semibold text-slate-200 hidden sm:inline-block truncate max-w-[160px]">
+                {profile?.fullName || profile?.email || user.email}
+              </span>
+              <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 hidden sm:block ${isProfileDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="px-4 py-3 border-b border-slate-800 sm:hidden">
+                  <p className="text-sm font-medium text-slate-200 truncate">
+                    {profile?.fullName || profile?.email || user.email}
+                  </p>
+                  {profile?.email && (
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{profile.email}</p>
+                  )}
+                </div>
+                <Link
+                  href="/settings"
+                  onClick={() => setIsProfileDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors"
+                >
+                  <Settings size={15} className="text-slate-400" />
+                  Settings
+                </Link>
+                
+                {workspaceId && !isWorkspaceOwner && (
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false)
+                      setIsLeaveModalOpen(true)
+                    }}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition-colors text-left group"
+                  >
+                    <DoorOpen size={15} className="text-slate-400 group-hover:text-red-400 transition-colors" />
+                    Leave Workspace
+                  </button>
+                )}
+
+                <div className="h-px bg-slate-800 my-1" />
+
+                <button
+                  onClick={() => {
+                    setIsProfileDropdownOpen(false)
+                    setIsSignoutModalOpen(true)
+                  }}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors text-left"
+                >
+                  <LogOut size={15} className="text-rose-400" />
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Action: Delete Workspace (if owner) or Leave Workspace (if member) */}
-          {workspaceId && !isWorkspaceOwner && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsLeaveModalOpen(true)}
-                className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 cursor-pointer rounded-full transition-colors w-8 h-8"
-                title={`Leave workspace "${workspaceName}"`}
-              >
-                <DoorOpen size={15} className="stroke-[2.5]" />
-              </Button>
-              <LeaveWorkspaceConfirmModal
-                isOpen={isLeaveModalOpen}
-                onClose={() => setIsLeaveModalOpen(false)}
-                name={workspaceName}
-                isPending={isLeaving}
-                onConfirm={handleLeaveConfirm}
-              />
-            </>
-          )}
-
-          {/* Always show logout/signout button if owner or if not inside a workspace */}
-          {(!workspaceId || isWorkspaceOwner) && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSignoutModalOpen(true)}
-                className="text-slate-400 hover:text-rose-455 hover:bg-rose-500/10 cursor-pointer rounded-full transition-colors w-8 h-8"
-                title="Sign Out"
-              >
-                <LogOut size={15} className="stroke-[2.5]" />
-              </Button>
-              <SignOutConfirmModal 
-                isOpen={isSignoutModalOpen} 
-                onClose={() => setIsSignoutModalOpen(false)} 
-              />
-            </>
-          )}
+          <LeaveWorkspaceConfirmModal
+            isOpen={isLeaveModalOpen}
+            onClose={() => setIsLeaveModalOpen(false)}
+            name={workspaceName}
+            isPending={isLeaving}
+            onConfirm={handleLeaveConfirm}
+          />
+          
+          <SignOutConfirmModal 
+            isOpen={isSignoutModalOpen} 
+            onClose={() => setIsSignoutModalOpen(false)} 
+          />
         </div>
       </div>
       <SwitchWorkspaceModal

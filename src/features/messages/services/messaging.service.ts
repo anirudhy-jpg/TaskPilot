@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@/lib/supabase/server';
+import { PermissionsService } from '@/lib/permissions';
 import type { Conversation, ConversationUser, Message } from '@/features/messages/types';
 import { CHAT_LIMITS } from '../constants';
 
@@ -11,22 +13,21 @@ export class MessagingService {
   }
 
   /**
-   * Check whether two users are in the given workspace.
+   * Check whether two users are allowed to chat.
+   *
+   * Permission rules:
+   *  - Owner/Admin of workspace W ↔ ANY member of workspace W
+   *  - Member ↔ Member only if they share at least one workspace
+   *
+   * RLS-safe: queries are scoped per workspace_id so the
+   * "see members of workspaces you belong to" policy applies.
    */
-  private static async usersShareWorkspace(
+  private static async usersShareAnyWorkspace(
     supabase: any,
-    workspaceId: string,
     userA: string,
     userB: string
   ): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('workspace_members')
-      .select('user_id')
-      .eq('workspace_id', workspaceId)
-      .in('user_id', [userA, userB]);
-      
-    if (error) throw error;
-    return data && data.length === 2;
+    return PermissionsService.sharesAnyWorkspace(supabase, userA, userB);
   }
 
   /** Verify that a user is a member of a conversation. */
@@ -45,61 +46,111 @@ export class MessagingService {
     return (count ?? 0) > 0;
   }
 
-  /** Get detailed info about shared projects for UI display. */
-  static async getSharedProjectsInfo(
-    workspaceId: string,
+  /** Get shared workspaces and projects info for UI display in chat header. */
+  static async getSharedWorkspacesInfo(
     userA: string,
     userB: string
-  ): Promise<{ count: number; names: string[] }> {
+  ): Promise<{
+    workspaceCount: number;
+    workspaceNames: string[];
+    projectCount: number;
+    projectNames: string[];
+  }> {
     const supabase = await createClient();
-    
-    const { data: myProjects, error: err1 } = await supabase
+
+    // 1. Shared Workspaces
+    const { data: myWorkspaces } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', userA);
+
+    const myWorkspaceIds = (myWorkspaces || []).map((m: any) => m.workspace_id);
+    let workspaceNames: string[] = [];
+
+    if (myWorkspaceIds.length > 0) {
+      const { data: sharedMemberships } = await supabase
+        .from('workspace_members')
+        .select('workspaces!inner(name)')
+        .eq('user_id', userB)
+        .in('workspace_id', myWorkspaceIds);
+
+      if (sharedMemberships) {
+        workspaceNames = sharedMemberships.map((m: any) => m.workspaces.name);
+      }
+    }
+
+    // 2. Shared Projects
+    const { data: myProjects } = await supabase
       .from('project_members')
       .select('project_id')
       .eq('user_id', userA);
-      
-    if (err1) throw err1;
-    if (!myProjects || myProjects.length === 0) return { count: 0, names: [] };
-    
-    const myProjectIds = myProjects.map((p: any) => p.project_id);
-    
-    const { data: sharedProjects, error: err2 } = await supabase
-      .from('project_members')
-      .select('project_id, projects!inner(name, workspace_id)')
-      .in('project_id', myProjectIds)
-      .eq('user_id', userB)
-      .eq('projects.workspace_id', workspaceId);
-      
-    if (err2) throw err2;
-    
-    if (!sharedProjects || sharedProjects.length === 0) return { count: 0, names: [] };
-    
-    const names = sharedProjects.map((p: any) => p.projects.name);
-    return { count: names.length, names };
+
+    const myProjectIds = (myProjects || []).map((m: any) => m.project_id);
+    let projectNames: string[] = [];
+
+    if (myProjectIds.length > 0) {
+      const { data: sharedProjects } = await supabase
+        .from('project_members')
+        .select('projects!inner(name)')
+        .eq('user_id', userB)
+        .in('project_id', myProjectIds);
+
+      if (sharedProjects) {
+        projectNames = sharedProjects.map((m: any) => m.projects.name);
+      }
+    }
+
+    return {
+      workspaceCount: workspaceNames.length,
+      workspaceNames,
+      projectCount: projectNames.length,
+      projectNames,
+    };
   }
 
   // -------------------------------------------------------------------
   // MEMBERS
   // -------------------------------------------------------------------
+  /**
+   * Returns all users the current user is allowed to chat with.
+   *
+   * Rules:
+   *  - Owner/Admin → can chat with ALL members of their workspaces
+   *  - Member      → can chat with:
+   *      a) Other members who share a project with them
+   *      b) Owners and Admins of any workspace the member belongs to
+   */
   static async getChateableMembers(
-    workspaceId: string,
     currentUserId: string
   ): Promise<ConversationUser[]> {
     const supabase = await createClient();
-    
-    // Everyone can chat with everyone in the workspace
-    const { data: allMembers, error: allErr } = await supabase
+
+    // 1. Get all workspace IDs the current user belongs to
+    const { data: myMemberships, error: myErr } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', currentUserId);
+
+    if (myErr) throw myErr;
+    if (!myMemberships || myMemberships.length === 0) return [];
+
+    const myWorkspaceIds = myMemberships.map((m: any) => m.workspace_id);
+
+    // 2. Fetch all unique users in those workspaces (excluding current user)
+    const { data: sharedMembers, error: sharedErr } = await supabase
       .from('workspace_members')
       .select('user_id')
-      .eq('workspace_id', workspaceId)
+      .in('workspace_id', myWorkspaceIds)
       .neq('user_id', currentUserId);
-      
-    if (allErr) throw allErr;
-    const eligibleUserIds = (allMembers || []).map((m: any) => m.user_id);
+
+    if (sharedErr) throw sharedErr;
+    if (!sharedMembers || sharedMembers.length === 0) return [];
+
+    const eligibleUserIds = [...new Set((sharedMembers || []).map((m: any) => m.user_id))];
 
     if (eligibleUserIds.length === 0) return [];
 
-    // 2. Fetch distinct user profiles
+    // 3. Fetch profiles for those users
     const { data: profiles, error: profErr } = await supabase
       .from('profiles')
       .select('id, email, full_name, avatar_url')
@@ -119,58 +170,67 @@ export class MessagingService {
   // CONVERSATIONS
   // -------------------------------------------------------------------
   static async getOrCreateConversation(
-    workspaceId: string,
     currentUserId: string,
     otherUserId: string
   ): Promise<Conversation> {
     const supabase = await createClient();
     const pairKey = this.pairKey(currentUserId, otherUserId);
 
-    // First try to find an existing conversation by pairKey
+    // Try to find existing global conversation by pair_key
     const { data: existing, error: findErr } = await supabase
       .from('conversations')
       .select('*')
-      .eq('workspace_id', workspaceId)
       .eq('pair_key', pairKey)
-      .single();
+      .maybeSingle();
       
-    if (findErr && findErr.code !== 'PGRST116') {
-      throw findErr;
-    }
+    if (findErr) throw findErr;
     
     if (existing) {
-      return existing as Conversation;
+      // Re-add users to conversation_members in case one of them deleted it
+      const members = [currentUserId, otherUserId].map((uid) => ({
+        conversation_id: existing.id,
+        user_id: uid,
+      }));
+      await supabase.from('conversation_members').upsert(members, { onConflict: 'conversation_id,user_id' });
+      return {
+        id: existing.id,
+        workspaceId: existing.workspace_id,
+        pairKey: existing.pair_key,
+        isActive: existing.is_active,
+        createdAt: existing.created_at,
+      } as Conversation;
     }
 
-    // Verify workspace membership before creating
-    const share = await this.usersShareWorkspace(
-      supabase,
-      workspaceId,
-      currentUserId,
-      otherUserId
-    );
+    // Verify at least one shared workspace before creating
+    const share = await this.usersShareAnyWorkspace(supabase, currentUserId, otherUserId);
     
     if (!share) {
-      throw new Error('Cannot start a conversation: both users must be in the same workspace.');
+      throw new Error('Cannot start a conversation: you must share at least one workspace with this user.');
     }
 
-    // Insert conversation and two membership rows
+    // Insert global conversation (no workspace_id)
     const { data: newConv, error: insertErr } = await supabase
       .from('conversations')
-      .insert({ workspace_id: workspaceId, pair_key: pairKey })
+      .insert({ pair_key: pairKey, workspace_id: null })
       .select()
       .single();
 
     if (insertErr) {
+      // Race condition: another request already created it
       if (insertErr.code === '23505') {
         const { data: raced, error: raceErr } = await supabase
           .from('conversations')
           .select('*')
-          .eq('workspace_id', workspaceId)
           .eq('pair_key', pairKey)
           .single();
         if (raceErr) throw raceErr;
-        return raced as Conversation;
+        return {
+          id: raced.id,
+          workspaceId: raced.workspace_id,
+          pairKey: raced.pair_key,
+          isActive: raced.is_active,
+          createdAt: raced.created_at,
+        } as Conversation;
       }
       throw insertErr;
     }
@@ -183,19 +243,28 @@ export class MessagingService {
     const { error: membersErr } = await supabase.from('conversation_members').insert(members);
     if (membersErr) throw membersErr;
     
-    return newConv as Conversation;
+    return {
+      id: newConv.id,
+      workspaceId: newConv.workspace_id,
+      pairKey: newConv.pair_key,
+      isActive: newConv.is_active,
+      createdAt: newConv.created_at,
+    } as Conversation;
   }
 
+  /**
+   * Load all DM conversations the current user participates in.
+   * Workspace-independent — shows the global list.
+   */
   static async getUserConversations(
-    workspaceId: string,
     currentUserId: string
   ): Promise<Conversation[]> {
     const supabase = await createClient();
     
-    // First find all conversation IDs for this user
+    // Find all conversations this user is a member of
     const { data: myMemberships, error: memErr } = await supabase
       .from('conversation_members')
-      .select('conversation_id, last_read_at')
+      .select('conversation_id, last_read_at, joined_at')
       .eq('user_id', currentUserId);
       
     if (memErr) throw memErr;
@@ -203,6 +272,7 @@ export class MessagingService {
     
     const conversationIds = myMemberships.map((m: any) => m.conversation_id);
     
+    // Load conversations with their latest message
     const { data, error } = await supabase
       .from('conversations')
       .select(
@@ -210,7 +280,6 @@ export class MessagingService {
         messages(content, created_at, sender_id)
         `
       )
-      .eq('workspace_id', workspaceId)
       .in('id', conversationIds)
       .order('created_at', { referencedTable: 'messages', ascending: false })
       .limit(1, { referencedTable: 'messages' });
@@ -222,13 +291,17 @@ export class MessagingService {
     // Fetch unread counts
     const unreadCounts = await Promise.all(
       myMemberships.map(async (m: any) => {
+        const thresholdDate = m.joined_at && new Date(m.joined_at) > new Date(m.last_read_at || 0)
+          ? m.joined_at
+          : m.last_read_at || '1970-01-01T00:00:00Z';
+          
         const { count } = await supabase
           .from('messages')
           .select('id', { count: 'exact', head: true })
           .eq('conversation_id', m.conversation_id)
           .neq('sender_id', currentUserId)
           .is('deleted_at', null)
-          .gt('created_at', m.last_read_at || '1970-01-01T00:00:00Z');
+          .gt('created_at', thresholdDate);
         return { conversationId: m.conversation_id, count: count || 0 };
       })
     );
@@ -266,11 +339,17 @@ export class MessagingService {
         avatarUrl: otherProfile?.avatar_url || null,
       };
       
-      const lastMsg = row.messages?.[0] ?? null;
-      
+      const membership = myMemberships.find((m: any) => m.conversation_id === row.id);
+      const joinedAt = membership?.joined_at;
+      let lastMsg = row.messages?.[0] ?? null;
+
+      if (lastMsg && joinedAt && new Date(lastMsg.created_at) <= new Date(joinedAt)) {
+        lastMsg = null;
+      }
+
       return {
         id: row.id,
-        workspaceId: row.workspace_id,
+        workspaceId: row.workspace_id, // Will be null for global conversations
         pairKey: row.pair_key,
         isActive: row.is_active,
         createdAt: row.created_at,
@@ -280,13 +359,79 @@ export class MessagingService {
           ? { content: lastMsg.content, createdAt: lastMsg.created_at, senderId: lastMsg.sender_id }
           : null,
       } as Conversation;
+    }).filter(c => {
+      const membership = myMemberships.find((m: any) => m.conversation_id === c.id);
+      if (membership?.joined_at && !c.lastMessage) return false;
+      return true;
     });
     
-    return convs.sort((a, b) => {
+    // Fetch user pins for conversations
+    const pinnedChatIds = new Map<string, string>();
+    try {
+      const { PinService } = await import("@/features/pins/services/pin.service");
+      const userPins = await PinService.getUserPins(currentUserId, "conversation");
+      userPins.forEach(pin => pinnedChatIds.set(pin.entityId, pin.createdAt));
+    } catch (error) {
+      console.error("Failed to fetch conversation pins:", error);
+    }
+
+    const mappedConvs = convs.map(c => {
+      if (pinnedChatIds.has(c.id)) {
+        c.isPinned = true;
+        c.pinnedAt = pinnedChatIds.get(c.id);
+      }
+      return c;
+    });
+
+    return mappedConvs.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isPinned && b.isPinned && a.pinnedAt && b.pinnedAt) {
+        return new Date(b.pinnedAt).getTime() - new Date(a.pinnedAt).getTime();
+      }
+
       const aDate = a.lastMessage?.createdAt || a.createdAt;
       const bDate = b.lastMessage?.createdAt || b.createdAt;
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
+  }
+
+  /**
+   * Re-evaluates is_active for a single conversation when it is opened.
+   * Heals any stale is_active = false values left over from the old
+   * workspace-scoped permission model.
+   * Returns the current is_active value after the check.
+   */
+  static async refreshSingleConversationStatus(
+    conversationId: string,
+    currentUserId: string
+  ): Promise<boolean> {
+    const supabase = await createClient();
+
+    // Verify the current user is a member of this conversation
+    const isMember = await this.verifyConversationMembership(supabase, conversationId, currentUserId);
+    if (!isMember) throw new Error('Not a member of this conversation.');
+
+    const { data: conv, error: convErr } = await supabase
+      .from('conversations')
+      .select('pair_key, is_active')
+      .eq('id', conversationId)
+      .single();
+
+    if (convErr) throw convErr;
+
+    const otherUserId = conv.pair_key.split(':').find((id: string) => id !== currentUserId)!;
+    const share = await this.usersShareAnyWorkspace(supabase, currentUserId, otherUserId);
+
+    // Only write to DB if the value needs to change (avoid unnecessary updates)
+    if (share !== conv.is_active) {
+      await supabase
+        .from('conversations')
+        .update({ is_active: share })
+        .eq('id', conversationId);
+    }
+
+    return share;
   }
 
   static async markConversationRead(conversationId: string, userId: string): Promise<void> {
@@ -298,13 +443,35 @@ export class MessagingService {
       .eq('user_id', userId);
   }
 
+  /**
+   * Permanently deletes a conversation and ALL of its messages.
+   * Only a participant of the conversation can delete it.
+   */
+  static async deleteConversation(conversationId: string, requestingUserId: string): Promise<void> {
+    const supabase = await createClient();
+
+    // Verify the requesting user is a member of this conversation
+    const isMember = await this.verifyConversationMembership(supabase, conversationId, requestingUserId);
+    if (!isMember) throw new Error('You are not a participant in this conversation.');
+
+    // Soft delete the conversation for the requesting user using joined_at
+    // This hides the conversation from their list until a new message arrives
+    const { error: updErr } = await supabase
+      .from('conversation_members')
+      .update({ joined_at: new Date().toISOString() })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', requestingUserId);
+
+    if (updErr) throw updErr;
+  }
+
   static async hasAnyUnreadMessages(userId: string): Promise<boolean> {
     const supabase = await createClient();
     
-    // First find all conversation IDs and last_read_at for this user
+    // Find all conversation memberships for this user
     const { data: myMemberships, error: memErr } = await supabase
       .from('conversation_members')
-      .select('conversation_id, last_read_at')
+      .select('conversation_id, last_read_at, joined_at')
       .eq('user_id', userId);
       
     if (memErr) throw memErr;
@@ -312,13 +479,17 @@ export class MessagingService {
     
     // Check if any conversation has unread messages
     for (const m of myMemberships) {
+      const thresholdDate = m.joined_at && new Date(m.joined_at) > new Date(m.last_read_at || 0)
+        ? m.joined_at
+        : m.last_read_at || '1970-01-01T00:00:00Z';
+        
       const { count } = await supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
         .eq('conversation_id', m.conversation_id)
         .neq('sender_id', userId)
         .is('deleted_at', null)
-        .gt('created_at', m.last_read_at || '1970-01-01T00:00:00Z')
+        .gt('created_at', thresholdDate)
         .limit(1);
         
       if (count && count > 0) return true;
@@ -330,8 +501,11 @@ export class MessagingService {
   // -------------------------------------------------------------------
   // STATUS REFRESH
   // -------------------------------------------------------------------
+  /**
+   * Refreshes `is_active` on all conversations involving a user,
+   * checking whether both participants still share any workspace.
+   */
   static async refreshConversationStatuses(
-    workspaceId: string,
     affectedUserId: string
   ): Promise<void> {
     const supabase = await createClient();
@@ -353,7 +527,7 @@ export class MessagingService {
       if (members?.length !== 2) continue;
       
       const [uidA, uidB] = members.map((m: any) => m.user_id);
-      const share = await this.usersShareWorkspace(supabase, workspaceId, uidA, uidB);
+      const share = await this.usersShareAnyWorkspace(supabase, uidA, uidB);
       
       await supabase
         .from('conversations')
@@ -367,16 +541,30 @@ export class MessagingService {
   // -------------------------------------------------------------------
   static async getMessages(
     conversationId: string,
+    currentUserId: string,
     cursor?: string,
     limit: number = 50
   ): Promise<{ messages: Message[]; hasMore: boolean }> {
     const supabase = await createClient();
+    
+    // Check if the current user has cleared this conversation (which updates joined_at)
+    const { data: memberData } = await supabase
+      .from('conversation_members')
+      .select('joined_at')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', currentUserId)
+      .single();
+
     const query = supabase
       .from('messages')
       .select('*, profiles!inner(id, email, full_name, avatar_url), message_reactions(id, message_id, user_id, emoji, created_at, profiles!inner(id, email, full_name, avatar_url))')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: false })
       .limit(limit);
+      
+    if (memberData?.joined_at) {
+      query.gt('created_at', memberData.joined_at);
+    }
       
     if (cursor) query.lt('created_at', cursor);
     const { data, error } = await query;
@@ -473,21 +661,35 @@ export class MessagingService {
     
     const { data: conv, error: convErr } = await supabase
       .from('conversations')
-      .select('is_active, workspace_id, pair_key')
+      .select('is_active, pair_key')
       .eq('id', conversationId)
       .single();
       
     if (convErr) throw convErr;
-    if (!conv.is_active) {
-      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
-    }
     
+    // Check current shared-workspace status
     const otherUserId = conv.pair_key.split(':').find((id: string) => id !== senderId)!;
-    const share = await this.usersShareWorkspace(supabase, conv.workspace_id, senderId, otherUserId);
+    const share = await this.usersShareAnyWorkspace(supabase, senderId, otherUserId);
+    
     if (!share) {
+      // Mark conversation as read-only if they no longer share any workspace
       await supabase.from('conversations').update({ is_active: false }).eq('id', conversationId);
-      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
+      throw new Error('You no longer share a workspace with this user. This conversation is read-only.');
     }
+
+    // Re-activate if previously deactivated and users now share again
+    if (!conv.is_active) {
+      await supabase.from('conversations').update({ is_active: true }).eq('id', conversationId);
+    }
+
+    // Ensure both users are members so if one deleted the chat, they are re-added
+    await supabase.from('conversation_members').upsert(
+      [
+        { conversation_id: conversationId, user_id: senderId },
+        { conversation_id: conversationId, user_id: otherUserId }
+      ],
+      { onConflict: 'conversation_id,user_id', ignoreDuplicates: true }
+    );
     
     if (!content?.trim() && !attachment) throw new Error('Message must contain at least text or an attachment.');
     if (content && content.length > CHAT_LIMITS.MAX_MESSAGE_LENGTH) throw new Error(`Message exceeds maximum length of ${CHAT_LIMITS.MAX_MESSAGE_LENGTH} characters.`);
@@ -589,7 +791,7 @@ export class MessagingService {
       
     if (convErr) throw convErr;
     if (!conv.is_active) {
-      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
+      throw new Error('You no longer share a workspace with this user. This conversation is read-only.');
     }
     
     const { data: updated, error: updErr } = await supabase
@@ -666,7 +868,7 @@ export class MessagingService {
       
     if (convErr) throw convErr;
     if (!conv.is_active) {
-      throw new Error('You and this user are no longer in the same workspace. This conversation is read‑only.');
+      throw new Error('You no longer share a workspace with this user. This conversation is read-only.');
     }
     
     const { error: delErr } = await supabase

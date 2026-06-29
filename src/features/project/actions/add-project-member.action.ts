@@ -123,8 +123,8 @@ export async function addProjectMemberAction(
       client: supabase,
     });
 
-    // 6. Refresh messaging conversation statuses
-    await MessagingService.refreshConversationStatuses(project.workspace_id, validatedUserId);
+    // 6. Re-evaluate conversation active statuses for this user
+    await MessagingService.refreshConversationStatuses(validatedUserId);
 
     revalidatePath("/projects", "layout");
     revalidatePath("/workspace");

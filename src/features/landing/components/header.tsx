@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { Menu, X, ArrowRight } from "lucide-react"
+import { Menu, X, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/ui/logo"
 
@@ -16,6 +16,7 @@ export function Header({ user }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [isSignoutModalOpen, setIsSignoutModalOpen] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -71,13 +72,23 @@ export function Header({ user }: HeaderProps) {
                 >
                   Sign Out
                 </button>
-                <Link href="/workspace">
+                <Link href="/workspace" onClick={() => setIsNavigating(true)}>
                   <Button
                     variant="default"
-                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm shadow-amber-500/10"
+                    disabled={isNavigating}
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-lg text-xs transition-colors duration-150 h-9 border-0 cursor-pointer shadow-sm shadow-amber-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    Workspace
-                    <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-slate-950" />
+                    {isNavigating ? (
+                      <>
+                        Loading
+                        <Loader2 className="w-3.5 h-3.5 ml-1.5 text-slate-950 animate-spin" />
+                      </>
+                    ) : (
+                      <>
+                        Workspace
+                        <ArrowRight className="w-3.5 h-3.5 ml-1.5 text-slate-950" />
+                      </>
+                    )}
                   </Button>
                 </Link>
               </>
@@ -139,10 +150,28 @@ export function Header({ user }: HeaderProps) {
           <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
             {user ? (
               <>
-                <Link href="/workspace" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer">
-                    Workspace
-                    <ArrowRight className="w-4 h-4 text-slate-950" />
+                <Link 
+                  href="/workspace" 
+                  onClick={() => {
+                    setIsOpen(false)
+                    setIsNavigating(true)
+                  }}
+                >
+                  <Button 
+                    disabled={isNavigating}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 rounded-lg transition-colors border-0 text-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isNavigating ? (
+                      <>
+                        Loading
+                        <Loader2 className="w-4 h-4 text-slate-950 animate-spin" />
+                      </>
+                    ) : (
+                      <>
+                        Workspace
+                        <ArrowRight className="w-4 h-4 text-slate-950" />
+                      </>
+                    )}
                   </Button>
                 </Link>
                 <Button

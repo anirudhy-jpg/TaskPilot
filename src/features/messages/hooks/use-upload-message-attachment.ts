@@ -35,7 +35,7 @@ export function useUploadMessageAttachment() {
       const fileExt = file.name.split(".").pop();
       const filePath = `messages/${workspaceId}/${conversationId}/${crypto.randomUUID()}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from("attachments")
         .upload(filePath, file, {
           cacheControl: "3600",
